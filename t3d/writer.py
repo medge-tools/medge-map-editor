@@ -1,15 +1,16 @@
+from .scene.types import Actor
 from io import TextIOWrapper
-
-class T3DFile:
-    pass
 
 class T3DWriter:
     def __init__(self):
         self.fp : TextIOWrapper = None
-        self.indent = 0
 
-    def write(self, filepath, t3d):
-        self.indent = 0
-        t3d_file = self.build_t3d_tree(t3d)
+    def write(self, filepath : str, scene : list[Actor] ):
+        s = ""
+        for a in scene:
+            s += str(a)
         with open(filepath, 'w') as self.fp:
-            self.write_file(t3d_file); 
+            self.fp.write("Begin Map\nBegin Level NAME=PersistentLevel\n")
+            self.fp.write(s)
+            self.fp.write("End Level\nBegin Surface\nEnd Surface\nEnd Map")
+            
