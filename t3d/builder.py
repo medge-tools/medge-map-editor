@@ -1,10 +1,11 @@
 import bpy
 import bmesh
-from mathutils import Vector
-from ..scene.types import Actor 
+from mathutils import Vector, Matrix
+
+from ..interface import utils
+from ..scene.types import * 
 from ..scene.brush import *
 from ..scene.volumes import *
-from ..scene.types import ActorType
 
 # =============================================================================
 class T3DBuilderError(Exception):
@@ -12,26 +13,35 @@ class T3DBuilderError(Exception):
 
 # =============================================================================
 class T3DBuilderOptions:
-    selected_objs : bool
-    scale_mult : int
+    only_selection : bool
+    scale : int
 
 # =============================================================================
 class T3DBuilder:
-    def build_brush(self, obj : bpy.types.Object, options : T3DBuilderOptions) -> [Brush]:
-        m = options.scale_mult
-        mult = Vector((m, m, m))
-        # Build Polygons
+    def build_brush(self, object : bpy.types.Object, options : T3DBuilderOptions) -> Brush | None:
+        # Transform to left-handed coordinate system by mirroring along the y-axis
+        # Mirror the location and vertices
+        if utils.get_me_actor(object).type == ActorType.NONE: 
+            return None
+        scale = Vector((options.scale, options.scale, options.scale))
+        mirror = Vector((1, -1, 1))
+        
+        utils.set_obj_mode(object, 'OBJECT')
+        obj = utils.deepcopy(object)
+        obj.location *= mirror
+        utils.mirror_quaternion_x_axis(obj)
+
         bm = bmesh.new()
         bm.from_mesh(obj.data)
-        bm.verts.ensure_lookup_table()
+
         polylist : list[Polygon] = []
         for f in bm.faces:
             verts = []
-            for v in f.verts:
-                verts.append(v.co * mult)
+            for v in reversed(f.verts):
+                verts.append(v.co * obj.scale * scale * mirror)
             v0 = f.verts[0].co
             v1 = f.verts[1].co
-
+            
             u = v1 - v0
             u.normalize()
             n = f.normal
@@ -40,29 +50,28 @@ class T3DBuilder:
             p = Polygon(verts[0], n, u, v, verts)
             polylist.append(p)
         bm.free()
+
         # Build Brush
-        type : ActorType = obj.data.me_actor.type
+        type : ActorType = utils.get_me_actor(obj).type
         match(type):
-            case ActorType.BRUSH:
-                brush = Brush(polylist)
             case ActorType.LADDER:
                 brush = Ladder(polylist)
-        brush.Location = obj.location * mult
-        euler = obj.rotation_euler
+            case ActorType.PIPE:
+                brush = Pipe(polylist)
+            case _:
+                brush = Brush(polylist)
+
+        brush.Location = obj.location * scale
+        euler = Vector(obj.rotation_euler)
         brush.Rotation = (euler.x, euler.y, euler.z)
         return brush
     
     def build(self, context : bpy.types.Context, options : T3DBuilderOptions) -> list[Actor]:
         scene : list[Actor] = []
         objs = context.selectable_objects
-        if options.selected_objs:
+        if options.only_selection:
             objs = context.selected_objects
         for obj in objs:
-            if obj.type != 'MESH': continue
-            context.view_layer.objects.active = obj
-            bpy.ops.object.mode_set(mode='OBJECT')
-            brush = self.build_brush(obj, options)
-            scene.append(brush)
+            if(brush := self.build_brush(obj, options)):
+                scene.append(brush)
         return scene
-
-

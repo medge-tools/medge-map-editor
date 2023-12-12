@@ -17,15 +17,21 @@ class T3D_OT_Exporter(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         maxlen=255,  # Max internal buffer length, longer would be hilighted.
     )
 
-    scale_mult : bpy.props.IntProperty(
+    scale_mult: bpy.props.IntProperty(
         name='Scale Multiplier',
         default=100
     )
 
-    selected_objs : bpy.props.BoolProperty(
+    selected_objs: bpy.props.BoolProperty(
         name='Selected Objects',
         description='Only export selected objects',
         default=False
+    )
+
+    apply_scale: bpy.props.BoolProperty(
+        name='Selected Objects',
+        description='Apply scale',
+        default=True
     )
 
     def draw(self, context : bpy.types.Context):
@@ -38,8 +44,8 @@ class T3D_OT_Exporter(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
     def execute(self, context):
         try:
             options = T3DBuilderOptions()
-            options.selected_objs = self.selected_objs
-            options.scale_mult = self.scale_mult
+            options.only_selection = self.selected_objs
+            options.scale = self.scale_mult
             scene = T3DBuilder().build(context, options)
             T3DWriter().write(self.filepath, scene)
             self.report({'INFO'}, 'T3D exported successful')

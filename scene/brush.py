@@ -58,32 +58,16 @@ class Brush(Actor):
                  actor_name : str = 'Brush_',
                  brush_name : str = 'Model_',
                  brush_comp_type : str = 'Engine.Default__Brush:BrushComponent0') -> None:
+        super().__init__()
         self._Class = 'Brush'
         self._Archetype = 'Brush\'Engine.Default__Brush\''
         self._CsgOper = 'CSG_Add'
+        self._Properties : list[str] = []
         self.ActorName = actor_name + str(Brush.__id)
         self.BrushName = brush_name + str(Brush.__id)
         Brush.__id += 1
         self._Components : list[Component] = [BrushComponent(brush_comp_type)]
         self.PolyList : list[Polygon] = polylist
-        self.__Location = Location()
-        self.__Rotation = Rotation()
-
-    @property
-    def Location(self):
-        return self.__Location
-
-    @Location.setter
-    def Location(self, loc : tuple[float, float, float]):
-        self.__Location = Location(loc)
-
-    @property
-    def Rotation(self):
-        return self.__Rotation
-    
-    @Rotation.setter
-    def Rotation(self, euler : tuple[float, float, float]):
-        self.__Rotation = Rotation(Vector(euler) * EULER_TO_URU)
 
     def __str__(self) -> str:
         components = ''
@@ -96,16 +80,20 @@ class Brush(Actor):
                 poly.Link = link
                 link += 1
             polylist += str(poly)
+        props = ''
+        for prop in self._Properties:
+            props += prop + '\n'
         return \
 f'Begin Actor Class={self._Class} Name={self.ActorName} Archetype={self._Archetype}\n\
 {components}\
 CsgOper={self._CsgOper}\n\
 Begin Brush Name={self.BrushName}\n\
+{props}\
 Begin PolyList\n\
 {polylist}\
 End PolyList\n\
 End Brush\n\
 Brush=Model\'{self.BrushName}\'\n\
-Location=({self.__Location})\n\
-Rotation=({self.__Rotation})\n\
+Location=({self._Location})\n\
+Rotation=({self._Rotation})\n\
 End Actor\n'
