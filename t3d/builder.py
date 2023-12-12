@@ -18,6 +18,21 @@ class T3DBuilderOptions:
 
 # =============================================================================
 class T3DBuilder:
+    def create_brush(self,
+                     obj: bpy.types.Object, 
+                     polylist: list[Polygon]) -> Brush:
+        type: ActorType = utils.get_me_actor(obj).type
+        match(type):
+            case ActorType.LADDER:
+                brush = Ladder(polylist)
+            case ActorType.PIPE:
+                brush = Pipe(polylist)
+            case ActorType.SWING:
+                brush = Swing(polylist)
+            case _:
+                brush = Brush(polylist)
+        return brush
+
     def build_brush(self, object : bpy.types.Object, options : T3DBuilderOptions) -> Brush | None:
         # Transform to left-handed coordinate system by mirroring along the y-axis
         # Mirror the location and vertices
@@ -52,15 +67,7 @@ class T3DBuilder:
         bm.free()
 
         # Build Brush
-        type : ActorType = utils.get_me_actor(obj).type
-        match(type):
-            case ActorType.LADDER:
-                brush = Ladder(polylist)
-            case ActorType.PIPE:
-                brush = Pipe(polylist)
-            case _:
-                brush = Brush(polylist)
-
+        brush = self.create_brush(obj, polylist)
         brush.Location = obj.location * scale
         euler = Vector(obj.rotation_euler)
         brush.Rotation = (euler.x, euler.y, euler.z)

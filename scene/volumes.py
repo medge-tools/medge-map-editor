@@ -11,7 +11,7 @@ End Object\n'
 class TdMoveVolumeRenderComponent(Component):
     def __str__(self) -> str:
         return \
-'Begin Object Class=TdMoveVolumeRenderComponent Name=MovementMesh ObjName=TdMoveVolumeRenderComponent_0 Archetype=TdMoveVolumeRenderComponent\'TdGame.Default__TdLadderVolume:MovementMesh\'\n\
+'Begin Object Class=TdMoveVolumeRenderComponent Name=MovementMesh Archetype=TdMoveVolumeRenderComponent\'TdGame.Default__TdLadderVolume:MovementMesh\'\n\
 End Object\n'
 
 # =============================================================================
@@ -20,7 +20,10 @@ class Ladder(Brush):
                  polylist : list[Polygon],
                  actor_name : str = 'TdLadderVolume_',
                  brush_name : str = 'Model_') -> None:
-        super().__init__(polylist, actor_name, brush_name, 'TdGame.Default__TdLadderVolume:BrushComponent0')
+        super().__init__(polylist, 
+                         actor_name, 
+                         brush_name, 
+                         'TdGame.Default__TdLadderVolume:BrushComponent0')
         self._Class='TdLadderVolume'
         self._Archetype='TdLadderVolume\'TdGame.Default__TdLadderVolume\''
         self._Components.append(ArrowComponent())
@@ -37,9 +40,14 @@ class Pipe(Ladder):
         self._Properties.append('LadderType=LT_Pipe')
 
 # =============================================================================
-class Swing(Ladder):
+class Swing(Brush):
     def __init__(self, 
                  polylist: list[Polygon], 
-                 actor_name: str = 'TdLadderVolume_', 
+                 actor_name: str = 'TdSwingVolume_', 
                  brush_name: str = 'Model_') -> None:
         super().__init__(polylist, actor_name, brush_name)
+        self._Class='TdSwingVolume'
+        self._Archetype='TdSwingVolume\'TdGame.Default__TdSwingVolume\''
+        self._Components.append(ArrowComponent())
+        self._Components.append(TdMoveVolumeRenderComponent())
+        self._CsgOper='CSG_Active'

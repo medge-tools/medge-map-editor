@@ -19,19 +19,13 @@ class T3D_OT_Exporter(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
 
     scale_mult: bpy.props.IntProperty(
         name='Scale Multiplier',
-        default=100
+        default=800
     )
 
     selected_objs: bpy.props.BoolProperty(
         name='Selected Objects',
         description='Only export selected objects',
         default=False
-    )
-
-    apply_scale: bpy.props.BoolProperty(
-        name='Selected Objects',
-        description='Apply scale',
-        default=True
     )
 
     def draw(self, context : bpy.types.Context):

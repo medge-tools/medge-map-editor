@@ -1,6 +1,6 @@
+import math
 from mathutils import Vector
 from enum import Enum
-import math
 
 EULER_TO_URU = 65536 / math.tau
 
@@ -13,6 +13,7 @@ class ActorType(str, Enum):
     PIPE = 'PIPE'
     SWING = 'SWING'
     ZIPLINE = 'ZIPLINE'
+    SPRINGBOARD = 'SPRINGBOARD'
 
 # =============================================================================
 class Point3D(Vector):
@@ -59,21 +60,14 @@ class Actor:
         self._Location = Location()
         self._Rotation = Rotation()
 
-    @property
-    def Location(self):
-        return self.__Location
-
-    @Location.setter
+    # https://stackoverflow.com/questions/17576009/python-class-property-use-setter-but-evade-getter
     def Location(self, loc : tuple[float, float, float]):
         self._Location = Location(loc)
+    Location = property(None, Location)
 
-    @property
-    def Rotation(self):
-        return self._Rotation
-    
-    @Rotation.setter
     def Rotation(self, euler : tuple[float, float, float]):
         self._Rotation = Rotation(Vector(euler) * EULER_TO_URU)
+    Rotation = property(None, Rotation)
 
     def __str__(self) -> str:
         pass

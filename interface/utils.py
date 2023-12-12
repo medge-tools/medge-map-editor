@@ -1,6 +1,9 @@
 import bpy
-from mathutils import Matrix
+import bmesh
+from mathutils import Matrix, Vector
 from ..scene.types import ActorType
+
+COLL_GIZMO = 'GIZMOS'
 
 # =============================================================================
 def get_me_actor(obj: bpy.types.Object):
@@ -42,13 +45,13 @@ def create_mesh_object(
 # =============================================================================
 def add_arrow(scale: tuple[float, float, float] = (1, 1, 1)) -> bpy.types.Object:
     verts = [
-        (-1,   .5, 0),
-        ( 0,   .5, 0),
-        ( 0,  1.5, 0), 
-        ( 2,  0  , 0), 
-        ( 0, -1.5, 0), 
-        ( 0,  -.5, 0),
-        (-1,  -.5, 0)
+        Vector((-1,   .5, 0)),
+        Vector(( 0,   .5, 0)),
+        Vector(( 0,  1.5, 0)), 
+        Vector(( 2,  0  , 0)), 
+        Vector(( 0, -1.5, 0)), 
+        Vector(( 0,  -.5, 0)),
+        Vector((-1,  -.5, 0))
     ]
     edges = [
         (0, 1),
@@ -59,7 +62,8 @@ def add_arrow(scale: tuple[float, float, float] = (1, 1, 1)) -> bpy.types.Object
         (5, 6),
         (6, 0)
     ]
-    obj = create_mesh_object(verts, edges, [], 'Direction', 'Gizmo')
+    obj = create_mesh_object(verts, edges, [], 'Direction', COLL_GIZMO)
+    obj.scale = scale
     set_obj_selectable(obj, True)
     return obj
 
@@ -68,14 +72,14 @@ def add_brush(type: ActorType,
               scale: tuple[float, float, float] = (1, 1, 1), 
               name: str = "Actor") -> bpy.types.Object:
     verts = [
-        (-1.0, -1.0, -1.0),
-        (-1.0,  1.0, -1.0),
-        ( 1.0,  1.0, -1.0),
-        ( 1.0, -1.0, -1.0),
-        (-1.0, -1.0,  1.0),
-        (-1.0,  1.0,  1.0),
-        ( 1.0,  1.0,  1.0),
-        ( 1.0, -1.0,  1.0),
+        Vector((-1.0, -1.0, -1.0)),
+        Vector((-1.0,  1.0, -1.0)),
+        Vector(( 1.0,  1.0, -1.0)),
+        Vector(( 1.0, -1.0, -1.0)),
+        Vector((-1.0, -1.0,  1.0)),
+        Vector((-1.0,  1.0,  1.0)),
+        Vector(( 1.0,  1.0,  1.0)),
+        Vector(( 1.0, -1.0,  1.0)),
     ]
     faces = [
         (0, 1, 2, 3),
@@ -91,13 +95,31 @@ def add_brush(type: ActorType,
     obj.scale = scale
     return obj
 
+# =============================================================================
+def cleanup_gizmos():
+    coll = bpy.context.blend_data.collections.get(COLL_GIZMO)
+    if coll is not None:
+        for child in coll.objects:
+            bpy.data.objects.remove(child)
+
+# =============================================================================
+def transform(obj: bpy.types.Object, transforms: list[Matrix]):
+    set_obj_mode(obj, 'OBJECT')
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+
+    for m in transforms:
+        bmesh.ops.transform(bm, matrix=m, space=obj.matrix_local, verts=bm.verts)
+
+    bm.to_mesh(obj.data)
+    bm.free()
+
+# =============================================================================
+# Rotation mode: 
+#   https://gist.github.com/behreajj/2dbb6fb7cee78c167cd85085e67bcdf6
+# Mirror rotation: 
+#   https://www.gamedev.net/forums/topic/# 599824-mirroring-a-quaternion-against-the-yz-plane/
 def mirror_quaternion_x_axis(obj: bpy.types.Object):
-    """
-    Rotation mode: 
-        https://gist.github.com/behreajj/2dbb6fb7cee78c167cd85085e67bcdf6
-    Mirror rotation: 
-        https://www.gamedev.net/forums/topic/599824-mirroring-a-quaternion-against-the-yz-plane/
-    """
     prev_rot_mode = obj.rotation_mode
     obj.rotation_mode = 'QUATERNION'
     q = obj.rotation_quaternion
@@ -106,25 +128,7 @@ def mirror_quaternion_x_axis(obj: bpy.types.Object):
     obj.rotation_quaternion = q
     obj.rotation_mode = prev_rot_mode
 
-def apply_scale(obj: bpy.types.Object):
-    """
-    Apply transforms without using operators:
-        https://blender.stackexchange.com/a/283228
-    """
-    mlocal = obj.matrix_local
-    _, _, mscale = mlocal.decompose()
-    mscale = Matrix.LocRotScale(None, None, mscale)
-    obj.data.transform(mscale)
-    obj.scale = 1, 1, 1
-
-def apply_all_transforms(obj: bpy.types.Object):
-    mat = obj.matrix_local
-    obj.data.transform(mat)
-    obj.matrix_local = Matrix()
-    # the above line is equivalent to:
-    # C.object.location = 0, 0, 0
-    # C.object.rotation_euler = 0,
-
+# =============================================================================
 def deepcopy(obj: bpy.types.Object) -> bpy.types.Object:
     o = obj.copy()
     o.data = obj.data.copy()

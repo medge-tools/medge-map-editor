@@ -1,4 +1,3 @@
-import math
 from .types import *
 
 # =============================================================================
@@ -87,8 +86,8 @@ class Brush(Actor):
 f'Begin Actor Class={self._Class} Name={self.ActorName} Archetype={self._Archetype}\n\
 {components}\
 CsgOper={self._CsgOper}\n\
-Begin Brush Name={self.BrushName}\n\
 {props}\
+Begin Brush Name={self.BrushName}\n\
 Begin PolyList\n\
 {polylist}\
 End PolyList\n\
