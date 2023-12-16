@@ -1,6 +1,24 @@
 import bpy
-from ..scene.types import ActorType
 from .ops import *
+from ..t3d.scene import ActorType
+
+# =============================================================================
+class ME_PT_Actor(bpy.types.Panel):
+    bl_idname = 'MET_PT_actor'
+    bl_label = 'Actor'
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = 'MEdge'
+
+    def draw(self, context : bpy.types.Context):
+        obj = context.active_object
+        if not obj or obj.type != 'MESH': return
+        layout = self.layout
+        layout.use_property_decorate = False
+        layout.use_property_split = True
+
+        me_actor = utils.get_me_actor(obj)
+        layout.prop(me_actor, 'type')
 
 # =============================================================================
 class ME_PT_Volume(bpy.types.Panel):
@@ -17,8 +35,7 @@ class ME_PT_Volume(bpy.types.Panel):
 
     def row_actor(self, 
                 layout: bpy.types.UILayout, 
-                types: tuple[ActorType, ...],
-                scales: tuple[tuple[float, float, float], ...]):
+                types: tuple[ActorType, ...]):
         row = self.create_row(layout)
         for k, actor in enumerate(types):
             if actor == ActorType.NONE:
@@ -26,8 +43,6 @@ class ME_PT_Volume(bpy.types.Panel):
                 continue
             op = row.operator(ME_OT_AddActor.bl_idname, text=actor)
             op.type = actor
-            if scales != None:
-                op.scale = scales[k]
 
     def draw(self, context : bpy.types.Context):
         layout = self.layout
@@ -35,15 +50,10 @@ class ME_PT_Volume(bpy.types.Panel):
         layout.use_property_split = True
         col = layout.column(align=True)
 
-        self.row_actor(col, 
-                       (ActorType.BRUSH, ActorType.PLAYERSTART),
-                       ((1, 1, 1), (.1, 1, 1)))
-        self.row_actor(col, 
-                       (ActorType.LADDER, ActorType.PIPE), 
-                       ((.05, .05, .3), (.05, .05, .3)))
-        self.row_actor(col,
-                       (ActorType.SWING, ActorType.ZIPLINE),
-                       ((.05, .05, .03), (1, 1, 1)))
+        self.row_actor(col, (ActorType.BRUSH, ActorType.PLAYERSTART))
+        self.row_actor(col, (ActorType.LADDER, ActorType.PIPE))
+        self.row_actor(col, (ActorType.SWING, ActorType.ZIPLINE))
+        self.row_actor(col, (ActorType.SPRINGBOARD, ActorType.STATICMESH))
         
         row = self.create_row(col)
         row.operator(ME_OT_CleanupGizmos.bl_idname, text='CLEANUP GIZMOS')

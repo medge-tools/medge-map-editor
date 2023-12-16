@@ -12,8 +12,8 @@ bl_info = {
 # =============================================================================
 import bpy
 from .t3d.exporter import T3D_OT_Exporter
-from .interface.props import *
-from .interface.gui import *
+from .b3d.props import *
+from .b3d.gui import *
 from . import auto_load
 
 # =============================================================================

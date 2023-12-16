@@ -1,4 +1,4 @@
-from ..scene.types import Actor
+from .scene import Actor
 from io import TextIOWrapper
 
 # =============================================================================

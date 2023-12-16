@@ -19,7 +19,7 @@ class T3D_OT_Exporter(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
 
     scale_mult: bpy.props.IntProperty(
         name='Scale Multiplier',
-        default=800
+        default=100
     )
 
     selected_objs: bpy.props.BoolProperty(
