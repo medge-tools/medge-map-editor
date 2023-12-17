@@ -25,7 +25,7 @@ def ActorTypeProperty(callback : Callable = None):
     )
 # =============================================================================
 ACTOR_DEFAULT_SCALE = {
-    ActorType.PLAYERSTART   : (1, .5, 2),
+    ActorType.PLAYERSTART   : (.5, .5, -1),
     ActorType.BRUSH         : (1, 1, 1),
     ActorType.LADDER        : (.5, .5, 2), 
     ActorType.PIPE          : (.5, .5, 2),
@@ -42,20 +42,18 @@ class ME_PG_Gizmo(bpy.types.PropertyGroup):
 # =============================================================================
 
 class ME_OBJECT_PG_Actor(bpy.types.PropertyGroup):
-    def __clear_gizmos(self):
-        for gm in self.gizmos:
+    def __clear_widget(self):
+        for gm in self.widgets:
             if gm.obj != None:
                 bpy.data.objects.remove(gm.obj)
-        self.gizmos.clear()
+        self.widgets.clear()
 
     def __set_mesh(self, obj: bpy.types.Object):
         match(self.type):
             case ActorType.SPRINGBOARD:
                 utils.set_mesh(obj, utils.create_springboard())
             case ActorType.PLAYERSTART:
-                utils.set_mesh(obj, utils.create_pyramid(self.scale))
-                m_mir_z = Matrix.Scale(-1, 3, (0, 0, 1))
-                utils.transform(obj.data, [m_mir_z])
+                utils.set_mesh(obj, utils.create_flag(self.scale))
             case _:
                 utils.set_mesh(obj, utils.create_cube(self.scale))
 
@@ -66,43 +64,46 @@ class ME_OBJECT_PG_Actor(bpy.types.PropertyGroup):
             case _:
                 obj.display_type = 'WIRE'
 
-    def __add_gizmos(self, obj: bpy.types.Object):
+    def __add_widget(self, obj: bpy.types.Object):
         match(self.type):
             case ActorType.LADDER | ActorType.PIPE:
-                arrow = self.gizmos.add()
-                arrow.obj = utils.new_object('ARROW', utils.create_arrow(self.scale), utils.COLLECTION_GIZMO)
+                arrow = self.widgets.add()
+                arrow.obj = utils.new_object('ARROW', utils.create_arrow(self.scale), utils.COLLECTION_WIDGET)
+                arrow.obj.parent = obj
+                utils.set_obj_selectable(arrow.obj, False)
             case ActorType.SWING:
                 m_t07_x = Matrix.Translation((.7, 0, 0))
                 m_t035_x = Matrix.Translation((.2, 0, 0))
                 m_r90_x = Matrix.Rotation(math.radians(90), 3, (1, 0, 0))
                 m_r90_y = Matrix.Rotation(math.radians(90), 3, (0, 1, 0))
                 m_mir_x = Matrix.Scale(-1, 3, (1, 0, 0))
-                arrow0 = self.gizmos.add()
-                arrow1 = self.gizmos.add()
-                arrow2 = self.gizmos.add()
-                for arrow in self.gizmos:
-                    scale = self.scale * .3
-                    arrow.obj = utils.new_object('ARROW', utils.create_arrow(scale), utils.COLLECTION_GIZMO)
+                arrow0 = self.widgets.add()
+                arrow1 = self.widgets.add()
+                arrow2 = self.widgets.add()
                 utils.transform(arrow0.obj.data, [m_t07_x, m_r90_x])
                 utils.transform(arrow1.obj.data, [m_t035_x, m_r90_x, m_r90_y])
                 utils.transform(arrow2.obj.data, [m_t07_x, m_r90_x, m_mir_x])
-        for g in self.gizmos:
-            g.obj.parent = obj
-            utils.set_obj_selectable(g.obj, False)
+                for arrow in self.widgets:
+                    scale = self.scale * .3
+                    arrow.obj = utils.new_object('ARROW', utils.create_arrow(scale), utils.COLLECTION_WIDGET)
+                    arrow.obj.parent = obj
+                    utils.set_obj_selectable(arrow.obj, False)
+            case ActorType.ZIPLINE:
+                path = self.widgets.add()
+                path.obj = utils.new_object('CURVE', utils.create_curve(8), utils.COLLECTION_WIDGET)
+                path.obj.parent = obj
 
     def on_type_update(self, context : bpy.types.Context):
         obj = context.active_object
         obj.scale = 1, 1, 1
         self.scale = ACTOR_DEFAULT_SCALE[self.type]
-        self.__clear_gizmos()
+        self.__clear_widget()
         self.__set_mesh(obj)
         self.__set_display_type(obj)
-        self.__add_gizmos(obj)
+        self.__add_widget(obj)
         obj.name = str(self.type)
         utils.set_active(obj)
 
     type: ActorTypeProperty(on_type_update)
-    gizmos: bpy.props.CollectionProperty(type=ME_PG_Gizmo)
-    scale: bpy.props.FloatVectorProperty(
-        default=(1.0, 1.0, 1.0),
-        subtype='TRANSLATION')
+    scale: bpy.props.FloatVectorProperty(default=(1.0, 1.0, 1.0),subtype='TRANSLATION')
+    widgets: bpy.props.CollectionProperty(type=ME_PG_Gizmo)

@@ -3,11 +3,22 @@ import bmesh
 from mathutils import Matrix, Vector, Euler
 from ..t3d.scene import ActorType
 
-COLLECTION_GIZMO = 'GIZMOS'
+COLLECTION_WIDGET = 'WIDGET'
 
+# =============================================================================
+# HELPERS
+# -----------------------------------------------------------------------------
 # =============================================================================
 def get_me_actor(obj: bpy.types.Object):
     return obj.me_actor
+
+# =============================================================================
+def cleanup_widgets():
+    collection = bpy.context.blend_data.collections.get(COLLECTION_WIDGET)
+    if collection is not None:
+        for child in collection.objects:
+            if child.parent != None: continue
+            bpy.data.objects.remove(child)
 
 # =============================================================================
 def set_active(obj: bpy.types.Object):
@@ -38,11 +49,21 @@ def add_obj_to_collection(obj: bpy.types.Object, collection: str = None):
 
 # =============================================================================
 def transform(mesh: bpy.types.Mesh, transforms: list[Matrix]):
+    mode = bpy.context.mode
     bm = bmesh.new()
-    bm.from_mesh(mesh)
+
+    if mode == 'OBJECT':
+        bm.from_mesh(mesh)
+    elif mode == 'EDIT_MESH':
+        bm = bmesh.from_edit_mesh(mesh)
+
     for m in transforms:
         bmesh.ops.transform(bm, matrix=m, verts=bm.verts)
-    bm.to_mesh(mesh)
+
+    if mode == 'OBJECT':
+        bm.to_mesh(mesh)
+    elif mode == 'EDIT_MESH':
+        bmesh.update_edit_mesh(mesh)  
     bm.free()
 
 # =============================================================================
@@ -58,13 +79,6 @@ def get_rotation_mirrored_x_axis(obj: bpy.types.Object) -> Euler:
     q.w *= -1
     obj.rotation_mode = prev_rot_mode
     return q.to_euler()
-
-# =============================================================================
-def new_object(name: str, mesh: bpy.types.Mesh, collection: str = None):
-    obj = bpy.data.objects.new(name, mesh)
-    add_obj_to_collection(obj, collection)
-    set_active(obj)
-    return obj
 
 # =============================================================================
 def remove_mesh(mesh: bpy.types.Mesh):
@@ -90,6 +104,23 @@ def set_mesh(obj: bpy.types.Object, mesh: bpy.types.Mesh):
     obj.data = mesh
     remove_mesh(old_mesh)
 
+# =============================================================================
+# CREATORS
+# -----------------------------------------------------------------------------
+# =============================================================================
+def new_object(name: str, data : bpy.types.ID, collection: str = None):
+    obj = bpy.data.objects.new(name, data)
+    add_obj_to_collection(obj, collection)
+    set_active(obj)
+    return obj
+
+# =============================================================================
+def new_actor(type: ActorType):
+    obj = new_object('ACTOR', create_cube())
+    obj.location = bpy.context.scene.cursor.location
+    actor = get_me_actor(obj)
+    actor.type = type
+    
 # =============================================================================
 # https://blender.stackexchange.com/questions/50160/scripting-low-level-join-meshes-elements-hopefully-with-bmesh
 def join_meshes(meshes: list[bpy.types.Mesh]):
@@ -117,10 +148,8 @@ def join_meshes(meshes: list[bpy.types.Mesh]):
         if bm_to_add.edges:
             for edge in bm_to_add.edges:
                 edge_seq = tuple(bm.verts[i.index+offset] for i in edge.verts)
-                try:
-                    bm_edges(edge_seq)
-                except ValueError:
-                    # edge exists!
+                try: bm_edges(edge_seq)
+                except ValueError: # edge exists!
                     pass
             bm.edges.index_update()
         bm_to_add.free()
@@ -185,22 +214,20 @@ def create_arrow(scale: tuple[float, float] = (1, 1)) -> bpy.types.Mesh:
     return create_mesh(verts, edges, [], 'ARROW')
 
 # =============================================================================
-def create_pyramid(scale: tuple[float, float, float] = (1, 1, 1)) -> bpy.types.Mesh:
+def create_flag(scale: tuple[float, float, float] = (1, 1, 1)) -> bpy.types.Mesh:
     verts = [
         Vector((-0.5        * scale[0], -1 * scale[1], 0)),
         Vector((-0.5        * scale[0],  1 * scale[1], 0)),
         Vector(( 0.866025   * scale[0],  0           , 0)),
         Vector((-0.5        * scale[0],  0           , 1 * scale[2])),
     ]
-    edges = [
-        (0, 1),
-        (1, 2),
-        (2, 0),
-        (0, 3),
-        (1, 3),
-        (2, 3),
+    faces = [
+        (2, 1, 0),
+        (0, 1, 3),
+        (1, 2, 3),
+        (0, 3, 2)
     ]
-    return create_mesh(verts, edges, [], 'PYRAMID')
+    return create_mesh(verts, [], faces, 'FLAG')
 
 # =============================================================================
 def create_springboard(scale: tuple[float, float, float] = (1, 1, 1)) -> bpy.types.Mesh:
@@ -209,18 +236,16 @@ def create_springboard(scale: tuple[float, float, float] = (1, 1, 1)) -> bpy.typ
     big_step = create_cube((.51, .8, .72))
     transform(big_step, [Matrix.Translation((1.82, .8, .72))])
     return join_meshes([small_step, big_step])
-    
-# =============================================================================
-def cleanup_gizmos():
-    collection = bpy.context.blend_data.collections.get(COLLECTION_GIZMO)
-    if collection is not None:
-        for child in collection.objects:
-            if child.parent != None: continue
-            bpy.data.objects.remove(child)
 
 # =============================================================================
-def add_actor(type: ActorType):
-    obj = new_object('ACTOR', create_cube())
-    obj.location = bpy.context.scene.cursor.location
-    actor = get_me_actor(obj)
-    actor.type = type
+#https://blender.stackexchange.com/questions/127603/how-to-specify-nurbs-path-vertices-in-python
+def create_curve(step: int = 1) -> bpy.types.Curve:
+    curve = bpy.data.curves.new('CURVE', 'CURVE')
+    path = curve.splines.new('NURBS')
+    curve.dimensions = '3D'
+    points = [(0, 0, 0, 1), (1 * step, 0, 0, 1), (2 * step, 0, 0, 1)]
+    path.points.add(len(points)-1)
+    for k, point in enumerate(points):
+        path.points[k].co = point
+    path.use_endpoint_u = True
+    return curve

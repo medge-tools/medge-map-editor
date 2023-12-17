@@ -95,38 +95,73 @@ End Polygon\n'
 # -----------------------------------------------------------------------------
 # =============================================================================
 class Actor:
-    def __init__(self) -> None:
-        self._Location = Location()
-        self._Rotation = Rotation()
-
-    # https://stackoverflow.com/questions/17576009/python-class-property-use-setter-but-evade-getter
-    def Location(self, loc : tuple[float, float, float]):
-        self._Location = Location(loc)
-    Location = property(None, Location)
-
-    def Rotation(self, euler : tuple[float, float, float]):
-        self._Rotation = Rotation(Vector(euler) * EULER_TO_URU)
-    Rotation = property(None, Rotation)
+    def __init__(self, 
+                 location: tuple[float, float, float] = (0, 0, 0),
+                 rotation: tuple[float, float, float] = (0, 0, 0)) -> None:
+        self._Location = Location(location)
+        self._Rotation = Rotation(rotation)
 
     def __str__(self) -> str:
         pass
 
+# =============================================================================
+class WorldInfo(Actor):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def __str__(self) -> str:
+        return \
+f'Begin Actor Class=WorldInfo Name=WorldInfo_0 Archetype=WorldInfo\'Engine.Default__WorldInfo\'\n\
+End Actor\n'
+    
+# =============================================================================
+class PlayerStart(Actor):
+    def __init__(self, 
+                 location: tuple[float, float, float], 
+                 rotation: tuple[float, float, float]) -> None:
+        super().__init__(location, rotation)
+
+    def __str__(self) -> str:
+        return \
+f'Begin Actor Class=PlayerStart Name=PlayerStart_0 Archetype=PlayerStart\'Engine.Default__PlayerStart\'\n\
+Location=({self._Location})\n\
+Rotation=({self._Rotation})\n\
+End Actor\n'
+
+# =============================================================================
+class StaticMesh(Actor):
+    def __init__(self, 
+                 location: tuple[float, float, float], 
+                 rotation: tuple[float, float, float],
+                 static_mesh: str) -> None:
+        super().__init__(location, rotation)
+        self.StaticMesh: str = static_mesh
+    
+    def __str__(self) -> str:
+        return \
+f'Begin Actor Class=StaticMeshActor Name=StaticMeshActor_0 Archetype=StaticMeshActor\'Engine.Default__StaticMeshActor\'\n\
+Begin Object Class=StaticMeshComponent Name=StaticMeshComponent0 Archetype=StaticMeshComponent\'Engine.Default__StaticMeshActor:StaticMeshComponent0\'\n\
+StaticMesh=StaticMesh\'{self.StaticMesh}\'\n\
+End Object\n\
+Location=({self._Location})\n\
+Rotation=({self._Rotation})\n\
+End Actor\n'
 
 # =============================================================================
 class Brush(Actor):
     def __init__(self, 
                  polylist : list[Polygon],
-                 actor_name : str = 'Brush',
-                 brush_name : str = 'Model',
-                 brush_comp_type : str = 'Engine.Default__Brush:BrushComponent0') -> None:
-        super().__init__()
-        self._Class = 'Brush'
-        self._Archetype = 'Brush\'Engine.Default__Brush\''
-        self._CsgOper = 'CSG_Add'
-        self._Properties : list[str] = []
-        self.ActorName = actor_name
-        self.BrushName = brush_name
-        self._BrushCompType = brush_comp_type
+                 location: tuple[float, float, float], 
+                 rotation: tuple[float, float, float],
+                 class_name: str = 'Brush',
+                 package_name: str = 'Engine.Default__Brush',
+                 csg_oper: str = 'CSG_Add') -> None:
+        super().__init__(location, rotation)
+        self._Package = package_name
+        self._Class = class_name
+        self._Archetype = class_name + '\'' + package_name + '\''
+        self._CsgOper = csg_oper
+        self._Settings : list[str] = []
         self.PolyList : list[Polygon] = polylist
 
     def __str__(self) -> str:
@@ -138,64 +173,20 @@ class Brush(Actor):
                 link += 1
             polylist += str(poly)
         props = ''
-        for prop in self._Properties:
+        for prop in self._Settings:
             props += prop + '\n'
         return \
-f'Begin Actor Class={self._Class} Name={self.ActorName}_0 Archetype={self._Archetype}\n\
-Begin Object Class=BrushComponent Name=BrushComponent0 Archetype=BrushComponent\'{self._BrushCompType}\'\n\
+f'Begin Actor Class={self._Class} Name={self._Class}_0 Archetype={self._Archetype}\n\
+Begin Object Class=BrushComponent Name=BrushComponent0 Archetype=BrushComponent\'{self._Package}:BrushComponent0\'\n\
 End Object\n\
 CsgOper={self._CsgOper}\n\
 {props}\
-Begin Brush Name={self.BrushName}_0\n\
+Begin Brush Name=Model_0\n\
 Begin PolyList\n\
 {polylist}\
 End PolyList\n\
 End Brush\n\
-Brush=Model\'{self.BrushName}_0\'\n\
-Location=({self._Location})\n\
-Rotation=({self._Rotation})\n\
-End Actor\n'
-
-# =============================================================================
-class WorldInfo(Actor):
-    def __init__(self, name : str = 'WorldInfo_') -> None:
-        super().__init__()
-        self.Name = name
-
-    def __str__(self) -> str:
-        return \
-f'Begin Actor Class=WorldInfo Name={self.Name}_0 Archetype=WorldInfo\'Engine.Default__WorldInfo\'\n\
-End Actor\n'
-    
-# =============================================================================
-class PlayerStart(Actor):
-    def __init__(self, name : str = 'PlayerStart') -> None:
-        super().__init__()
-        self.Name = name
-
-    def __str__(self) -> str:
-        return \
-f'Begin Actor Class=PlayerStart Name={self.Name}_0 Archetype=PlayerStart\'Engine.Default__PlayerStart\'\n\
-Location=({self._Location})\n\
-Rotation=({self._Rotation})\n\
-End Actor\n'
-
-# =============================================================================
-class StaticMesh(Actor):
-    def __init__(self, 
-                 static_mesh: str,
-                 name : str = 'StaticMeshActor'
-                 ) -> None:
-        super().__init__()
-        self.Name = name
-        self.StaticMesh: str = static_mesh
-    
-    def __str__(self) -> str:
-        return \
-f'Begin Actor Class=StaticMeshActor Name={self.Name}_0 Archetype=StaticMeshActor\'Engine.Default__StaticMeshActor\'\n\
-Begin Object Class=StaticMeshComponent Name=StaticMeshComponent0 Archetype=StaticMeshComponent\'Engine.Default__StaticMeshActor:StaticMeshComponent0\'\n\
-StaticMesh=StaticMesh\'{self.StaticMesh}\'\n\
-End Object\n\
+Brush=Model\'Model_0\'\n\
 Location=({self._Location})\n\
 Rotation=({self._Rotation})\n\
 End Actor\n'
@@ -207,32 +198,48 @@ End Actor\n'
 class Ladder(Brush):
     def __init__(self, 
                  polylist : list[Polygon],
-                 actor_name : str = 'TdLadderVolume_',
-                 brush_name : str = 'Model_') -> None:
-        super().__init__(polylist, 
-                         actor_name, 
-                         brush_name, 
-                         'TdGame.Default__TdLadderVolume:BrushComponent0')
-        self._Class='TdLadderVolume'
-        self._Archetype='TdLadderVolume\'TdGame.Default__TdLadderVolume\''
-        self._CsgOper='CSG_Active'
+                 location: tuple[float, float, float], 
+                 rotation: tuple[float, float, float]
+                 ) -> None:
+        super().__init__(polylist, location, rotation,
+                         'TdLadderVolume',
+                         'TdGame.Default__TdLadderVolume',
+                         'CSG_Active')
 
 # =============================================================================
 class Pipe(Ladder):
-    def __init__(self, 
-                 polylist: list[Polygon], 
-                 actor_name: str = 'TdLadderVolume_', 
-                 brush_name: str = 'Model_') -> None:
-        super().__init__(polylist, actor_name, brush_name)
-        self._Properties.append('LadderType=LT_Pipe')
+    def __init__(self, polylist: list[Polygon],
+                 location: tuple[float, float, float], 
+                 rotation: tuple[float, float, float]) -> None:
+        super().__init__(polylist, location, rotation)
+        self._Settings.append('LadderType=LT_Pipe')
 
 # =============================================================================
 class Swing(Brush):
+    def __init__(self, polylist: list[Polygon],
+                 location: tuple[float, float, float], 
+                 rotation: tuple[float, float, float]) -> None:
+        super().__init__(polylist, location, rotation,
+                         'TdSwingVolume',
+                         'TdGame.Default__TdSwingVolume',
+                         'CSG_Active')
+
+# =============================================================================
+class Zipline(Brush):
     def __init__(self, 
-                 polylist: list[Polygon], 
-                 actor_name: str = 'TdSwingVolume_', 
-                 brush_name: str = 'Model_') -> None:
-        super().__init__(polylist, actor_name, brush_name)
-        self._Class='TdSwingVolume'
-        self._Archetype='TdSwingVolume\'TdGame.Default__TdSwingVolume\''
-        self._CsgOper='CSG_Active'
+                 polylist: list[Polygon],
+                 rotation: tuple[float, float, float],
+                 start: tuple[float, float, float],
+                 middle: tuple[float, float, float],
+                 end: tuple[float, float, float]) -> None:
+        super().__init__(polylist, start, rotation,
+                         'TdZiplineVolume',
+                         'TdGame.Default__TdZiplineVolume',
+                         'CSG_Active')
+        self._Settings.append(f'Start=({Location(start)})')
+        self._Settings.append(f'End=({Location(end)})')
+        self._Settings.append(f'Middle=({Location(middle)})')
+        self._Settings.append('bHideSplineMarkers=False')
+        self._Settings.append('bAllowSplineControl=True')
+        self._Settings.append('OldScale=(X=1.000000,Y=1.000000,Z=1.000000)')
+        self._Settings.append(f'OldLocation=({Location(start)})')

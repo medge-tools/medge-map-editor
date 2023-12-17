@@ -11,7 +11,7 @@ class ME_OT_AddActor(bpy.types.Operator):
     type: props.ActorTypeProperty()
 
     def execute(self, context : bpy.types.Context):
-        utils.add_actor(self.type)
+        utils.new_actor(self.type)
         return {'FINISHED'}
 
 # =============================================================================
@@ -21,5 +21,5 @@ class ME_OT_CleanupGizmos(bpy.types.Operator):
     bl_options = {'UNDO'}
 
     def execute(self, context: bpy.types.Context):
-        utils.cleanup_gizmos()
+        utils.cleanup_widgets()
         return {'FINISHED'}
