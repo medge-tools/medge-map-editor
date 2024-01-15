@@ -21,7 +21,7 @@ class T3DBuilder:
 
     def __get_location_rotation(self, obj: bpy.types.Object) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
         rot = utils.get_rotation_mirrored_x_axis(obj)
-        location = obj.location * self.scale * self.mirror
+        location = obj.matrix_world.translation * self.scale * self.mirror
         rotation = (rot.x, rot.y, rot.z)
         return location, rotation
 
@@ -86,9 +86,10 @@ class T3DBuilder:
         match(me_actor.type):
             case ActorType.PLAYERSTART:
                 actor = PlayerStart(*self.__get_location_rotation(obj))
-            case ActorType.SPRINGBOARD:
+            case ActorType.STATICMESH | ActorType.SPRINGBOARD:
                 location, rotation = self.__get_location_rotation(obj)
-                actor = StaticMesh(location, rotation, 'P_Gameplay.SpringBoard.SpringBoardHigh_ColMesh')
+                static_mesh = me_actor.static_mesh_package + '.' + me_actor.static_mesh_name
+                actor = StaticMesh(location, rotation, static_mesh)
             case ActorType.ZIPLINE:
                 actor = self.__build_zipline(obj)
             case _:

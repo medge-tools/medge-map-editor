@@ -51,7 +51,8 @@ class Location(Point3D):
 # =============================================================================
 class Rotation(Point3D):
     def __init__(self, point : tuple[float, float, float] = (0, 0, 0)) -> None:
-        super().__init__(point)
+        rotation = Vector(point) * EULER_TO_URU
+        super().__init__(rotation)
         self.set_prefix('Roll', 'Pitch', 'Yaw')
         self.set_format('{:.0f}')
 
