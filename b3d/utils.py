@@ -1,12 +1,14 @@
 import bpy
 import bmesh
-from mathutils import Matrix, Vector, Euler
-from ..t3d.scene import ActorType
+from mathutils import Matrix, Euler
+from . import props
 
 COLLECTION_WIDGET = 'WIDGET'
-
 # =============================================================================
-def get_me_actor(obj: bpy.types.Object):
+# HELPERS
+# -----------------------------------------------------------------------------
+# =============================================================================
+def get_me_actor(obj: bpy.types.Object) -> props.ME_OBJECT_PG_Actor:
     return obj.me_actor
 
 # =============================================================================
@@ -96,6 +98,10 @@ def get_rotation_mirrored_x_axis(obj: bpy.types.Object) -> Euler:
     return q.to_euler()
 
 # =============================================================================
+def remove_object(obj : bpy.types.Object):
+    bpy.data.objects.remove(obj)
+
+# =============================================================================
 def remove_mesh(mesh: bpy.types.Mesh):
     # Extra test because this can crash Blender if not done correctly.
     result = False
@@ -156,3 +162,31 @@ def join_meshes(meshes: list[bpy.types.Mesh]):
     bm.to_mesh(meshes[0])
     bm.free()
     return meshes[0]
+
+# =============================================================================
+def deselect_all():
+    for obj in bpy.context.selected_objects:
+        obj.select_set(False)
+
+# =============================================================================
+# HANDLER CALLBACK
+# -----------------------------------------------------------------------------
+# =============================================================================
+def add_callback(handler, function):
+    for fn in handler:
+        if fn.__name__ == function.__name__: return
+    handler.append(function)
+
+# =============================================================================
+def remove_callback(handler, function):
+    for fn in handler:
+        if fn.__name__ == function.__name__:
+            handler.remove(fn)
+
+# =============================================================================
+def on_depsgraph_update_post(scene : bpy.types.Scene, depsgraph : bpy.types.Depsgraph):
+    for obj in scene.objects:
+        me_actor = get_me_actor(obj)
+        if me_actor is None: continue
+        if me_actor.static_mesh_name != obj.name:
+            me_actor.static_mesh_name = obj.name

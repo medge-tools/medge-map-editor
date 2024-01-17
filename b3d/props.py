@@ -4,7 +4,7 @@ from typing import Callable
 from mathutils import Matrix
 from ..t3d.scene import ActorType
 from . import utils
-from . import creator
+from . import medge_tools as medge
 
 # =============================================================================
 def ActorTypeProperty(callback : Callable = None):
@@ -38,14 +38,14 @@ ACTOR_DEFAULT_SCALE = {
 
 # =============================================================================
 ACTOR_DEFAULT_STATIC_MESH = {
-    ActorType.PLAYERSTART   : ('', ''),
-    ActorType.BRUSH         : ('', ''),
+    ActorType.PLAYERSTART   : ('MyPackage', ''),
+    ActorType.BRUSH         : ('MyPackage', ''),
     ActorType.LADDER        : ('P_Generic.Ladders', 'S_LadderSystem_01b'),
     ActorType.PIPE          : ('P_Pipes.PipeSystem_03', 'S_PipeSystem_03h'),
     ActorType.SWING         : ('P_RunnerObjects.SwingPole_01', 'S_SwingPole_01c'),
-    ActorType.ZIPLINE       : ('', ''),
+    ActorType.ZIPLINE       : ('MyPackage', ''),
     ActorType.SPRINGBOARD   : ('P_Gameplay.SpringBoard', 'SpringBoardHigh_ColMesh'),
-    ActorType.STATICMESH    : ('', ''),
+    ActorType.STATICMESH    : ('MyPackage', ''),
 }
 
 # =============================================================================
@@ -54,30 +54,42 @@ class ME_PG_Gizmo(bpy.types.PropertyGroup):
 
 # =============================================================================
 class ME_OBJECT_PG_Actor(bpy.types.PropertyGroup):
-    def __clear_widget(self):
+    def __reset(self):
+        self.scale = ACTOR_DEFAULT_SCALE[self.type]
+        self.ase_export = False
+        self.static_mesh_package, self.static_mesh_name = ACTOR_DEFAULT_STATIC_MESH[self.type]
+    
+    def __clear_widgets(self):
         for gm in self.widgets:
             if gm.obj != None:
                 bpy.data.objects.remove(gm.obj)
         self.widgets.clear()
 
-    def __set_default_static_mesh(self):
-        self.static_mesh_package, self.static_mesh_name = ACTOR_DEFAULT_STATIC_MESH[self.type]
-        self.enable_static_mesh = False
-        if(self.static_mesh_package and self.static_mesh_name): 
-            self.enable_static_mesh = True
-
     def __set_mesh(self, obj: bpy.types.Object):
         match(self.type):
             case ActorType.SPRINGBOARD:
-                utils.set_mesh(obj, creator.create_springboard())
+                utils.set_mesh(obj, medge.create_springboard())
             case ActorType.PLAYERSTART:
-                utils.set_mesh(obj, creator.create_flag(self.scale))
+                utils.set_mesh(obj, medge.create_flag(self.scale))
+            case ActorType.ZIPLINE:
+                # Creat volume
+                utils.set_mesh(obj, medge.create_cube(self.scale)) 
+                # Create zipline
+                path = medge.new_actor(ActorType.STATICMESH, 'CURVE')
+                path.parent = obj
+                path.location = 0, 0, 0
+                utils.set_mesh(path, medge.create_curve(step=8))
+                me_actor = utils.get_me_actor(path)
+                me_actor.static_mesh_name = 'Zipline'
+                me_actor.ase_export = True
+                path.data.bevel_depth = 0.04
             case _:
-                utils.set_mesh(obj, creator.create_cube(self.scale))
+                if obj.type == 'MESH':
+                    utils.set_mesh(obj, medge.create_cube(self.scale))
 
     def __set_display_type(self, obj: bpy.types.Object):
         match(self.type):
-            case ActorType.BRUSH | ActorType.SPRINGBOARD:
+            case ActorType.BRUSH | ActorType.SPRINGBOARD | ActorType.STATICMESH:
                 obj.display_type = 'TEXTURED'
             case _:
                 obj.display_type = 'WIRE'
@@ -86,7 +98,7 @@ class ME_OBJECT_PG_Actor(bpy.types.PropertyGroup):
         match(self.type):
             case ActorType.LADDER | ActorType.PIPE:
                 arrow = self.widgets.add()
-                arrow.obj = utils.new_object('ARROW', creator.create_arrow(self.scale), utils.COLLECTION_WIDGET, obj)
+                arrow.obj = utils.new_object('ARROW', medge.create_arrow(self.scale), utils.COLLECTION_WIDGET, obj)
                 utils.set_obj_selectable(arrow.obj, False)
             case ActorType.SWING:
                 m_t07_x = Matrix.Translation((.7, 0, 0))
@@ -99,50 +111,56 @@ class ME_OBJECT_PG_Actor(bpy.types.PropertyGroup):
                 arrow2 = self.widgets.add()
                 for arrow in self.widgets:
                     scale = self.scale * .3
-                    arrow.obj = utils.new_object('ARROW', creator.create_arrow(scale), utils.COLLECTION_WIDGET, obj)
+                    arrow.obj = utils.new_object('ARROW', medge.create_arrow(scale), utils.COLLECTION_WIDGET, obj)
                     utils.set_obj_selectable(arrow.obj, False)
-                utils.transform(arrow0.obj.data, [m_t07_x, m_r90_x])
+                utils.transform(arrow0.obj.data, [m_t07_x , m_r90_x])
                 utils.transform(arrow1.obj.data, [m_t035_x, m_r90_x, m_r90_y])
-                utils.transform(arrow2.obj.data, [m_t07_x, m_r90_x, m_mir_x])
-            case ActorType.ZIPLINE:
-                path = self.widgets.add()
-                path.obj = utils.new_object('CURVE', creator.create_curve(8), utils.COLLECTION_WIDGET, obj)
+                utils.transform(arrow2.obj.data, [m_t07_x , m_r90_x, m_mir_x])                
 
     def __on_type_update(self, context : bpy.types.Context):
         obj = context.active_object
         obj.scale = 1, 1, 1
-        self.scale = ACTOR_DEFAULT_SCALE[self.type]
-        self.__clear_widget()
-        self.__set_default_static_mesh()
+        self.__reset()
+        self.__clear_widgets()
         self.__set_mesh(obj)
         self.__set_display_type(obj)
         self.__add_widget(obj)
         obj.name = str(self.type)
         utils.set_active(obj)
+        self.parent = obj
 
-    def add_static_mesh(self, context : bpy.types.Context):
+    def __on_static_mesh_name_update(self, context : bpy.types.Context):
+        if context.active_object != self.parent: return
+        obj = context.active_object
+        if obj.name != self.static_mesh_name:
+            obj.name = self.static_mesh_name
+        # obj.name might be changed by Blender; we update self.static_mesh_name in utils.on_depsgraph_update
+
+    def __on_static_mesh_prefab_update(self, context : bpy.types.Context):
+        obj = context.active_object
         prefab = self.static_mesh_prefab
-        if(not prefab): return False
-        parent = context.active_object
-        obj = creator.new_actor(ActorType.STATICMESH)
+        if not prefab: return
         utils.set_mesh(obj, prefab.data)
-        obj.parent = parent
-        me_actor = utils.get_me_actor(obj)
-        me_actor.copy_static_mesh(utils.get_me_actor(parent))
-        return True
-    
-    def copy_static_mesh(self, actor : 'ME_OBJECT_PG_Actor'):
-        self.enable_static_mesh = True
-        self.static_mesh_package = actor.static_mesh_package
-        self.static_mesh_name = actor.static_mesh_name
 
-    type: ActorTypeProperty(__on_type_update)
-    scale: bpy.props.FloatVectorProperty(default=(1.0, 1.0, 1.0), subtype='TRANSLATION')
-    widgets: bpy.props.CollectionProperty(type=ME_PG_Gizmo)
-    enable_static_mesh: bpy.props.BoolProperty(name="Enable Static Mesh", default=False)
-    static_mesh_package: bpy.props.StringProperty(name="Package")
-    static_mesh_name: bpy.props.StringProperty(name="Name")
-    static_mesh_prefab: bpy.props.PointerProperty(type=bpy.types.Object, name="Placeholder")
-    enable_material: bpy.props.BoolProperty(name="Enable Material", default=False, )
-    material_package: bpy.props.StringProperty(name="Package")
-    material_name: bpy.props.StringProperty(name="Name")
+    type : ActorTypeProperty(__on_type_update)
+    scale : bpy.props.FloatVectorProperty(default=(1.0, 1.0, 1.0), subtype='TRANSLATION')
+    widgets : bpy.props.CollectionProperty(type=ME_PG_Gizmo)
+    parent : bpy.props.PointerProperty(type=bpy.types.Object)
+    static_mesh_use_prefab : bpy.props.BoolProperty(name='Use Placeholder', default=False)
+    static_mesh_package : bpy.props.StringProperty(name='Package')
+    static_mesh_name : bpy.props.StringProperty(name='Name', update=__on_static_mesh_name_update)
+    static_mesh_prefab : bpy.props.PointerProperty(type=bpy.types.Object, name='Placeholder', update=__on_static_mesh_prefab_update)
+    enable_material : bpy.props.BoolProperty(name='Enable Material', default=False, )
+    material_package : bpy.props.StringProperty(name='Package')
+    material_name : bpy.props.StringProperty(name='Name')
+    ase_export : bpy.props.BoolProperty(name='Export ASE', default=False, description='Mesh will be export as .ase file.')
+
+# =============================================================================
+def copy_me_actor(src : ME_OBJECT_PG_Actor, dest : ME_OBJECT_PG_Actor):
+    dest.scale                  = src.scale
+    dest.static_mesh_package    = src.static_mesh_package
+    dest.static_mesh_name       = src.static_mesh_name
+    dest.enable_material        = src.enable_material
+    dest.material_package       = src.material_package
+    dest.material_name          = src.material_name
+    dest.ase_export             = src.ase_export
