@@ -27,11 +27,11 @@ def register():
     auto_load.register()
     bpy.types.Object.me_actor = bpy.props.PointerProperty(type=ME_OBJECT_PG_Actor)
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
-    utils.add_callback(depsgraph_update_post, on_depsgraph_update_post_sync_static_mesh_name)
+    utils.add_callback(depsgraph_update_post, ME_ACTOR_PG_StaticMesh.on_depsgraph_update_post_sync_static_mesh_name)
 
 # =============================================================================
 def unregister():
-    utils.remove_callback(depsgraph_update_post, on_depsgraph_update_post_sync_static_mesh_name)
+    utils.remove_callback(depsgraph_update_post, ME_ACTOR_PG_StaticMesh.on_depsgraph_update_post_sync_static_mesh_name)
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
     del bpy.types.Object.me_actor
     auto_load.unregister()

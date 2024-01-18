@@ -26,6 +26,10 @@ def select_obj(obj: bpy.types.Object):
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
 
+def select_all() -> None:
+    for obj in bpy.context.scene.objects:
+        select_obj(obj)
+
 # =============================================================================
 def deselect_all() -> None:
     for obj in bpy.context.selected_objects:
@@ -134,6 +138,18 @@ def join_meshes(meshes: list[bpy.types.Mesh]) -> None:
     return meshes[0]
 
 # =============================================================================
+def convert_to_mesh_in_place(obj: bpy.types.Object):
+    set_active(obj)
+    bpy.ops.object.convert(target='MESH') 
+
+# =============================================================================
+def convert_to_new_mesh(obj: bpy.types.Object) -> bpy.types.Object:
+    mesh = bpy.data.meshes.new_from_object(obj)
+    new_obj = new_object(obj.name, mesh)
+    new_obj.matrix_world = obj.matrix_world 
+    return new_obj
+
+# =============================================================================
 #https://blender.stackexchange.com/questions/127603/how-to-specify-nurbs-path-vertices-in-python
 def create_curve(num_points : int = 3, step: int = 1, dir : tuple[float, float, float] = (1, 0, 0)) -> bpy.types.Curve:
     curve = bpy.data.curves.new('CURVE', 'CURVE')
@@ -194,6 +210,70 @@ def apply_all_transforms(obj: bpy.types.Object) -> None:
         c.matrix_local = mb @ c.matrix_local
         
     obj.matrix_basis.identity()
+
+
+# =============================================================================
+# CREATE
+# -----------------------------------------------------------------------------
+# =============================================================================
+def create_cube(scale: tuple[float, float, float] = (1, 1, 1)) -> bpy.types.Mesh:
+    verts = [
+        Vector((-1 * scale[0], -1 * scale[1], -1 * scale[2])),
+        Vector((-1 * scale[0],  1 * scale[1], -1 * scale[2])),
+        Vector(( 1 * scale[0],  1 * scale[1], -1 * scale[2])),
+        Vector(( 1 * scale[0], -1 * scale[1], -1 * scale[2])),
+        Vector((-1 * scale[0], -1 * scale[1],  1 * scale[2])),
+        Vector((-1 * scale[0],  1 * scale[1],  1 * scale[2])),
+        Vector(( 1 * scale[0],  1 * scale[1],  1 * scale[2])),
+        Vector(( 1 * scale[0], -1 * scale[1],  1 * scale[2])),
+    ]
+    faces = [
+        (0, 1, 2, 3),
+        (7, 6, 5, 4),
+        (4, 5, 1, 0),
+        (7, 4, 0, 3),
+        (6, 7, 3, 2),
+        (5, 6, 2, 1),
+    ]
+    return create_mesh(verts, [], faces, 'CUBE')
+
+# =============================================================================
+def create_arrow(scale: tuple[float, float] = (1, 1)) -> bpy.types.Mesh:
+    verts = [
+        Vector((-1 * scale[0],  0.4 * scale[1], 0)),
+        Vector(( 0 * scale[0],  0.4 * scale[1], 0)),
+        Vector(( 0 * scale[0],  1   * scale[1], 0)), 
+        Vector(( 1 * scale[0],  0   * scale[1], 0)), 
+        Vector(( 0 * scale[0], -1   * scale[1], 0)), 
+        Vector(( 0 * scale[0], -0.4 * scale[1], 0)),
+        Vector((-1 * scale[0], -0.4 * scale[1], 0)),
+    ]
+    edges = [
+        (0, 1),
+        (1, 2),
+        (2, 3),
+        (3, 4),
+        (4, 5),
+        (5, 6),
+        (6, 0),
+    ]
+    return create_mesh(verts, edges, [], 'ARROW')
+
+# =============================================================================
+def create_flag(scale: tuple[float, float, float] = (1, 1, 1)) -> bpy.types.Mesh:
+    verts = [
+        Vector((-0.5        * scale[0], -1 * scale[1], 0)),
+        Vector((-0.5        * scale[0],  1 * scale[1], 0)),
+        Vector(( 0.866025   * scale[0],  0           , 0)),
+        Vector((-0.5        * scale[0],  0           , 1 * scale[2])),
+    ]
+    faces = [
+        (2, 1, 0),
+        (0, 1, 3),
+        (1, 2, 3),
+        (0, 3, 2)
+    ]
+    return create_mesh(verts, [], faces, 'FLAG')
 
 # =============================================================================
 # HANDLER CALLBACK

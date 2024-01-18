@@ -13,41 +13,39 @@ class ME_PT_Actor(bpy.types.Panel):
 
     def draw(self, context : bpy.types.Context):
         obj = context.active_object
-        layout = self.layout
         if not obj: return
-
+        
         me_actor = medge.get_me_actor(obj)
-        col = layout.column(align=True)
 
+        layout = self.layout
+        layout.use_property_decorate = False
+        layout.use_property_split = True
+
+        col = layout.column(align=True)
         col.prop(me_actor, 'type')
+        col.prop(me_actor, 't3d_export')
 
         if me_actor.type == ActorType.NONE: return
 
-        col.use_property_decorate = False
-        col.use_property_split = True
+        match(me_actor.type):
+            case ActorType.PLAYERSTART:
+                actor = me_actor.player_start
+            case ActorType.BRUSH:
+                actor = me_actor.brush
+            case ActorType.LADDER:
+                actor = me_actor.ladder
+            case ActorType.PIPE:
+                actor = me_actor.pipe
+            case ActorType.SWING:
+                actor = me_actor.swing
+            case ActorType.ZIPLINE:
+                actor = me_actor.zipline
+            case ActorType.SPRINGBOARD:
+                actor = me_actor.springboard
+            case ActorType.STATICMESH:
+                actor = me_actor.static_mesh
 
-
-        if(me_actor.type == ActorType.STATICMESH):
-            col.prop(me_actor, 'use_material')
-            col.prop(me_actor, 'use_prefab')
-            col.prop(me_actor, 't3d_export')
-            if not me_actor.use_prefab:
-                col.prop(me_actor, 'ase_export')
-
-            col = layout.column(align=True)
-            col.label(text='Static Mesh')
-            if not me_actor.use_prefab:
-                col.prop(me_actor, 'static_mesh_package')
-                col.prop(me_actor, 'static_mesh_name')
-
-            if me_actor.use_prefab:
-                col.prop(me_actor, 'prefab')
-
-            if(me_actor.use_material):
-                col = layout.column(align=True)
-                col.label(text='Material')
-                col.prop(me_actor, 'material_package')
-                col.prop(me_actor, 'material_name')
+        actor.draw(layout)
 
 # =============================================================================
 class ME_PT_Volume(bpy.types.Panel):

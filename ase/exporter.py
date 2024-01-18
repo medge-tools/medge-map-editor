@@ -34,11 +34,15 @@ class ME_OT_ASE_Export(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
     def execute(self, context : bpy.types.Context):
         # Apply transform to temporary copies and mirror x-axis
         temp_objs_to_export = []
-        for obj in context.selectable_objects:
-            if not medge.get_me_actor(obj).ase_export: continue
+        utils.select_all()
+        for obj in context.selected_objects:
+            me_actor = medge.get_me_actor(obj)
+            if me_actor.type != ActorType.STATICMESH: continue
+            if not me_actor.static_mesh.ase_export: continue
             # Convert curves to meshes
             if obj.type == 'CURVE':
-                new_obj = medge.curve_to_mesh(obj)
+                new_obj = utils.copy_object(obj)
+                utils.convert_to_mesh_in_place(new_obj)
             else:
                 new_obj = utils.copy_object(obj)
 
@@ -63,9 +67,6 @@ class ME_OT_ASE_Export(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         # Select objects to export
         utils.deselect_all()
         for obj in temp_objs_to_export:
-            me_actor = medge.get_me_actor(obj)
-            if obj.type != 'MESH': continue
-            if me_actor.ase_export != True: continue
             utils.select_obj(obj)
 
         try:

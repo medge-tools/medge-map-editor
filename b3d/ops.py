@@ -1,7 +1,7 @@
 import bpy
 from . import props
 from . import medge_tools
-
+from . import utils
 # =============================================================================
 class ME_OT_AddActor(bpy.types.Operator):
     bl_idname = 'met.add_actor'

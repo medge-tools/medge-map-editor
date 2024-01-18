@@ -49,7 +49,7 @@ class T3DBuilder:
         bm.free()
         return polylist
 
-    def __build_brush(self, obj : bpy.types.Object) -> Brush:
+    def __build_volume(self, obj : bpy.types.Object) -> Brush:
         polylist = self.__create_polygons(obj)
         type: ActorType = medge.get_me_actor(obj).type
         location, rotation = self.__get_location_rotation(obj)
@@ -79,16 +79,14 @@ class T3DBuilder:
                 return Zipline(polylist, rotation, start, middle, end)
 
     def __build_static_mesh(self, obj: bpy.types.Object) -> Actor:
-        me_actor = medge.get_me_actor(obj)
+        static_mesh = medge.get_me_actor(obj).static_mesh
         location, rotation = self.__get_location_rotation(obj)
-        if me_actor.use_prefab:
-            prefab = me_actor.prefab
-            ma = medge.get_me_actor(prefab)
-            print(ma.get_static_mesh())
-            return StaticMesh(location, rotation, ma.get_static_mesh())
+        if static_mesh.use_prefab:
+            prefab = static_mesh.prefab
+            path = medge.get_me_actor(prefab).static_mesh.path()
+            return StaticMesh(location, rotation, path)
         else:
-            print('else ' + me_actor.get_static_mesh())
-            return StaticMesh(location, rotation, me_actor.get_static_mesh())
+            return StaticMesh(location, rotation, static_mesh.path())
         
     def __build_actor(self, obj : bpy.types.Object) -> Actor | None:
         if obj.type != 'MESH': return None
@@ -110,7 +108,7 @@ class T3DBuilder:
             case ActorType.ZIPLINE:
                 actor = self.__build_zipline(obj)
             case _:
-                actor = self.__build_brush(obj)
+                actor = self.__build_volume(obj)
         return actor
     
     def build(self, context : bpy.types.Context, options : T3DBuilderOptions) -> list[Actor]:
