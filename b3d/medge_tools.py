@@ -4,6 +4,8 @@ from ..t3d.scene import ActorType
 from . import utils
 from . import props
 
+
+COLLECTION_WIDGET = 'WIDGET'
 # =============================================================================
 # CREATORS
 # -----------------------------------------------------------------------------
@@ -24,6 +26,15 @@ def new_actor(actor_type: ActorType, object_type = 'MESH', data = None) -> bpy.t
     if data is not None:
         utils.set_mesh(obj, data)
     return obj
+
+# =============================================================================
+def cleanup_widgets():
+    collection = bpy.context.blend_data.collections.get(COLLECTION_WIDGET)
+    if collection is not None:
+        for child in collection.objects:
+            if child.parent != None: continue
+            bpy.data.objects.remove(child)
+
 
 # =============================================================================
 def curve_to_mesh(obj : bpy.types.Object) -> bpy.types.Object:
@@ -103,18 +114,12 @@ def create_springboard(scale: tuple[float, float, float] = (1, 1, 1)) -> bpy.typ
     utils.transform(big_step, [Matrix.Translation((1.82, .8, .72))])
     return utils.join_meshes([small_step, big_step])
 
-# =============================================================================
-#https://blender.stackexchange.com/questions/127603/how-to-specify-nurbs-path-vertices-in-python
-def create_curve(num_points : int = 3, step: int = 1, dir : tuple[float, float, float] = (1, 0, 0)) -> bpy.types.Curve:
-    curve = bpy.data.curves.new('CURVE', 'CURVE')
-    path = curve.splines.new('NURBS')
-    curve.dimensions = '3D'
-    points = []
-    for k in range(num_points):
-        p = Vector(dir) * Vector((1, 1, 1)) * step * k
-        points.append((*p, 1))
-    path.points.add(len(points)-1)
-    for k, point in enumerate(points):
-        path.points[k].co = point
-    path.use_endpoint_u = True
-    return curve
+def create_zipline() -> bpy.types.Object:
+    zipline = new_actor(ActorType.STATICMESH, 'CURVE')
+    utils.set_mesh(zipline, utils.create_curve(step=8))
+    me_actor = get_me_actor(zipline)
+    me_actor.static_mesh_name = 'Zipline'
+    me_actor.ase_export = True
+    zipline.data.bevel_depth = 0.04
+    zipline.data.use_fill_caps = True
+    return zipline

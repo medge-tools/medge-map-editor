@@ -81,20 +81,24 @@ class T3DBuilder:
     def __build_static_mesh(self, obj: bpy.types.Object) -> Actor:
         me_actor = medge.get_me_actor(obj)
         location, rotation = self.__get_location_rotation(obj)
-        if me_actor.static_mesh_use_prefab:
-            prefab = me_actor.static_mesh_prefab
+        if me_actor.use_prefab:
+            prefab = me_actor.prefab
             ma = medge.get_me_actor(prefab)
+            print(ma.get_static_mesh())
             return StaticMesh(location, rotation, ma.get_static_mesh())
         else:
+            print('else ' + me_actor.get_static_mesh())
             return StaticMesh(location, rotation, me_actor.get_static_mesh())
         
     def __build_actor(self, obj : bpy.types.Object) -> Actor | None:
-        me_actor = medge.get_me_actor(obj)
-        if not me_actor or me_actor.type == ActorType.NONE or obj.type != 'MESH': 
-            return None
-        
-        utils.set_obj_mode(obj, 'OBJECT')
+        if obj.type != 'MESH': return None
 
+        me_actor = medge.get_me_actor(obj)
+        if me_actor.type == ActorType.NONE: return None
+        if not me_actor.t3d_export: return None
+
+        utils.set_obj_mode(obj, 'OBJECT')
+        
         match(me_actor.type):
             case ActorType.PLAYERSTART:
                 actor = PlayerStart(*self.__get_location_rotation(obj))

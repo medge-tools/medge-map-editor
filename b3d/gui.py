@@ -15,9 +15,10 @@ class ME_PT_Actor(bpy.types.Panel):
         obj = context.active_object
         layout = self.layout
         if not obj: return
-        
+
         me_actor = medge.get_me_actor(obj)
         col = layout.column(align=True)
+
         col.prop(me_actor, 'type')
 
         if me_actor.type == ActorType.NONE: return
@@ -25,21 +26,24 @@ class ME_PT_Actor(bpy.types.Panel):
         col.use_property_decorate = False
         col.use_property_split = True
 
+
         if(me_actor.type == ActorType.STATICMESH):
-            col.prop(me_actor, 'enable_material')
-            col.prop(me_actor, 'ase_export')
-            col.prop(me_actor, 'static_mesh_use_prefab')
+            col.prop(me_actor, 'use_material')
+            col.prop(me_actor, 'use_prefab')
+            col.prop(me_actor, 't3d_export')
+            if not me_actor.use_prefab:
+                col.prop(me_actor, 'ase_export')
 
             col = layout.column(align=True)
             col.label(text='Static Mesh')
-            if not me_actor.static_mesh_use_prefab:
+            if not me_actor.use_prefab:
                 col.prop(me_actor, 'static_mesh_package')
                 col.prop(me_actor, 'static_mesh_name')
 
-            if me_actor.static_mesh_use_prefab:
-                col.prop(me_actor, 'static_mesh_prefab')
+            if me_actor.use_prefab:
+                col.prop(me_actor, 'prefab')
 
-            if(me_actor.enable_material):
+            if(me_actor.use_material):
                 col = layout.column(align=True)
                 col.label(text='Material')
                 col.prop(me_actor, 'material_package')
@@ -62,7 +66,7 @@ class ME_PT_Volume(bpy.types.Panel):
                 layout: bpy.types.UILayout, 
                 types: tuple[ActorType, ...]):
         row = self.create_row(layout)
-        for k, actor in enumerate(types):
+        for actor in types:
             if actor == ActorType.NONE:
                 row.label(text='')
                 continue

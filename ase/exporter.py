@@ -1,5 +1,6 @@
 import bpy
 import bpy_extras
+from mathutils import Matrix
 from ..b3d import medge_tools as medge
 from ..b3d import utils
 from ..t3d.scene import ActorType
@@ -20,7 +21,7 @@ class ME_OT_ASE_Export(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
     filter_glob : bpy.props.StringProperty(
         default='*.ase',
         options={'HIDDEN'},
-        maxlen=255,  # Max internal buffer length, longer would be hilighted.
+        maxlen=255, # Max internal buffer length, longer would be hilighted.
     )
 
     units : bpy.props.EnumProperty(
@@ -31,20 +32,26 @@ class ME_OT_ASE_Export(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
     )
 
     def execute(self, context : bpy.types.Context):
-        temp_objects = []
-        
-        # Convert curves to meshes
+        # Apply transform to temporary copies and mirror x-axis
+        temp_objs_to_export = []
         for obj in context.selectable_objects:
+            if not medge.get_me_actor(obj).ase_export: continue
+            # Convert curves to meshes
             if obj.type == 'CURVE':
                 new_obj = medge.curve_to_mesh(obj)
-                temp_objects.append(new_obj)
+            else:
+                new_obj = utils.copy_object(obj)
+
+            utils.apply_all_transforms(new_obj)
+            utils.transform(new_obj.data, [Matrix.Scale(-1, 3, (1, 0, 0))])
+            temp_objs_to_export.append(new_obj)
         
-        # Replace . with _
-        for obj in context.selectable_objects:
+        # Replace . with _ to be able to import in ME Editor
+        for obj in temp_objs_to_export:
             obj.name = obj.name.replace('.', '_')
                 
-        # Add default material if missing
-        for obj in context.selectable_objects:
+        # Add default material if missing; required for ASE Export
+        for obj in temp_objs_to_export:
             if len(obj.data.materials) > 0: continue
             
             mat = bpy.data.materials.get('ME_Default')
@@ -53,21 +60,21 @@ class ME_OT_ASE_Export(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
             obj.data.materials.append(mat)
             obj.active_material_index = len(obj.data.materials) - 1 
 
-        # Select all ActorType.STATICMESH with export_ase == TRUE
+        # Select objects to export
         utils.deselect_all()
-        for obj in context.selectable_objects:
+        for obj in temp_objs_to_export:
             me_actor = medge.get_me_actor(obj)
-            if me_actor is None: continue
-            if me_actor.type != ActorType.STATICMESH: continue
+            if obj.type != 'MESH': continue
             if me_actor.ase_export != True: continue
-            obj.select_set(True)
+            utils.select_obj(obj)
+
         try:
             bpy.ops.io_scene_ase.ase_export(filepath=self.filepath, units=self.units)
         except ASEExportError as e:
             self.report({'ERROR'}, str(e))
 
         # Remove temp objects
-        for obj in temp_objects:
+        for obj in reversed(temp_objs_to_export):
             utils.remove_object(obj)
             
         return {'FINISHED'}

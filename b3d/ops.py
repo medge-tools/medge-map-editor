@@ -1,5 +1,4 @@
 import bpy
-from . import utils
 from . import props
 from . import medge_tools
 
@@ -22,5 +21,5 @@ class ME_OT_CleanupWidgets(bpy.types.Operator):
     bl_options = {'UNDO'}
 
     def execute(self, context: bpy.types.Context):
-        utils.cleanup_widgets()
+        medge_tools.cleanup_widgets()
         return {'FINISHED'}
