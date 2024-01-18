@@ -2,6 +2,7 @@ import bpy
 import bmesh
 from mathutils import Vector
 from ..b3d import utils
+from ..b3d import medge_tools as medge
 from .scene import *
 
 # =============================================================================
@@ -19,6 +20,7 @@ class T3DBuilder:
         self.mirror = Vector((1, -1, 1))
         self.scale = (1, 1, 1)
 
+    # Transform to left-handed coordinate system
     def __get_location_rotation(self, obj: bpy.types.Object) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
         rot = utils.get_rotation_mirrored_x_axis(obj)
         location = obj.matrix_world.translation * self.scale * self.mirror
@@ -49,7 +51,7 @@ class T3DBuilder:
 
     def __build_brush(self, obj : bpy.types.Object) -> Brush:
         polylist = self.__create_polygons(obj)
-        type: ActorType = utils.get_me_actor(obj).type
+        type: ActorType = medge.get_me_actor(obj).type
         location, rotation = self.__get_location_rotation(obj)
         arguments = polylist, location, rotation
         match(type):
@@ -76,20 +78,31 @@ class T3DBuilder:
                 _, rotation = self.__get_location_rotation(obj)
                 return Zipline(polylist, rotation, start, middle, end)
 
-    # Transform to left-handed coordinate system
+    def __build_static_mesh(self, obj: bpy.types.Object) -> Actor:
+        me_actor = medge.get_me_actor(obj)
+        location, rotation = self.__get_location_rotation(obj)
+        if me_actor.static_mesh_use_prefab:
+            prefab = me_actor.static_mesh_prefab
+            ma = medge.get_me_actor(prefab)
+            return StaticMesh(location, rotation, ma.get_static_mesh())
+        else:
+            return StaticMesh(location, rotation, me_actor.get_static_mesh())
+        
     def __build_actor(self, obj : bpy.types.Object) -> Actor | None:
-        me_actor = utils.get_me_actor(obj)
-        if not me_actor or me_actor.type == ActorType.NONE: 
+        me_actor = medge.get_me_actor(obj)
+        if not me_actor or me_actor.type == ActorType.NONE or obj.type != 'MESH': 
             return None
+        
         utils.set_obj_mode(obj, 'OBJECT')
 
         match(me_actor.type):
             case ActorType.PLAYERSTART:
                 actor = PlayerStart(*self.__get_location_rotation(obj))
-            case ActorType.STATICMESH | ActorType.SPRINGBOARD:
+            case ActorType.STATICMESH:
+                actor = self.__build_static_mesh(obj)
+            case ActorType.SPRINGBOARD:
                 location, rotation = self.__get_location_rotation(obj)
-                static_mesh = me_actor.static_mesh_package + '.' + me_actor.static_mesh_name
-                actor = StaticMesh(location, rotation, static_mesh)
+                actor = StaticMesh(location, rotation, 'P_Gameplay.SpringBoard.SpringBoardHigh_ColMesh')
             case ActorType.ZIPLINE:
                 actor = self.__build_zipline(obj)
             case _:

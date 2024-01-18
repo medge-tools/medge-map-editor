@@ -1,16 +1,13 @@
 import bpy
 import bmesh
 from mathutils import Matrix, Euler
-from . import props
+from . import medge_tools as medge
+
 
 COLLECTION_WIDGET = 'WIDGET'
 # =============================================================================
 # HELPERS
 # -----------------------------------------------------------------------------
-# =============================================================================
-def get_me_actor(obj: bpy.types.Object) -> props.ME_OBJECT_PG_Actor:
-    return obj.me_actor
-
 # =============================================================================
 def create_mesh(
         verts: list[tuple[float, float, float]], 
@@ -183,10 +180,3 @@ def remove_callback(handler, function):
         if fn.__name__ == function.__name__:
             handler.remove(fn)
 
-# =============================================================================
-def on_depsgraph_update_post(scene : bpy.types.Scene, depsgraph : bpy.types.Depsgraph):
-    for obj in scene.objects:
-        me_actor = get_me_actor(obj)
-        if me_actor is None: continue
-        if me_actor.static_mesh_name != obj.name:
-            me_actor.static_mesh_name = obj.name

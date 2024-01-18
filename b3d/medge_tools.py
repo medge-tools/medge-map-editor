@@ -8,6 +8,10 @@ from . import props
 # CREATORS
 # -----------------------------------------------------------------------------
 # =============================================================================
+def get_me_actor(obj: bpy.types.Object) -> props.ME_OBJECT_PG_Actor:
+    return obj.me_actor
+
+# =============================================================================
 def new_actor(actor_type: ActorType, object_type = 'MESH', data = None) -> bpy.types.Object:
     match(object_type):
         case 'MESH':
@@ -15,7 +19,7 @@ def new_actor(actor_type: ActorType, object_type = 'MESH', data = None) -> bpy.t
         case 'CURVE':
             obj = utils.new_object('ACTOR', create_curve())
     obj.location = bpy.context.scene.cursor.location
-    me_actor = utils.get_me_actor(obj)
+    me_actor = get_me_actor(obj)
     me_actor.type = actor_type
     if data is not None:
         utils.set_mesh(obj, data)

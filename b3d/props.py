@@ -57,7 +57,6 @@ class ME_OBJECT_PG_Actor(bpy.types.PropertyGroup):
     def __reset(self):
         self.scale = ACTOR_DEFAULT_SCALE[self.type]
         self.ase_export = False
-        self.static_mesh_package, self.static_mesh_name = ACTOR_DEFAULT_STATIC_MESH[self.type]
     
     def __clear_widgets(self):
         for gm in self.widgets:
@@ -79,11 +78,12 @@ class ME_OBJECT_PG_Actor(bpy.types.PropertyGroup):
                 path.parent = obj
                 path.location = 0, 0, 0
                 utils.set_mesh(path, medge.create_curve(step=8))
-                me_actor = utils.get_me_actor(path)
+                me_actor = medge.get_me_actor(path)
                 me_actor.static_mesh_name = 'Zipline'
                 me_actor.ase_export = True
                 path.data.bevel_depth = 0.04
             case _:
+                if obj.data: return
                 if obj.type == 'MESH':
                     utils.set_mesh(obj, medge.create_cube(self.scale))
 
@@ -117,9 +117,8 @@ class ME_OBJECT_PG_Actor(bpy.types.PropertyGroup):
                 utils.transform(arrow1.obj.data, [m_t035_x, m_r90_x, m_r90_y])
                 utils.transform(arrow2.obj.data, [m_t07_x , m_r90_x, m_mir_x])                
 
-    def __on_type_update(self, context : bpy.types.Context):
+    def __on_type_update(self, context: bpy.types.Context):
         obj = context.active_object
-        obj.scale = 1, 1, 1
         self.__reset()
         self.__clear_widgets()
         self.__set_mesh(obj)
@@ -129,27 +128,39 @@ class ME_OBJECT_PG_Actor(bpy.types.PropertyGroup):
         utils.set_active(obj)
         self.parent = obj
 
-    def __on_static_mesh_name_update(self, context : bpy.types.Context):
+    def __on_static_mesh_name_update(self, context: bpy.types.Context):
+        if self.static_mesh_use_prefab: return
         if context.active_object != self.parent: return
         obj = context.active_object
         if obj.name != self.static_mesh_name:
             obj.name = self.static_mesh_name
         # obj.name might be changed by Blender; we update self.static_mesh_name in utils.on_depsgraph_update
 
-    def __on_static_mesh_prefab_update(self, context : bpy.types.Context):
+    def __on_static_mesh_prefab_update(self, context: bpy.types.Context):
         obj = context.active_object
         prefab = self.static_mesh_prefab
         if not prefab: return
         utils.set_mesh(obj, prefab.data)
+        me_actor = medge.get_me_actor(prefab)
+        package = me_actor.static_mesh_package
+        name = me_actor.static_mesh_name
+        if not package or not name:
+            self.report({'WARNING'}, 'Prefab has no package data')
+
+    def __on_static_mesh_package_update(self, context : bpy.types.Context):
+        self.static_mesh_package.rstrip('.')
+
+    def get_static_mesh(self) -> str:
+        return self.static_mesh_package + '.' + self.static_mesh_name
 
     type : ActorTypeProperty(__on_type_update)
     scale : bpy.props.FloatVectorProperty(default=(1.0, 1.0, 1.0), subtype='TRANSLATION')
     widgets : bpy.props.CollectionProperty(type=ME_PG_Gizmo)
     parent : bpy.props.PointerProperty(type=bpy.types.Object)
-    static_mesh_use_prefab : bpy.props.BoolProperty(name='Use Placeholder', default=False)
-    static_mesh_package : bpy.props.StringProperty(name='Package')
+    static_mesh_package : bpy.props.StringProperty(name='Package', update=__on_static_mesh_package_update)
     static_mesh_name : bpy.props.StringProperty(name='Name', update=__on_static_mesh_name_update)
-    static_mesh_prefab : bpy.props.PointerProperty(type=bpy.types.Object, name='Placeholder', update=__on_static_mesh_prefab_update)
+    static_mesh_use_prefab : bpy.props.BoolProperty(name='Use Prefab', default=False)
+    static_mesh_prefab : bpy.props.PointerProperty(type=bpy.types.Object, name='Prefab', update=__on_static_mesh_prefab_update)
     enable_material : bpy.props.BoolProperty(name='Enable Material', default=False, )
     material_package : bpy.props.StringProperty(name='Package')
     material_name : bpy.props.StringProperty(name='Name')
@@ -164,3 +175,11 @@ def copy_me_actor(src : ME_OBJECT_PG_Actor, dest : ME_OBJECT_PG_Actor):
     dest.material_package       = src.material_package
     dest.material_name          = src.material_name
     dest.ase_export             = src.ase_export
+
+# =============================================================================
+def on_depsgraph_update_post_sync_static_mesh_name(scene : bpy.types.Scene, depsgraph : bpy.types.Depsgraph):
+    for obj in scene.objects:
+        me_actor = medge.get_me_actor(obj)
+        if me_actor is None: continue
+        if me_actor.static_mesh_name != obj.name:
+            me_actor.static_mesh_name = obj.name

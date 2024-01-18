@@ -1,6 +1,7 @@
 import bpy
 from .ops import *
 from ..t3d.scene import ActorType
+from . import medge_tools as medge
 
 # =============================================================================
 class ME_PT_Actor(bpy.types.Panel):
@@ -15,7 +16,7 @@ class ME_PT_Actor(bpy.types.Panel):
         layout = self.layout
         if not obj: return
         
-        me_actor = utils.get_me_actor(obj)
+        me_actor = medge.get_me_actor(obj)
         col = layout.column(align=True)
         col.prop(me_actor, 'type')
 
@@ -31,8 +32,9 @@ class ME_PT_Actor(bpy.types.Panel):
 
             col = layout.column(align=True)
             col.label(text='Static Mesh')
-            col.prop(me_actor, 'static_mesh_package')
-            col.prop(me_actor, 'static_mesh_name')
+            if not me_actor.static_mesh_use_prefab:
+                col.prop(me_actor, 'static_mesh_package')
+                col.prop(me_actor, 'static_mesh_name')
 
             if me_actor.static_mesh_use_prefab:
                 col.prop(me_actor, 'static_mesh_prefab')
