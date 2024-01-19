@@ -31,7 +31,7 @@ class ME_OT_T3D_Export(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         name='Units'
     )
 
-    selected_objs : bpy.props.BoolProperty(
+    selected_objects : bpy.props.BoolProperty(
         name='Selected Objects',
         description='Only export selected objects',
         default=False
@@ -55,8 +55,9 @@ class ME_OT_T3D_Export(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         # Export T3D
         try:
             options = T3DBuilderOptions()
-            options.only_selection = self.selected_objs
-            options.scale = self.units_scale[self.units]
+            options.selected_objects = self.selected_objects
+            s = self.units_scale[self.units]
+            options.scale = Vector((s, s, s))
             scene = T3DBuilder().build(context, options)
             T3DWriter().write(self.filepath, scene)
             self.report({'INFO'}, 'T3D exported successful')

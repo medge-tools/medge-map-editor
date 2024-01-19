@@ -3,6 +3,7 @@ import math
 from typing import Callable
 from bpy.types import UILayout
 from mathutils import Matrix
+
 from ..t3d.scene import ActorType
 from . import utils
 from . import medge_tools as medge
@@ -135,7 +136,7 @@ class ME_ACTOR_PG_Ladder(ME_ActorBase, bpy.types.PropertyGroup):
     # -------------------------------------------------------------------------
     def add_widgets(self, obj):
         arrow = self.widgets.add()
-        arrow.obj = utils.new_object('ARROW', utils.create_arrow(self.scale), medge.layoutLECTION_WIDGET, obj)
+        arrow.obj = utils.new_object('ARROW', utils.create_arrow(self.scale), medge.COLLECTION_WIDGET, obj)
         utils.set_obj_selectable(arrow.obj, False)
 
 # =============================================================================
@@ -163,7 +164,7 @@ class ME_ACTOR_PG_Swing(ME_ActorBase, bpy.types.PropertyGroup):
         arrow2 = self.widgets.add()
         for arrow in self.widgets:
             scale = self.scale * .3
-            arrow.obj = utils.new_object('ARROW', utils.create_arrow(scale), medge.layoutLECTION_WIDGET, obj)
+            arrow.obj = utils.new_object('ARROW', utils.create_arrow(scale), medge.COLLECTION_WIDGET, obj)
             utils.set_obj_selectable(arrow.obj, False)
         utils.transform(arrow0.obj.data, [m_t07_x , m_r90_x])
         utils.transform(arrow1.obj.data, [m_t035_x, m_r90_x, m_r90_y])
@@ -177,13 +178,20 @@ class ME_ACTOR_PG_Zipline(ME_ActorBase, bpy.types.PropertyGroup):
     # -------------------------------------------------------------------------
     def set_mesh(self, obj):  
         utils.set_mesh(obj, utils.create_cube())      
-        zipline = medge.create_zipline()
-        zipline.location = 0, 0, 0
-        zipline.parent = obj
+        self.curve = medge.create_zipline()
+        self.curve.location = 0, 0, 0
+        self.curve.parent = obj
 
     # -------------------------------------------------------------------------
     def set_display_type(self, obj):
         obj.display_type = 'WIRE'
+
+    # -------------------------------------------------------------------------
+    def draw(self, layout: UILayout):
+        col = layout.column(align=True)
+        col.prop(self, 'curve')
+
+    curve: bpy.props.PointerProperty(type=bpy.types.Object, name='Curve')
 
 # =============================================================================
 class ME_ACTOR_PG_SpringBoard(ME_ActorBase, bpy.types.PropertyGroup):
@@ -203,7 +211,8 @@ class ME_ACTOR_PG_StaticMesh(ME_ActorBase, bpy.types.PropertyGroup):
 
     # -------------------------------------------------------------------------
     def set_mesh(self, obj):
-        utils.set_mesh(obj, utils.create_cube())
+        if obj.type == 'MESH':
+            utils.set_mesh(obj, utils.create_cube())
 
     # -------------------------------------------------------------------------
     def draw(self, layout: UILayout):
