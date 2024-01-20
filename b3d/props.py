@@ -1,4 +1,5 @@
 import bpy
+from bpy.props import *
 import math
 from typing import Callable
 from bpy.types import UILayout
@@ -10,7 +11,7 @@ from . import medge_tools as medge
 
 # =============================================================================
 def ActorTypeProperty(callback : Callable = None):
-    return bpy.props.EnumProperty(
+    return EnumProperty(
         items=[
             (ActorType.NONE, 'None', 'None'),
             (ActorType.PLAYERSTART, 'PlayerStart', 'PlayerStart'),
@@ -52,7 +53,7 @@ ACTOR_DEFAULT_STATIC_MESH = {
 
 # =============================================================================
 class ME_PG_Gizmo(bpy.types.PropertyGroup):
-    obj : bpy.props.PointerProperty(type=bpy.types.Object)
+    obj : PointerProperty(type=bpy.types.Object)
 
 # =============================================================================
 class ME_ActorBase():
@@ -92,8 +93,8 @@ class ME_ActorBase():
         pass
 
     # -------------------------------------------------------------------------
-    widgets : bpy.props.CollectionProperty(type=ME_PG_Gizmo)
-    scale : bpy.props.FloatVectorProperty(default=(1.0, 1.0, 1.0), subtype='TRANSLATION')
+    widgets: CollectionProperty(type=ME_PG_Gizmo)
+    scale: FloatVectorProperty(default=(1.0, 1.0, 1.0), subtype='TRANSLATION')
 
 # =============================================================================
 class ME_ACTOR_PG_PlayerStart(ME_ActorBase, bpy.types.PropertyGroup):
@@ -179,8 +180,8 @@ class ME_ACTOR_PG_Zipline(ME_ActorBase, bpy.types.PropertyGroup):
     def set_mesh(self, obj):  
         utils.set_mesh(obj, utils.create_cube())      
         self.curve = medge.create_zipline()
-        self.curve.location = 0, 0, 0
-        self.curve.parent = obj
+        self.curve.location = obj.location
+        utils.set_parent(self.curve, obj)
 
     # -------------------------------------------------------------------------
     def set_display_type(self, obj):
@@ -191,7 +192,7 @@ class ME_ACTOR_PG_Zipline(ME_ActorBase, bpy.types.PropertyGroup):
         col = layout.column(align=True)
         col.prop(self, 'curve')
 
-    curve: bpy.props.PointerProperty(type=bpy.types.Object, name='Curve')
+    curve: PointerProperty(type=bpy.types.Object, name='Curve')
 
 # =============================================================================
 class ME_ACTOR_PG_SpringBoard(ME_ActorBase, bpy.types.PropertyGroup):
@@ -279,15 +280,15 @@ class ME_ACTOR_PG_StaticMesh(ME_ActorBase, bpy.types.PropertyGroup):
                 me_actor.static_mesh.name = obj.name
 
     # -------------------------------------------------------------------------
-    parent : bpy.props.PointerProperty(type=bpy.types.Object)
-    package : bpy.props.StringProperty(name='Package', default='MyPackage')
-    name : bpy.props.StringProperty(name='Name', update=__on_static_mesh_name_update)
-    use_prefab : bpy.props.BoolProperty(name='Use Prefab', default=False, update=__on_use_prefab_update)
-    prefab : bpy.props.PointerProperty(type=bpy.types.Object, name='Prefab', update=__on_prefab_update)
-    use_material : bpy.props.BoolProperty(name='Use Material', default=False, )
-    material_package : bpy.props.StringProperty(name='Package')
-    material_name : bpy.props.StringProperty(name='Name')
-    ase_export : bpy.props.BoolProperty(name='Export ASE', default=False, description='Object will be export as .ase file.')
+    parent: PointerProperty(type=bpy.types.Object)
+    package: StringProperty(name='Package', default='MyPackage')
+    name: StringProperty(name='Name', update=__on_static_mesh_name_update)
+    use_prefab: BoolProperty(name='Use Prefab', default=False, update=__on_use_prefab_update)
+    prefab: PointerProperty(type=bpy.types.Object, name='Prefab', update=__on_prefab_update)
+    use_material: BoolProperty(name='Use Material', default=False, )
+    material_package: StringProperty(name='Package')
+    material_name: StringProperty(name='Name')
+    ase_export: BoolProperty(name='Export ASE', default=False, description='Object will be export as .ase file.')
 
 # =============================================================================
 class ME_OBJECT_PG_Actor(bpy.types.PropertyGroup):
@@ -316,14 +317,14 @@ class ME_OBJECT_PG_Actor(bpy.types.PropertyGroup):
                 self.static_mesh.init(obj)
     
     # -------------------------------------------------------------------------
-    type : ActorTypeProperty(__on_type_update)
-    t3d_export : bpy.props.BoolProperty(name='Export T3D', default=True, description='Object will be export as part of the .t3d scene')
+    type: ActorTypeProperty(__on_type_update)
+    t3d_export: BoolProperty(name='Export T3D', default=True, description='Object will be export as part of the .t3d scene')
 
-    player_start : bpy.props.PointerProperty(type=ME_ACTOR_PG_PlayerStart)
-    brush : bpy.props.PointerProperty(type=ME_ACTOR_PG_Brush)
-    ladder : bpy.props.PointerProperty(type=ME_ACTOR_PG_Ladder)
-    pipe : bpy.props.PointerProperty(type=ME_ACTOR_PG_Ladder)
-    swing : bpy.props.PointerProperty(type=ME_ACTOR_PG_Swing)
-    zipline : bpy.props.PointerProperty(type=ME_ACTOR_PG_Zipline)
-    springboard : bpy.props.PointerProperty(type=ME_ACTOR_PG_SpringBoard)
-    static_mesh : bpy.props.PointerProperty(type=ME_ACTOR_PG_StaticMesh)
+    player_start: PointerProperty(type=ME_ACTOR_PG_PlayerStart)
+    brush: PointerProperty(type=ME_ACTOR_PG_Brush)
+    ladder: PointerProperty(type=ME_ACTOR_PG_Ladder)
+    pipe: PointerProperty(type=ME_ACTOR_PG_Ladder)
+    swing: PointerProperty(type=ME_ACTOR_PG_Swing)
+    zipline: PointerProperty(type=ME_ACTOR_PG_Zipline)
+    springboard: PointerProperty(type=ME_ACTOR_PG_SpringBoard)
+    static_mesh: PointerProperty(type=ME_ACTOR_PG_StaticMesh)

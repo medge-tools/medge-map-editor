@@ -211,6 +211,20 @@ def apply_all_transforms(obj: bpy.types.Object) -> None:
         
     obj.matrix_basis.identity()
 
+# =============================================================================
+# https://blender.stackexchange.com/questions/9200/how-to-make-object-a-a-parent-of-object-b-via-blenders-python-api
+def set_parent(child: bpy.types.Object, parent: bpy.types.Object, keep_world_location : bool = True):
+    child.parent = parent
+    if keep_world_location:
+        child.matrix_parent_inverse = parent.matrix_world.inverted()
+
+# =============================================================================
+# https://blender.stackexchange.com/questions/9200/how-to-make-object-a-a-parent-of-object-b-via-blenders-python-api
+def unparent(obj: bpy.types.Object, keep_world_location : bool = True):
+    parented_wm = obj.matrix_world.copy()
+    obj.parent = None
+    if keep_world_location:
+        obj.matrix_world = parented_wm
 
 # =============================================================================
 # CREATE

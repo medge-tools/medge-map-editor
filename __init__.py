@@ -24,7 +24,7 @@ def menu_func_export_t3d(self, context):
 
 # =============================================================================
 def menu_func_export_ase(self, context):
-    self.layout.operator(ME_OT_ASE_Export.bl_idname, text='MEdge ASE (.t3d)')
+    self.layout.operator(ME_OT_ASE_Export.bl_idname, text='MEdge ASE (.ase)')
 
 # =============================================================================
 def register():

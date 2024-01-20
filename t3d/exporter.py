@@ -19,6 +19,7 @@ class ME_OT_T3D_Export(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         maxlen=255,  # Max internal buffer length, longer would be hilighted.
     )
 
+    # These values are identical to the ASE Export addon
     units_scale = {
         'M': 60.352,
         'U': 1.0

@@ -1,7 +1,7 @@
 import bpy
 import bmesh
-from bpy.types import Object
 from mathutils import Vector
+import math
 
 from .scene import *
 from ..b3d import utils
@@ -104,12 +104,12 @@ class ZiplineBuilder(Builder):
     def build(self, obj: bpy.types.Object, options: T3DBuilderOptions) -> Actor | None:
         super().build(obj, options)
         curve = medge.get_me_actor(obj).zipline.curve
-        scale = Vector((*(self.scale * self.mirror), 1.0)) 
+        t = Vector((*(self.scale * self.mirror), 1.0)) 
         mworld = curve.matrix_world
         points = curve.data.splines[0].points
-        start = (mworld @ points[0].co) * scale
-        middle = (mworld @ points[1].co) * scale
-        end = (mworld @ points[2].co) * scale
+        start = (mworld @ points[0].co) * t
+        middle = (mworld @ points[1].co) * t
+        end = (mworld @ points[2].co) * t
         polylist = self.create_polygons(obj)
         _, rotation = self.get_location_rotation(obj)
         return Zipline(polylist, rotation, start, middle, end)
@@ -132,6 +132,8 @@ class StaticMeshBuilder(Builder):
             path = medge.get_me_actor(prefab).static_mesh.path()
             return StaticMesh(location, rotation, path)
         else:
+            if static_mesh.ase_export:
+                location = (0.0, 0.0, 0.0)
             return StaticMesh(location, rotation, static_mesh.path())
 
 # =============================================================================
