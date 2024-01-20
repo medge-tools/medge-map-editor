@@ -1,14 +1,92 @@
 import bpy
 from bpy.props import *
 import math
-from typing import Callable
-from bpy.types import UILayout
+from typing import Any, Callable
 from mathutils import Matrix
 
 from ..t3d.scene import ActorType
 from . import utils
 from . import medge_tools as medge
 
+# =============================================================================
+# RESOURCE BROWSER
+# -----------------------------------------------------------------------------
+# =============================================================================
+class ME_PG_Resource(bpy.types.PropertyGroup):
+    def path(self) -> str:
+        self.package.name.rstrip('.')
+        return self.package.name + '.' + self.name
+
+    name: StringProperty(name='Resource', default='MyResource')
+    package_name: StringProperty(name='Package')
+
+# =============================================================================
+class ME_PG_Package(bpy.types.PropertyGroup):
+    def add_resource(self):
+        self.resources.add()
+        self.active_idx = len(self.resources) - 1
+    
+    def remove_active_resource(self):
+        self.resources.remove(self.active_idx)
+        self.active_idx = min(max(0, self.active_idx - 1), len(self.resources) - 1)
+
+    def empty(self) -> bool:
+        if len(self.resources) == 0:
+            return True
+        return False
+
+    def get_active_resource(self) -> ME_PG_Resource | None:
+        if self.resources:
+            return self.resources[self.active_idx]
+        return None
+
+    def __on_name_update(self, context: bpy.types.Context):
+        for r in self.resources:
+            r.package_name = self.name
+
+    name: StringProperty(name='Package', default='MyPackage', update=__on_name_update)
+    resources: CollectionProperty(type=ME_PG_Resource)
+    active_idx: IntProperty(name='Resource Index', default=0)
+
+# =============================================================================
+class ME_SCENE_PG_GenericBrowser(bpy.types.PropertyGroup):
+    def add_package(self):
+        self.packages.add()
+        self.active_idx = len(self.packages) - 1
+    
+    def remove_active_package(self):
+        self.packages.remove(self.active_idx)
+        self.active_idx = min(max(0, self.active_idx - 1), len(self.packages) - 1)
+    
+    def empty(self) -> bool:
+        if len(self.packages) == 0:
+            return True
+        return False
+
+    def get_active_package(self) -> ME_PG_Package | None:
+        if self.packages:
+            return self.packages[self.active_idx]
+        return None
+
+    packages: CollectionProperty(type=ME_PG_Package)
+    active_idx: IntProperty(name='Package Index', default=0)
+
+# =============================================================================
+class ME_UL_GenericList(bpy.types.UIList):
+    def draw_item(self, 
+                  context: bpy.types.Context | None, 
+                  layout: bpy.types.UILayout, 
+                  data: Any | None, 
+                  item: Any | ME_PG_Package | None, 
+                  icon: int | None, active_data: Any, 
+                  active_property: str, 
+                  index: Any | None = 0, 
+                  flt_flag: Any | None = 0):
+        layout.label(text=item.name)
+
+# =============================================================================
+# ACTORS
+# -----------------------------------------------------------------------------
 # =============================================================================
 def ActorTypeProperty(callback : Callable = None):
     return EnumProperty(
@@ -120,6 +198,20 @@ class ME_ACTOR_PG_Brush(ME_ActorBase, bpy.types.PropertyGroup):
     def set_mesh(self, obj):        
         utils.set_mesh(obj, utils.create_cube(self.scale))
 
+    # -------------------------------------------------------------------------
+    def draw(self, layout: bpy.types.UILayout):
+        col = layout.column(align=True)
+        col.prop(self, 'material_package')
+        col.prop(self, 'material_name')
+
+    # -------------------------------------------------------------------------
+    def material(self) -> str:
+        self.material_package.rstrip('.')
+        return self.material_package + '.' + self.material_name
+
+    material_package: StringProperty(name='Package')
+    material_name: StringProperty(name='Name')
+
 # =============================================================================
 class ME_ACTOR_PG_Ladder(ME_ActorBase, bpy.types.PropertyGroup):
     # -------------------------------------------------------------------------
@@ -188,7 +280,7 @@ class ME_ACTOR_PG_Zipline(ME_ActorBase, bpy.types.PropertyGroup):
         obj.display_type = 'WIRE'
 
     # -------------------------------------------------------------------------
-    def draw(self, layout: UILayout):
+    def draw(self, layout: bpy.types.UILayout):
         col = layout.column(align=True)
         col.prop(self, 'curve')
 
@@ -216,7 +308,7 @@ class ME_ACTOR_PG_StaticMesh(ME_ActorBase, bpy.types.PropertyGroup):
             utils.set_mesh(obj, utils.create_cube())
 
     # -------------------------------------------------------------------------
-    def draw(self, layout: UILayout):
+    def draw(self, layout: bpy.types.UILayout):
         col = layout.column(align=True)
         col.prop(self, 'use_material')
         col.prop(self, 'use_prefab')
@@ -225,14 +317,12 @@ class ME_ACTOR_PG_StaticMesh(ME_ActorBase, bpy.types.PropertyGroup):
 
         col = layout.column(align=True)
         col.label(text='Static Mesh')
-        if not self.use_prefab:
+        if self.use_prefab:
+            col.prop(self, 'prefab')
+        else:
             col.prop(self, 'package')
             col.prop(self, 'name')
 
-        if self.use_prefab:
-            col.prop(self, 'prefab')
-
-        if(self.use_material):
             col = layout.column(align=True)
             col.label(text='Material')
             col.prop(self, 'material_package')
@@ -285,7 +375,7 @@ class ME_ACTOR_PG_StaticMesh(ME_ActorBase, bpy.types.PropertyGroup):
     name: StringProperty(name='Name', update=__on_static_mesh_name_update)
     use_prefab: BoolProperty(name='Use Prefab', default=False, update=__on_use_prefab_update)
     prefab: PointerProperty(type=bpy.types.Object, name='Prefab', update=__on_prefab_update)
-    use_material: BoolProperty(name='Use Material', default=False, )
+    use_material: BoolProperty(name='Use Material', default=False)
     material_package: StringProperty(name='Package')
     material_name: StringProperty(name='Name')
     ase_export: BoolProperty(name='Export ASE', default=False, description='Object will be export as .ase file.')
@@ -328,3 +418,6 @@ class ME_OBJECT_PG_Actor(bpy.types.PropertyGroup):
     zipline: PointerProperty(type=ME_ACTOR_PG_Zipline)
     springboard: PointerProperty(type=ME_ACTOR_PG_SpringBoard)
     static_mesh: PointerProperty(type=ME_ACTOR_PG_StaticMesh)
+
+
+

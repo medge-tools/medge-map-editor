@@ -5,13 +5,30 @@ from . import utils
 from . import props
 
 COLLECTION_WIDGET = 'WIDGET'
+
+
 # =============================================================================
-# CREATORS
+# HELPSERS
 # -----------------------------------------------------------------------------
+# =============================================================================
+def get_me_browser(scene: bpy.types.Scene) -> props.ME_SCENE_PG_GenericBrowser:
+    return scene.me_browser
+
 # =============================================================================
 def get_me_actor(obj: bpy.types.Object) -> props.ME_OBJECT_PG_Actor:
     return obj.me_actor
 
+# =============================================================================
+def cleanup_widgets():
+    collection = bpy.context.blend_data.collections.get(COLLECTION_WIDGET)
+    if collection is not None:
+        for child in collection.objects:
+            if child.parent != None: continue
+            bpy.data.objects.remove(child)
+
+# =============================================================================
+# CREATORS
+# -----------------------------------------------------------------------------
 # =============================================================================
 def new_actor(actor_type: ActorType, object_type = 'MESH', data = None) -> bpy.types.Object:
     match(object_type):
@@ -25,14 +42,6 @@ def new_actor(actor_type: ActorType, object_type = 'MESH', data = None) -> bpy.t
     if data is not None:
         utils.set_mesh(obj, data)
     return obj
-
-# =============================================================================
-def cleanup_widgets():
-    collection = bpy.context.blend_data.collections.get(COLLECTION_WIDGET)
-    if collection is not None:
-        for child in collection.objects:
-            if child.parent != None: continue
-            bpy.data.objects.remove(child)
 
 # =============================================================================
 def create_springboard(scale: tuple[float, float, float] = (1, 1, 1)) -> bpy.types.Mesh:

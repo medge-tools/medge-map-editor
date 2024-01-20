@@ -64,36 +64,38 @@ class PlayerStartBuilder(Builder):
         return PlayerStart(*self.get_location_rotation(obj))
 
 # =============================================================================
-class VolumeArgs():
-    def get_arguments(self, obj: bpy.types.Object):
+class VolumeBuilder(Builder):
+    def get_arguments(self, obj: bpy.types.Object) -> tuple[list[Polygon], tuple[float, float, float], tuple[float, float, float]]:
         polylist = self.create_polygons(obj)
         location, rotation = self.get_location_rotation(obj)
-        arguments = polylist, location, rotation
-        return arguments
+        return polylist, location, rotation
 
 # =============================================================================
-class BrushBuilder(VolumeArgs, Builder):
+class BrushBuilder(VolumeBuilder):
     def build(self, obj: bpy.types.Object, options: T3DBuilderOptions) -> Actor | None:
         super().build(obj, options)
-        arguments = self.get_arguments(obj)
-        return Brush(*arguments)
+        polylist, location, rotation = self.get_arguments(obj)
+        for poly in polylist:
+            poly.Texture = medge.get_me_actor(obj).brush.material()
+
+        return Brush(polylist, location, rotation)
 
 # =============================================================================
-class LadderBuilder(VolumeArgs, Builder):
+class LadderBuilder(VolumeBuilder):
     def build(self, obj: bpy.types.Object, options: T3DBuilderOptions) -> Actor | None:
         super().build(obj, options)
         arguments = self.get_arguments(obj)
         return Ladder(*arguments)
 
 # ================================P=============================================
-class PipeBuilder(VolumeArgs, Builder):
+class PipeBuilder(VolumeBuilder):
     def build(self, obj: bpy.types.Object, options: T3DBuilderOptions) -> Actor | None:
         super().build(obj, options)
         arguments = self.get_arguments(obj)
         return Pipe(*arguments)
 
 # =============================================================================
-class SwingBuilder(VolumeArgs, Builder):
+class SwingBuilder(VolumeBuilder):
     def build(self, obj: bpy.types.Object, options: T3DBuilderOptions) -> Actor | None:
         super().build(obj, options)
         arguments = self.get_arguments(obj)

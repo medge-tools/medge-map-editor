@@ -66,6 +66,7 @@ class ME_OT_ASE_Export(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
                 new_obj = utils.copy_object(obj)
             
             utils.apply_all_transforms(new_obj)
+            # Mirror x, y because the ASE exporter rotates the models 180 degrees around z
             utils.transform(new_obj.data, [Matrix.Scale(-1, 3, (1, 0, 0))])
             utils.transform(new_obj.data, [Matrix.Scale(-1, 3, (0, 1, 0))])
             temp_objs_to_export.append(new_obj)
