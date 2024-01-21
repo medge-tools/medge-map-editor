@@ -76,7 +76,7 @@ class BrushBuilder(VolumeBuilder):
         super().build(obj, options)
         polylist, location, rotation = self.get_arguments(obj)
         for poly in polylist:
-            poly.Texture = medge.get_me_actor(obj).brush.material()
+            poly.Texture = medge.get_me_actor(obj).brush.get_material_path()
 
         return Brush(polylist, location, rotation)
 
@@ -85,14 +85,8 @@ class LadderBuilder(VolumeBuilder):
     def build(self, obj: bpy.types.Object, options: T3DBuilderOptions) -> Actor | None:
         super().build(obj, options)
         arguments = self.get_arguments(obj)
-        return Ladder(*arguments)
-
-# ================================P=============================================
-class PipeBuilder(VolumeBuilder):
-    def build(self, obj: bpy.types.Object, options: T3DBuilderOptions) -> Actor | None:
-        super().build(obj, options)
-        arguments = self.get_arguments(obj)
-        return Pipe(*arguments)
+        ladder = medge.get_me_actor(obj).ladder
+        return Ladder(*arguments, ladder.is_pipe)
 
 # =============================================================================
 class SwingBuilder(VolumeBuilder):
@@ -130,13 +124,10 @@ class StaticMeshBuilder(Builder):
         static_mesh = medge.get_me_actor(obj).static_mesh
         location, rotation = self.get_location_rotation(obj)
         if static_mesh.use_prefab:
-            prefab = static_mesh.prefab
-            path = medge.get_me_actor(prefab).static_mesh.path()
-            return StaticMesh(location, rotation, path)
+            return StaticMesh(location, rotation, static_mesh.get_prefab_path())
         else:
-            if static_mesh.ase_export:
-                location = (0.0, 0.0, 0.0)
-            return StaticMesh(location, rotation, static_mesh.path())
+            location = (0.0, 0.0, 0.0)
+            return StaticMesh(location, rotation, static_mesh.get_path())
 
 # =============================================================================
 # T3DBuilder
@@ -148,16 +139,14 @@ class T3DBuilderError(Exception):
 # =============================================================================
 class T3DBuilder():
     def build_actor(self, obj: bpy.types.Object, options: T3DBuilderOptions) -> Actor | None:
-
         me_actor = medge.get_me_actor(obj)
         
         if me_actor.type == ActorType.NONE: return None
-        if not me_actor.t3d_export: return None
 
         utils.set_obj_mode(obj, 'OBJECT')
 
         actor = None
-        
+        print(obj.name)
         match(me_actor.type):
             case ActorType.PLAYERSTART:
                 actor = PlayerStartBuilder().build(obj, options)
@@ -165,8 +154,6 @@ class T3DBuilder():
                 actor = BrushBuilder().build(obj, options)
             case ActorType.LADDER:
                 actor = LadderBuilder().build(obj, options)
-            case ActorType.PIPE:
-                actor = PipeBuilder().build(obj, options)
             case ActorType.SWING:
                 actor = SwingBuilder().build(obj, options)
             case ActorType.ZIPLINE:
@@ -178,6 +165,7 @@ class T3DBuilder():
 
         return actor
     
+    # -------------------------------------------------------------------------
     def build(self, context : bpy.types.Context, options : T3DBuilderOptions) -> list[Actor]:
         scene : list[Actor] = []
         objs = context.scene.objects

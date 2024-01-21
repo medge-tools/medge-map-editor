@@ -1,4 +1,5 @@
 import bpy
+from bpy.types import Object
 import bmesh
 from mathutils import Vector, Matrix, Euler
 
@@ -6,23 +7,23 @@ from mathutils import Vector, Matrix, Euler
 # HELPERS
 # -----------------------------------------------------------------------------
 # =============================================================================
-def set_active(obj: bpy.types.Object) -> None:
+def set_active(obj: Object) -> None:
     active = bpy.context.active_object
     if active: active.select_set(False)
     bpy.context.view_layer.objects.active = obj
     obj.select_set(True)
 
 # =============================================================================
-def set_obj_mode(obj: bpy.types.Object, m = 'OBJECT') -> None:
+def set_obj_mode(obj: Object, m = 'OBJECT') -> None:
     bpy.context.view_layer.objects.active = obj
     bpy.ops.object.mode_set(mode=m)
 
 # =============================================================================
-def set_obj_selectable(obj: bpy.types.Object, select: bool) -> None:
+def set_obj_selectable(obj: Object, select: bool) -> None:
     obj.hide_select = not select
 
 # =============================================================================
-def select_obj(obj: bpy.types.Object):
+def select_obj(obj: Object):
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
 
@@ -36,7 +37,7 @@ def deselect_all() -> None:
         obj.select_set(False)
 
 # =============================================================================
-def add_obj_to_scene(obj: bpy.types.Object, collection: str = None) -> None:
+def add_object_to_scene(obj: Object, collection: str = None) -> None:
     if collection is not None:
         c = bpy.context.blend_data.collections.get(collection)
         if c == None:
@@ -46,23 +47,28 @@ def add_obj_to_scene(obj: bpy.types.Object, collection: str = None) -> None:
     else:
         bpy.context.scene.collection.objects.link(obj)
 
+def is_mesh(obj: Object) -> bool:
+    return obj.type == 'MESH'
+# =============================================================================
+# SCENE
+# -----------------------------------------------------------------------------
 # =============================================================================
 def new_object(name: str, data: bpy.types.ID, collection: str = None, parent: bpy.types.Object = None) -> None:
     obj = bpy.data.objects.new(name, data)
-    add_obj_to_scene(obj, collection)
+    add_object_to_scene(obj, collection)
     if(parent): obj.parent = parent
     set_active(obj)
     return obj
 
 # =============================================================================
-def remove_object(obj: bpy.types.Object) -> None:
+def remove_object(obj: Object) -> None:
     bpy.data.objects.remove(obj)
 
 # =============================================================================
-def copy_object(obj: bpy.types.Object) -> bpy.types.Object:
+def copy_object(obj: Object) -> bpy.types.Object:
     copy = obj.copy()
     copy.data = obj.data.copy()
-    add_obj_to_scene(copy)
+    add_object_to_scene(copy)
     return copy
 
 # =============================================================================
@@ -94,7 +100,7 @@ def remove_mesh(mesh: bpy.types.Mesh) -> None:
 
 # =============================================================================
 # https://blenderartists.org/t/how-to-replace-a-mesh/596225/4
-def set_mesh(obj: bpy.types.Object, mesh: bpy.types.Mesh) -> None:
+def set_mesh(obj: Object, mesh: bpy.types.Mesh) -> None:
     old_mesh = obj.data
     obj.data = mesh
     remove_mesh(old_mesh)
@@ -138,12 +144,12 @@ def join_meshes(meshes: list[bpy.types.Mesh]) -> None:
     return meshes[0]
 
 # =============================================================================
-def convert_to_mesh_in_place(obj: bpy.types.Object):
+def convert_to_mesh_in_place(obj: Object):
     set_active(obj)
     bpy.ops.object.convert(target='MESH') 
 
 # =============================================================================
-def convert_to_new_mesh(obj: bpy.types.Object) -> bpy.types.Object:
+def convert_to_new_mesh(obj: Object) -> bpy.types.Object:
     mesh = bpy.data.meshes.new_from_object(obj)
     new_obj = new_object(obj.name, mesh)
     new_obj.matrix_world = obj.matrix_world 
@@ -191,7 +197,7 @@ def transform(mesh: bpy.types.Mesh, transforms: list[Matrix]) -> None:
 #   https://gist.github.com/behreajj/2dbb6fb7cee78c167cd85085e67bcdf6
 # Mirror rotation: 
 #   https://www.gamedev.net/forums/topic/# 599824-mirroring-a-quaternion-against-the-yz-plane/
-def get_rotation_mirrored_x_axis(obj: bpy.types.Object) -> Euler:
+def get_rotation_mirrored_x_axis(obj: Object) -> Euler:
     prev_rot_mode = obj.rotation_mode
     obj.rotation_mode = 'QUATERNION'
     q = obj.rotation_quaternion.copy()
@@ -202,7 +208,7 @@ def get_rotation_mirrored_x_axis(obj: bpy.types.Object) -> Euler:
 
 # =============================================================================
 # https://blender.stackexchange.com/questions/159538/how-to-apply-all-transformations-to-an-object-at-low-level
-def apply_all_transforms(obj: bpy.types.Object) -> None:
+def apply_all_transforms(obj: Object) -> None:
     mb = obj.matrix_basis
     if hasattr(obj.data, 'transform'):
         obj.data.transform(mb)
@@ -213,14 +219,14 @@ def apply_all_transforms(obj: bpy.types.Object) -> None:
 
 # =============================================================================
 # https://blender.stackexchange.com/questions/9200/how-to-make-object-a-a-parent-of-object-b-via-blenders-python-api
-def set_parent(child: bpy.types.Object, parent: bpy.types.Object, keep_world_location : bool = True):
+def set_parent(child: Object, parent: Object, keep_world_location : bool = True):
     child.parent = parent
     if keep_world_location:
         child.matrix_parent_inverse = parent.matrix_world.inverted()
 
 # =============================================================================
 # https://blender.stackexchange.com/questions/9200/how-to-make-object-a-a-parent-of-object-b-via-blenders-python-api
-def unparent(obj: bpy.types.Object, keep_world_location : bool = True):
+def unparent(obj: Object, keep_world_location : bool = True):
     parented_wm = obj.matrix_world.copy()
     obj.parent = None
     if keep_world_location:

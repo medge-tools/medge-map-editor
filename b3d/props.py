@@ -1,88 +1,14 @@
 import bpy
 from bpy.props import *
-import math
-from typing import Any, Callable
+from bpy.types import Object, PropertyGroup, Context, UILayout
+from typing import Callable
 from mathutils import Matrix
+
+import math
 
 from ..t3d.scene import ActorType
 from . import utils
 from . import medge_tools as medge
-
-# =============================================================================
-# RESOURCE BROWSER
-# -----------------------------------------------------------------------------
-# =============================================================================
-class ME_PG_Resource(bpy.types.PropertyGroup):
-    def path(self) -> str:
-        self.package.name.rstrip('.')
-        return self.package.name + '.' + self.name
-
-    name: StringProperty(name='Resource', default='MyResource')
-    package_name: StringProperty(name='Package')
-
-# =============================================================================
-class ME_PG_Package(bpy.types.PropertyGroup):
-    def add_resource(self):
-        self.resources.add()
-        self.active_idx = len(self.resources) - 1
-    
-    def remove_active_resource(self):
-        self.resources.remove(self.active_idx)
-        self.active_idx = min(max(0, self.active_idx - 1), len(self.resources) - 1)
-
-    def empty(self) -> bool:
-        if len(self.resources) == 0:
-            return True
-        return False
-
-    def get_active_resource(self) -> ME_PG_Resource | None:
-        if self.resources:
-            return self.resources[self.active_idx]
-        return None
-
-    def __on_name_update(self, context: bpy.types.Context):
-        for r in self.resources:
-            r.package_name = self.name
-
-    name: StringProperty(name='Package', default='MyPackage', update=__on_name_update)
-    resources: CollectionProperty(type=ME_PG_Resource)
-    active_idx: IntProperty(name='Resource Index', default=0)
-
-# =============================================================================
-class ME_SCENE_PG_GenericBrowser(bpy.types.PropertyGroup):
-    def add_package(self):
-        self.packages.add()
-        self.active_idx = len(self.packages) - 1
-    
-    def remove_active_package(self):
-        self.packages.remove(self.active_idx)
-        self.active_idx = min(max(0, self.active_idx - 1), len(self.packages) - 1)
-    
-    def empty(self) -> bool:
-        if len(self.packages) == 0:
-            return True
-        return False
-
-    def get_active_package(self) -> ME_PG_Package | None:
-        if self.packages:
-            return self.packages[self.active_idx]
-        return None
-
-    packages: CollectionProperty(type=ME_PG_Package)
-    active_idx: IntProperty(name='Package Index', default=0)
-
-# =============================================================================
-class ME_UL_GenericList(bpy.types.UIList):
-    def draw_item(self, 
-                  context: bpy.types.Context | None, 
-                  layout: bpy.types.UILayout, 
-                  data: Any | None, 
-                  item: Any | ME_PG_Package | None, 
-                  icon: int | None, active_data: Any, 
-                  active_property: str, 
-                  index: Any | None = 0, 
-                  flt_flag: Any | None = 0):
-        layout.label(text=item.name)
 
 # =============================================================================
 # ACTORS
@@ -95,13 +21,12 @@ def ActorTypeProperty(callback : Callable = None):
             (ActorType.PLAYERSTART, 'PlayerStart', 'PlayerStart'),
             (ActorType.BRUSH, 'Brush', 'Brush'),
             (ActorType.LADDER, 'Ladder', 'TdLadderVolume'),
-            (ActorType.PIPE, 'Pipe', 'TdLadderVolume'),
             (ActorType.SWING, 'Swing', 'TdSwingVolume'),
             (ActorType.ZIPLINE, 'Zipline', 'TdZiplineVolume'),
             (ActorType.SPRINGBOARD, 'Springboard', 'P_Gameplay.SpringBoardHigh_layoutMesh'),
             (ActorType.STATICMESH, 'StaticMesh', 'StaticMeshActor')
         ],
-        name='ActorType',
+        name='Type',
         default=ActorType.NONE,
         update=callback
     )
@@ -110,7 +35,6 @@ ACTOR_DEFAULT_SCALE = {
     ActorType.PLAYERSTART   : (.5, .5, -1),
     ActorType.BRUSH         : (1, 1, 1),
     ActorType.LADDER        : (.5, .5, 2), 
-    ActorType.PIPE          : (.5, .5, 2),
     ActorType.SWING         : (1, 1, .5),
     ActorType.ZIPLINE       : (1, 1, 1),
     ActorType.SPRINGBOARD   : (1, 1, 1),
@@ -118,23 +42,36 @@ ACTOR_DEFAULT_SCALE = {
 }
 
 # =============================================================================
-ACTOR_DEFAULT_STATIC_MESH = {
-    ActorType.PLAYERSTART   : ('MyPackage', ''),
-    ActorType.BRUSH         : ('MyPackage', ''),
-    ActorType.LADDER        : ('P_Generic.Ladders', 'S_LadderSystem_01b'),
-    ActorType.PIPE          : ('P_Pipes.PipeSystem_03', 'S_PipeSystem_03h'),
-    ActorType.SWING         : ('P_RunnerObjects.SwingPole_01', 'S_SwingPole_01c'),
-    ActorType.ZIPLINE       : ('MyPackage', ''),
-    ActorType.SPRINGBOARD   : ('P_Gameplay.SpringBoard', 'SpringBoardHigh_layoutMesh'),
-    ActorType.STATICMESH    : ('MyPackage', ''),
-}
+# ACTOR_DEFAULT_STATIC_MESH = {
+#     ActorType.PLAYERSTART   : ('MyPackage', ''),
+#     ActorType.BRUSH         : ('MyPackage', ''),
+#     ActorType.LADDER        : ('P_Generic.Ladders', 'S_LadderSystem_01b'),
+#     ActorType.PIPE          : ('P_Pipes.PipeSystem_03', 'S_PipeSystem_03h'),
+#     ActorType.SWING         : ('P_RunnerObjects.SwingPole_01', 'S_SwingPole_01c'),
+#     ActorType.ZIPLINE       : ('MyPackage', ''),
+#     ActorType.SPRINGBOARD   : ('P_Gameplay.SpringBoard', 'SpringBoardHigh_layoutMesh'),
+#     ActorType.STATICMESH    : ('MyPackage', ''),
+# }
 
 # =============================================================================
-class ME_PG_Gizmo(bpy.types.PropertyGroup):
-    obj : PointerProperty(type=bpy.types.Object)
+class ME_MaterialProperty():
+    def __filter_on_package(self, obj: Object):
+        is_material = obj.name.startswith('M_')
+        return self.material_package in obj.users_collection and is_material
+    
+    def get_material_path(self):
+        self.material_package.name.rstrip('.')
+        return self.material_package.name + '.' + self.material.name
+    
+    material_package: PointerProperty(type=bpy.types.Collection, name='Package')
+    material: PointerProperty(type=Object, name='Material', poll=__filter_on_package)
 
 # =============================================================================
-class ME_ActorBase():
+class ME_PG_Widget(PropertyGroup):
+    obj : PointerProperty(type=Object)
+
+# =============================================================================
+class ME_ActorProperty():
     # -------------------------------------------------------------------------
     def __clear_widgets(self):
         for gm in self.widgets:
@@ -143,110 +80,115 @@ class ME_ActorBase():
         self.widgets.clear()
 
     # -------------------------------------------------------------------------
-    def reset(self, obj: bpy.types.Object):
+    def reset(self):
         pass
     
     # -------------------------------------------------------------------------
-    def set_mesh(self, obj):
+    def set_mesh(self):
         pass
 
     # -------------------------------------------------------------------------
-    def set_display_type(self, obj):
-        obj.display_type = 'TEXTURED'
+    def set_display_type(self):
+        self.id_data.display_type = 'TEXTURED'
 
     # -------------------------------------------------------------------------
-    def add_widgets(self, obj):
+    def add_widgets(self):
         pass
 
     # -------------------------------------------------------------------------
-    def init(self, obj: bpy.types.Object):
+    def init(self):
         self.__clear_widgets()
-        self.reset(obj)
-        self.set_mesh(obj)
-        self.set_display_type(obj)
-        self.add_widgets(obj)
+        self.reset()
+        self.set_mesh()
+        self.set_display_type()
+        self.add_widgets()
 
     # -------------------------------------------------------------------------
-    def draw(self, layout: bpy.types.UILayout):
+    def draw(self, context: Context, layout: UILayout):
         pass
 
     # -------------------------------------------------------------------------
-    widgets: CollectionProperty(type=ME_PG_Gizmo)
+    widgets: CollectionProperty(type=ME_PG_Widget)
     scale: FloatVectorProperty(default=(1.0, 1.0, 1.0), subtype='TRANSLATION')
 
 # =============================================================================
-class ME_ACTOR_PG_PlayerStart(ME_ActorBase, bpy.types.PropertyGroup):
+class ME_ACTOR_PG_PlayerStart(ME_ActorProperty, PropertyGroup):
     # -------------------------------------------------------------------------
-    def reset(self, obj: bpy.types.Object):
+    def reset(self):
         self.scale = ACTOR_DEFAULT_SCALE[ActorType.PLAYERSTART]
 
     # -------------------------------------------------------------------------
-    def set_mesh(self, obj):
-        utils.set_mesh(obj, utils.create_flag(self.scale))
+    def set_mesh(self):
+        utils.set_mesh(self.id_data, utils.create_flag(self.scale))
 
     # -------------------------------------------------------------------------
-    def set_display_type(self, obj):
-        obj.display_type = 'WIRE'
+    def set_display_type(self):
+        self.id_data.display_type = 'WIRE'
 
 # =============================================================================
-class ME_ACTOR_PG_Brush(ME_ActorBase, bpy.types.PropertyGroup):
+class ME_ACTOR_PG_Brush(ME_ActorProperty, ME_MaterialProperty, PropertyGroup):
     # -------------------------------------------------------------------------
-    def reset(self, obj: bpy.types.Object):
+    def draw(self, context: Context, layout: UILayout):
+        layout.prop(self, 'material_package')
+        layout.prop(self, 'material')
+
+    # -------------------------------------------------------------------------
+    def reset(self):
         self.scale = ACTOR_DEFAULT_SCALE[ActorType.BRUSH]
 
     # -------------------------------------------------------------------------
-    def set_mesh(self, obj):        
-        utils.set_mesh(obj, utils.create_cube(self.scale))
-
-    # -------------------------------------------------------------------------
-    def draw(self, layout: bpy.types.UILayout):
-        col = layout.column(align=True)
-        col.prop(self, 'material_package')
-        col.prop(self, 'material_name')
-
-    # -------------------------------------------------------------------------
-    def material(self) -> str:
-        self.material_package.rstrip('.')
-        return self.material_package + '.' + self.material_name
-
-    material_package: StringProperty(name='Package')
-    material_name: StringProperty(name='Name')
+    def set_mesh(self):        
+        utils.set_mesh(self.id_data, utils.create_cube(self.scale))
 
 # =============================================================================
-class ME_ACTOR_PG_Ladder(ME_ActorBase, bpy.types.PropertyGroup):
+class ME_ACTOR_PG_Ladder(ME_ActorProperty, PropertyGroup):
     # -------------------------------------------------------------------------
-    def reset(self, obj: bpy.types.Object):
+    def draw(self, context: Context, layout: UILayout):
+        layout.prop(self, 'is_pipe')
+
+    # -------------------------------------------------------------------------
+    def reset(self):
         self.scale = ACTOR_DEFAULT_SCALE[ActorType.LADDER]
 
     # -------------------------------------------------------------------------
-    def set_mesh(self, obj):        
-        utils.set_mesh(obj, utils.create_cube(self.scale))
+    def set_mesh(self):        
+        utils.set_mesh(self.id_data, utils.create_cube(self.scale))
 
     # -------------------------------------------------------------------------
-    def set_display_type(self, obj):
-        obj.display_type = 'WIRE'
+    def set_display_type(self):
+        self.id_data.display_type = 'WIRE'
 
     # -------------------------------------------------------------------------
-    def add_widgets(self, obj):
+    def add_widgets(self):
         arrow = self.widgets.add()
-        arrow.obj = utils.new_object('ARROW', utils.create_arrow(self.scale), medge.COLLECTION_WIDGET, obj)
+        arrow.obj = utils.new_object('ARROW', utils.create_arrow(self.scale), medge.COLLECTION_WIDGETS, obj)
         utils.set_obj_selectable(arrow.obj, False)
+    
+    # -------------------------------------------------------------------------
+    def __on_is_pipe_update(self, context: Context):
+        self.id_data.name = 'LADDER'
+        if self.is_pipe:
+            self.id_data.name = 'PIPE'
+
+    # -------------------------------------------------------------------------
+    is_pipe: BoolProperty(name='Is Pipe', update=__on_is_pipe_update)
 
 # =============================================================================
-class ME_ACTOR_PG_Swing(ME_ActorBase, bpy.types.PropertyGroup):
-    def reset(self, obj: bpy.types.Object):
+class ME_ACTOR_PG_Swing(ME_ActorProperty, PropertyGroup):
+    # -------------------------------------------------------------------------
+    def reset(self):
         self.scale = ACTOR_DEFAULT_SCALE[ActorType.SWING]
 
     # -------------------------------------------------------------------------
-    def set_mesh(self, obj):        
-        utils.set_mesh(obj, utils.create_cube(self.scale))
+    def set_mesh(self):        
+        utils.set_mesh(self.id_data, utils.create_cube(self.scale))
 
     # -------------------------------------------------------------------------
-    def set_display_type(self, obj):
-        obj.display_type = 'WIRE'
+    def set_display_type(self):
+        self.id_data.display_type = 'WIRE'
 
     # -------------------------------------------------------------------------
-    def add_widgets(self, obj):
+    def add_widgets(self):
         m_t07_x = Matrix.Translation((.7, 0, 0))
         m_t035_x = Matrix.Translation((.2, 0, 0))
         m_r90_x = Matrix.Rotation(math.radians(90), 3, (1, 0, 0))
@@ -257,163 +199,131 @@ class ME_ACTOR_PG_Swing(ME_ActorBase, bpy.types.PropertyGroup):
         arrow2 = self.widgets.add()
         for arrow in self.widgets:
             scale = self.scale * .3
-            arrow.obj = utils.new_object('ARROW', utils.create_arrow(scale), medge.COLLECTION_WIDGET, obj)
+            arrow.obj = utils.new_object('ARROW', utils.create_arrow(scale), medge.COLLECTION_WIDGETS, obj)
             utils.set_obj_selectable(arrow.obj, False)
         utils.transform(arrow0.obj.data, [m_t07_x , m_r90_x])
         utils.transform(arrow1.obj.data, [m_t035_x, m_r90_x, m_r90_y])
         utils.transform(arrow2.obj.data, [m_t07_x , m_r90_x, m_mir_x])  
 
 # =============================================================================
-class ME_ACTOR_PG_Zipline(ME_ActorBase, bpy.types.PropertyGroup):
-    def reset(self, obj: bpy.types.Object):
+class ME_ACTOR_PG_Zipline(ME_ActorProperty, PropertyGroup):
+    # -------------------------------------------------------------------------
+    def reset(self):
         self.scale = ACTOR_DEFAULT_SCALE[ActorType.ZIPLINE]
 
     # -------------------------------------------------------------------------
-    def set_mesh(self, obj):  
-        utils.set_mesh(obj, utils.create_cube())      
+    def set_mesh(self):  
+        utils.set_mesh(self.id_data, utils.create_cube())      
         self.curve = medge.create_zipline()
-        self.curve.location = obj.location
-        utils.set_parent(self.curve, obj)
+        self.curve.location = self.id_data.location
+        utils.set_parent(self.curve, self.id_data)
+        utils.add_object_to_scene(self.curve, medge.DEFAULT_PACKAGE)
 
     # -------------------------------------------------------------------------
-    def set_display_type(self, obj):
-        obj.display_type = 'WIRE'
+    def set_display_type(self):
+        self.id_data.display_type = 'WIRE'
 
     # -------------------------------------------------------------------------
-    def draw(self, layout: bpy.types.UILayout):
+    def draw(self, context: Context, layout: UILayout):
         col = layout.column(align=True)
         col.prop(self, 'curve')
 
-    curve: PointerProperty(type=bpy.types.Object, name='Curve')
+    curve: PointerProperty(type=Object, name='Curve')
 
 # =============================================================================
-class ME_ACTOR_PG_SpringBoard(ME_ActorBase, bpy.types.PropertyGroup):
-    def reset(self, obj: bpy.types.Object):
+class ME_ACTOR_PG_SpringBoard(ME_ActorProperty, PropertyGroup):
+    # -------------------------------------------------------------------------
+    def reset(self):
         self.scale = ACTOR_DEFAULT_SCALE[ActorType.SPRINGBOARD]
 
     # -------------------------------------------------------------------------
-    def set_mesh(self, obj):  
-        utils.set_mesh(obj, medge.create_springboard())
+    def set_mesh(self):  
+        utils.set_mesh(self.id_data, medge.create_springboard())
 
 # =============================================================================
-class ME_ACTOR_PG_StaticMesh(ME_ActorBase, bpy.types.PropertyGroup):
+class ME_ACTOR_PG_StaticMesh(ME_ActorProperty, ME_MaterialProperty, PropertyGroup):
     # -------------------------------------------------------------------------
-    def reset(self, obj: bpy.types.Object):
-        self.scale = ACTOR_DEFAULT_SCALE[ActorType.STATICMESH]
-        self.parent = obj
+    def draw(self, context: Context, layout: UILayout):
+        layout.prop(self, 'use_prefab')
 
-    # -------------------------------------------------------------------------
-    def set_mesh(self, obj):
-        if obj.type == 'MESH':
-            utils.set_mesh(obj, utils.create_cube())
-
-    # -------------------------------------------------------------------------
-    def draw(self, layout: bpy.types.UILayout):
-        col = layout.column(align=True)
-        col.prop(self, 'use_material')
-        col.prop(self, 'use_prefab')
-        if not self.use_prefab:
-            col.prop(self, 'ase_export')
-
-        col = layout.column(align=True)
-        col.label(text='Static Mesh')
         if self.use_prefab:
-            col.prop(self, 'prefab')
+            layout.prop(self, 'prefab')
         else:
-            col.prop(self, 'package')
-            col.prop(self, 'name')
-
-            col = layout.column(align=True)
-            col.label(text='Material')
-            col.prop(self, 'material_package')
-            col.prop(self, 'material_name')
+            layout.prop(self, 'use_material')
+            if self.use_material:
+                layout = layout.column(align=True)
+                layout.label(text='Material')
+                layout.prop(self, 'material_package')
+                layout.prop(self, 'material')
 
     # -------------------------------------------------------------------------
-    # obj.name might be changed by Blender; we update self.static_mesh_name in utils.on_depsgraph_update
-    def __on_static_mesh_name_update(self, context: bpy.types.Context):
-        if self.use_prefab: return
-        # Check prevents circular setting of name
-        if (obj := context.active_object) != self.parent: return
-        if obj.name != self.name:
-            obj.name = self.name
-            
+    def reset(self):
+        self.scale = ACTOR_DEFAULT_SCALE[ActorType.STATICMESH]
+
     # -------------------------------------------------------------------------
-    def __on_use_prefab_update(self, context: bpy.types.Context):
+    def set_mesh(self):
+        if self.id_data.type == 'MESH':
+            utils.set_mesh(self.id_data, utils.create_cube())
+    # -------------------------------------------------------------------------
+    def get_path(self) -> str:
+        package = self.id_data.users_collection[0].name
+        package.rstrip('.')
+        return package + '.' + self.id_data.name
+
+    # -------------------------------------------------------------------------
+    def get_prefab_path(self) -> str:
+        package = self.prefab.users_collection[0].name
+        package.rstrip('.')
+        return package + '.' + self.prefab.name
+
+    # -------------------------------------------------------------------------
+    def __on_use_prefab_update(self, context: Context):
         if self.use_prefab:
             self.ase_export = False
 
     # -------------------------------------------------------------------------
-    def __on_prefab_update(self, context: bpy.types.Context):
-        obj = context.active_object
+    def __on_prefab_update(self, context: Context):
         prefab = self.prefab
         if not prefab: 
-            self.set_mesh(obj)
+            self.set_mesh(self.id_data)
             return
-        utils.set_mesh(obj, prefab.data)
-        me_actor = medge.get_me_actor(prefab)
-        self.package = me_actor.static_mesh.package
-        self.name = me_actor.static_mesh.name
-        if not self.package or not self.name:
-            self.report({'WARNING'}, 'Prefab has no package data')
+        utils.set_mesh(self.id_data, prefab.data)
+        self.id_data.name = prefab.name + '_PREFAB'
 
     # -------------------------------------------------------------------------
-    def path(self) -> str:
-        self.package.rstrip('.')
-        return self.package + '.' + self.name
-
-    # -------------------------------------------------------------------------
-    def on_depsgraph_update_post_sync_static_mesh_name(scene : bpy.types.Scene, depsgraph : bpy.types.Depsgraph):
-        for obj in scene.objects:
-            me_actor = medge.get_me_actor(obj)
-            if me_actor is None: continue
-            if me_actor.static_mesh.name != obj.name:
-                me_actor.static_mesh.name = obj.name
-
-    # -------------------------------------------------------------------------
-    parent: PointerProperty(type=bpy.types.Object)
-    package: StringProperty(name='Package', default='MyPackage')
-    name: StringProperty(name='Name', update=__on_static_mesh_name_update)
-    use_prefab: BoolProperty(name='Use Prefab', default=False, update=__on_use_prefab_update)
-    prefab: PointerProperty(type=bpy.types.Object, name='Prefab', update=__on_prefab_update)
     use_material: BoolProperty(name='Use Material', default=False)
-    material_package: StringProperty(name='Package')
-    material_name: StringProperty(name='Name')
-    ase_export: BoolProperty(name='Export ASE', default=False, description='Object will be export as .ase file.')
+    use_prefab: BoolProperty(name='Use Prefab', default=False, update=__on_use_prefab_update)
+    prefab: PointerProperty(type=Object, name='Prefab', update=__on_prefab_update)
 
 # =============================================================================
-class ME_OBJECT_PG_Actor(bpy.types.PropertyGroup):
+class ME_OBJECT_PG_Actor(PropertyGroup):
     # -------------------------------------------------------------------------
-    def __on_type_update(self, context: bpy.types.Context):
-        obj = context.active_object
-        obj.name = str(self.type)
-        utils.set_active(obj)
+    def __on_type_update(self, context: Context):
+        self.id_data.name = str(self.type)
+        utils.set_active(self.id_data)
 
         match(self.type):
             case ActorType.PLAYERSTART:
-                self.player_start.init(obj)
+                self.player_start.init()
             case ActorType.BRUSH:
-                self.brush.init(obj)
+                self.brush.init()
             case ActorType.LADDER:
-                self.ladder.init(obj)
-            case ActorType.PIPE:
-                self.pipe.init(obj)
+                self.ladder.init()
             case ActorType.SWING:
-                self.swing.init(obj)
+                self.swing.init()
             case ActorType.ZIPLINE:
-                self.zipline.init(obj)
+                self.zipline.init()
             case ActorType.SPRINGBOARD:
-                self.springboard.init(obj)
+                self.springboard.init()
             case ActorType.STATICMESH:
-                self.static_mesh.init(obj)
+                self.static_mesh.init()
     
     # -------------------------------------------------------------------------
     type: ActorTypeProperty(__on_type_update)
-    t3d_export: BoolProperty(name='Export T3D', default=True, description='Object will be export as part of the .t3d scene')
 
     player_start: PointerProperty(type=ME_ACTOR_PG_PlayerStart)
     brush: PointerProperty(type=ME_ACTOR_PG_Brush)
     ladder: PointerProperty(type=ME_ACTOR_PG_Ladder)
-    pipe: PointerProperty(type=ME_ACTOR_PG_Ladder)
     swing: PointerProperty(type=ME_ACTOR_PG_Swing)
     zipline: PointerProperty(type=ME_ACTOR_PG_Zipline)
     springboard: PointerProperty(type=ME_ACTOR_PG_SpringBoard)

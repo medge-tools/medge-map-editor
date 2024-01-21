@@ -30,22 +30,16 @@ def menu_func_export_ase(self, context):
 def register():
     auto_load.init()
     auto_load.register()
-    bpy.types.Scene.me_browser = bpy.props.PointerProperty(type=ME_SCENE_PG_GenericBrowser)
     bpy.types.Object.me_actor = bpy.props.PointerProperty(type=ME_OBJECT_PG_Actor)
 
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export_t3d)
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export_ase)
 
-    utils.add_callback(depsgraph_update_post, ME_ACTOR_PG_StaticMesh.on_depsgraph_update_post_sync_static_mesh_name)
-
 # =============================================================================
 def unregister():
-    utils.remove_callback(depsgraph_update_post, ME_ACTOR_PG_StaticMesh.on_depsgraph_update_post_sync_static_mesh_name)
-
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export_ase)
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export_t3d)
 
     del bpy.types.Object.me_actor
-    del bpy.types.Scene.me_browser
     
     auto_load.unregister()

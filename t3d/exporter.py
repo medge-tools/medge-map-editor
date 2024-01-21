@@ -41,7 +41,7 @@ class ME_OT_T3D_Export(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
     ase_export : bpy.props.BoolProperty(
         name='Export ASE',
         description='Export static meshes',
-        default=True
+        default=False
     )
 
     def draw(self, context : bpy.types.Context):
@@ -66,6 +66,7 @@ class ME_OT_T3D_Export(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
             self.report({'ERROR'}, str(e))
 
         # Export ASE
-        bpy.ops.medge_tools.ase_export(filepath=self.filepath, units=self.units)
+        if self.ase_export:
+            bpy.ops.medge_map_editor.ase_export(filepath=self.filepath, units=self.units)
 
         return {'FINISHED'}

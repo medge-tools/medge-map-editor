@@ -10,7 +10,6 @@ class ActorType(str, Enum):
     PLAYERSTART = 'PLAYERSTART'
     BRUSH       = 'BRUSH'
     LADDER      = 'LADDER'
-    PIPE        = 'PIPE'
     SWING       = 'SWING'
     ZIPLINE     = 'ZIPLINE'
     SPRINGBOARD = 'SPRINGBOARD'
@@ -99,8 +98,8 @@ class Actor:
     def __init__(self, 
                  location: tuple[float, float, float] = (0, 0, 0),
                  rotation: tuple[float, float, float] = (0, 0, 0)) -> None:
-        self._Location = Location(location)
-        self._Rotation = Rotation(rotation)
+        self.Location = Location(location)
+        self.Rotation = Rotation(rotation)
 
     def __str__(self) -> str:
         pass
@@ -125,8 +124,8 @@ class PlayerStart(Actor):
     def __str__(self) -> str:
         return \
 f'Begin Actor Class=PlayerStart Name=PlayerStart_0 Archetype=PlayerStart\'Engine.Default__PlayerStart\'\n\
-Location=({self._Location})\n\
-Rotation=({self._Rotation})\n\
+Location=({self.Location})\n\
+Rotation=({self.Rotation})\n\
 End Actor\n'
 
 # =============================================================================
@@ -134,18 +133,21 @@ class StaticMesh(Actor):
     def __init__(self, 
                  location: tuple[float, float, float], 
                  rotation: tuple[float, float, float],
-                 static_mesh: str) -> None:
+                 static_mesh: str,
+                 material: str = '') -> None:
         super().__init__(location, rotation)
         self.StaticMesh: str = static_mesh
+        self.Material: str = material
     
     def __str__(self) -> str:
         return \
 f'Begin Actor Class=StaticMeshActor Name=StaticMeshActor_0 Archetype=StaticMeshActor\'Engine.Default__StaticMeshActor\'\n\
 Begin Object Class=StaticMeshComponent Name=StaticMeshComponent0 Archetype=StaticMeshComponent\'Engine.Default__StaticMeshActor:StaticMeshComponent0\'\n\
 StaticMesh=StaticMesh\'{self.StaticMesh}\'\n\
+Materials(0)=Material\'{self.Material}\'\n\
 End Object\n\
-Location=({self._Location})\n\
-Rotation=({self._Rotation})\n\
+Location=({self.Location})\n\
+Rotation=({self.Rotation})\n\
 End Actor\n'
 
 # =============================================================================
@@ -188,8 +190,8 @@ Begin PolyList\n\
 End PolyList\n\
 End Brush\n\
 Brush=Model\'Model_0\'\n\
-Location=({self._Location})\n\
-Rotation=({self._Rotation})\n\
+Location=({self.Location})\n\
+Rotation=({self.Rotation})\n\
 End Actor\n'
 
 # =============================================================================
@@ -200,20 +202,15 @@ class Ladder(Brush):
     def __init__(self, 
                  polylist : list[Polygon],
                  location: tuple[float, float, float], 
-                 rotation: tuple[float, float, float]
+                 rotation: tuple[float, float, float],
+                 is_pipe: bool = False
                  ) -> None:
         super().__init__(polylist, location, rotation,
                          'TdLadderVolume',
                          'TdGame.Default__TdLadderVolume',
                          'CSG_Active')
-
-# =============================================================================
-class Pipe(Ladder):
-    def __init__(self, polylist: list[Polygon],
-                 location: tuple[float, float, float], 
-                 rotation: tuple[float, float, float]) -> None:
-        super().__init__(polylist, location, rotation)
-        self._Settings.append('LadderType=LT_Pipe')
+        if is_pipe:
+            self._Settings.append('LadderType=LT_Pipe')
 
 # =============================================================================
 class Swing(Brush):

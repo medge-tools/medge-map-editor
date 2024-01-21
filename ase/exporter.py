@@ -13,7 +13,7 @@ class ASEExportError(Exception):
 # =============================================================================
 class ME_OT_ASE_Export(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
     '''Process selection before exporting to a .ase files'''
-    bl_idname = 'medge_tools.ase_export'
+    bl_idname = 'medge_map_editor.ase_export'
     bl_label = 'Export ASE'
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
@@ -56,7 +56,7 @@ class ME_OT_ASE_Export(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         for obj in context.scene.objects:
             me_actor = medge.get_me_actor(obj)
             if me_actor.type != ActorType.STATICMESH: continue
-            if not me_actor.static_mesh.ase_export: continue
+            if me_actor.static_mesh.use_prefab: continue
 
             # Convert to mesh
             if obj.type == 'CURVE':
@@ -91,8 +91,8 @@ class ME_OT_ASE_Export(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
             self.report({'ERROR'}, str(e))
 
         # Remove temp objects
-        # for obj in temp_objs_to_export:
-        #     utils.remove_object(obj)
+        for obj in temp_objs_to_export:
+            utils.remove_object(obj)
 
         # Restore original names
         for obj, name in orig_obj_names:

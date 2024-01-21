@@ -4,52 +4,6 @@ from ..t3d.scene import ActorType
 from . import medge_tools as medge
 
 # =============================================================================
-class ME_PT_GenericBrowser(bpy.types.Panel):
-    bl_idname = 'MET_PT_GenericBrowser'
-    bl_label = 'Generic Browser'
-    bl_space_type = 'VIEW_3D'
-    bl_region_type = 'UI'
-    bl_category = 'MEdge'
-
-    def draw(self, context: bpy.types.Context):
-        browser = medge.get_me_browser(context.scene)
-        
-        layout = self.layout
-        layout.use_property_split = True
-        layout.use_property_decorate = False
-
-        layout.label(text='Packages')
-        row = layout.row(align=True)
-        row.template_list('ME_UL_GenericList', 'packages', browser, 'packages', browser, 'active_idx', rows=4)
-        col = row.column(align=True)
-        col.operator(ME_OT_AddPackage.bl_idname, icon='ADD', text='')
-        col.operator(ME_OT_RemovePackage.bl_idname, icon='REMOVE', text='')
-        col.operator(ME_OT_MovePackage.bl_idname, icon='TRIA_UP', text='').direction = 'UP'
-        col.operator(ME_OT_MovePackage.bl_idname, icon='TRIA_DOWN', text='').direction = 'DOWN'
-        
-        package = browser.get_active_package()
-
-        if package:
-            col = layout.column(align=True)
-            col.prop(package, 'name')
-
-            layout.label(text='Resources')
-            row = layout.row(align=True)
-            row.template_list('ME_UL_GenericList', 'resources', package, 'resources', package, 'active_idx', rows=4)
-            col = row.column(align=True)
-            col.operator(ME_OT_AddResource.bl_idname, icon='ADD', text='')
-            col.operator(ME_OT_RemoveResource.bl_idname, icon='REMOVE', text='')
-            col.operator(ME_OT_MoveResource.bl_idname, icon='TRIA_UP', text='').direction = 'UP'
-            col.operator(ME_OT_MoveResource.bl_idname, icon='TRIA_DOWN', text='').direction = 'DOWN'
-            
-            resource = package.get_active_resource()
-
-            if resource:
-                col = layout.column(align=True)
-                col.prop(resource, 'name')
-
-
-# =============================================================================
 class ME_PT_Actor(bpy.types.Panel):
     bl_idname = 'MET_PT_actor'
     bl_label = 'Actor'
@@ -69,7 +23,6 @@ class ME_PT_Actor(bpy.types.Panel):
 
         col = layout.column(align=True)
         col.prop(me_actor, 'type')
-        col.prop(me_actor, 't3d_export')
 
         if me_actor.type == ActorType.NONE: return
 
@@ -80,8 +33,6 @@ class ME_PT_Actor(bpy.types.Panel):
                 actor = me_actor.brush
             case ActorType.LADDER:
                 actor = me_actor.ladder
-            case ActorType.PIPE:
-                actor = me_actor.pipe
             case ActorType.SWING:
                 actor = me_actor.swing
             case ActorType.ZIPLINE:
@@ -91,12 +42,13 @@ class ME_PT_Actor(bpy.types.Panel):
             case ActorType.STATICMESH:
                 actor = me_actor.static_mesh
 
-        actor.draw(layout)
+        col = layout.column(align=True)
+        actor.draw(context, col)
 
 # =============================================================================
 class ME_PT_Volume(bpy.types.Panel):
     bl_idname = 'MET_PT_volume'
-    bl_label = 'Add Volume'
+    bl_label = 'Add Actor'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = 'MEdge'
@@ -110,12 +62,12 @@ class ME_PT_Volume(bpy.types.Panel):
                 layout: bpy.types.UILayout, 
                 types: tuple[ActorType, ...]):
         row = self.create_row(layout)
-        for actor in types:
-            if actor == ActorType.NONE:
+        for type in types:
+            if type == ActorType.NONE:
                 row.label(text='')
                 continue
-            op = row.operator(ME_OT_AddActor.bl_idname, text=actor)
-            op.type = actor
+            op = row.operator(ME_OT_AddActor.bl_idname, text=type)
+            op.type = type
 
     def draw(self, context : bpy.types.Context):
         layout = self.layout
@@ -124,9 +76,9 @@ class ME_PT_Volume(bpy.types.Panel):
         col = layout.column(align=True)
 
         self.row_actor(col, (ActorType.BRUSH, ActorType.PLAYERSTART))
-        self.row_actor(col, (ActorType.LADDER, ActorType.PIPE))
-        self.row_actor(col, (ActorType.SWING, ActorType.ZIPLINE))
+        self.row_actor(col, (ActorType.LADDER, ActorType.SWING))
         self.row_actor(col, (ActorType.SPRINGBOARD, ActorType.STATICMESH))
+        self.row_actor(col, (ActorType.ZIPLINE, ActorType.NONE))
         
         row = self.create_row(col)
-        row.operator(ME_OT_CleanupWidgets.bl_idname, text='CLEANUP WIDGETS')
+        row.operator(ME_OT_CleanupWidgets.bl_idname, text='Cleanup Widgets')

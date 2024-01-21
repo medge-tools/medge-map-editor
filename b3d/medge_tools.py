@@ -1,26 +1,22 @@
 import bpy
-from mathutils import Vector, Matrix
+from mathutils import Matrix
 from ..t3d.scene import ActorType
 from . import utils
 from . import props
 
-COLLECTION_WIDGET = 'WIDGET'
-
+COLLECTION_WIDGETS = 'WIDGET'
+DEFAULT_PACKAGE = 'MyPackage'
 
 # =============================================================================
 # HELPSERS
 # -----------------------------------------------------------------------------
-# =============================================================================
-def get_me_browser(scene: bpy.types.Scene) -> props.ME_SCENE_PG_GenericBrowser:
-    return scene.me_browser
-
 # =============================================================================
 def get_me_actor(obj: bpy.types.Object) -> props.ME_OBJECT_PG_Actor:
     return obj.me_actor
 
 # =============================================================================
 def cleanup_widgets():
-    collection = bpy.context.blend_data.collections.get(COLLECTION_WIDGET)
+    collection = bpy.context.blend_data.collections.get(COLLECTION_WIDGETS)
     if collection is not None:
         for child in collection.objects:
             if child.parent != None: continue
