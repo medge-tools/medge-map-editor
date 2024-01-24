@@ -5,15 +5,47 @@ from enum import Enum
 EULER_TO_URU = 65536 / math.tau
 
 # =============================================================================
+# RHS needs to be exactly the same as LHS it to work in Blender
 class ActorType(str, Enum):
-    NONE        = 'NONE'
-    PLAYERSTART = 'PLAYERSTART'
-    BRUSH       = 'BRUSH'
-    LADDER      = 'LADDER'
-    SWING       = 'SWING'
-    ZIPLINE     = 'ZIPLINE'
-    SPRINGBOARD = 'SPRINGBOARD'
-    STATICMESH  = 'STATICMESH'
+    NONE            = 'NONE'
+    PLAYER_START    = 'PLAYER_START'
+    STATIC_MESH     = 'STATIC_MESH'
+    BRUSH           = 'BRUSH'
+    LADDER          = 'LADDER'
+    SWING           = 'SWING'
+    ZIPLINE         = 'ZIPLINE'
+    SPRINGBOARD     = 'SPRINGBOARD'
+    CHECKPOINT      = 'CHECKPOINT'
+
+
+# =============================================================================
+class TrackIndex(str, Enum):
+    ETTS_NONE               = 'ETTS_NONE'
+    ETTS_CRANES_A01         = 'ETTS_CRANES_A01'
+    ETTS_CRANES_B01         = 'ETTS_CRANES_B01'
+    ETTS_CRANES_B02         = 'ETTS_CRANES_B02'
+    ETTS_CRANES_C01         = 'ETTS_CRANES_C01'   
+    ETTS_CRANES_D01         = 'ETTS_CRANES_D01'
+    ETTS_EDGE_A01           = 'ETTS_EDGE_A01'
+    ETTS_STORMDRAIN_A01     = 'ETTS_STORMDRAIN_A01'
+    ETTS_STORMDRAIN_A02     = 'ETTS_STORMDRAIN_A02'
+    ETTS_STORMDRAIN_B01     = 'ETTS_STORMDRAIN_B01'
+    ETTS_STORMDRAIN_B02     = 'ETTS_STORMDRAIN_B02'
+    ETTS_STORMDRAIN_B03     = 'ETTS_STORMDRAIN_B03'
+    ETTS_CONVOY_A01         = 'ETTS_CONVOY_A01'
+    ETTS_CONVOY_A02         = 'ETTS_CONVOY_A02'
+    ETTS_CONVOY_B01         = 'ETTS_CONVOY_B01'
+    ETTS_CONVOY_B02         = 'ETTS_CONVOY_B02'
+    ETTS_MALL_A01           = 'ETTS_MALL_A01'
+    ETTS_TUTORIAL_A01       = 'ETTS_TUTORIAL_A01'
+    ETTS_TUTORIAL_A02       = 'ETTS_TUTORIAL_A02'
+    ETTS_TUTORIAL_A03       = 'ETTS_TUTORIAL_A03'
+    ETTS_FACTORY_A01        = 'ETTS_FACTORY_A01'
+    ETTS_SKYSCRAPER_A01     = 'ETTS_SKYSCRAPER_A01'
+    ETTS_SKYSCRAPER_B01     = 'ETTS_SKYSCRAPER_B01'
+    ETTS_ESCAPE_A01         = 'ETTS_ESCAPE_A01'
+    ETTS_ESCAPE_B01         = 'ETTS_ESCAPE_B01'
+
 
 # =============================================================================
 class Point3D(Vector):
@@ -41,11 +73,13 @@ class Point3D(Vector):
     def set_format(self, f : str):
         self.format = f
 
+
 # =============================================================================
 class Location(Point3D):
     def __init__(self, point : tuple[float, float, float] = (0, 0, 0)) -> None:
         super().__init__(point) 
         self.set_prefix('X', 'Y', 'Z')
+
 
 # =============================================================================
 class Rotation(Point3D):
@@ -54,6 +88,7 @@ class Rotation(Point3D):
         super().__init__(rotation)
         self.set_prefix('Roll', 'Pitch', 'Yaw')
         self.set_format('{:.0f}')
+
 
 # =============================================================================
 class Polygon:
@@ -90,6 +125,7 @@ f'Begin Polygon {texture}Flags=3584 {link}\n\
 {verts}\
 End Polygon\n'
 
+
 # =============================================================================
 # ACTOR
 # -----------------------------------------------------------------------------
@@ -104,29 +140,70 @@ class Actor:
     def __str__(self) -> str:
         pass
 
-# =============================================================================
-class WorldInfo(Actor):
-    def __init__(self) -> None:
-        super().__init__()
 
-    def __str__(self) -> str:
-        return \
-f'Begin Actor Class=WorldInfo Name=WorldInfo_0 Archetype=WorldInfo\'Engine.Default__WorldInfo\'\n\
-End Actor\n'
-    
 # =============================================================================
 class PlayerStart(Actor):
     def __init__(self, 
-                 location: tuple[float, float, float], 
-                 rotation: tuple[float, float, float]) -> None:
+                 location: tuple[float, float, float] = (0, 0, 0), 
+                 rotation: tuple[float, float, float] = (0, 0, 0),
+                 is_time_trial: bool = False,
+                 track_index: TrackIndex = TrackIndex.ETTS_TUTORIAL_A01) -> None:
         super().__init__(location, rotation)
+        self.is_time_trial = is_time_trial
+        self.TrackIndex = track_index
 
     def __str__(self) -> str:
-        return \
+        if self.is_time_trial: 
+            return\
+f'Begin Actor Class=TdTimeTrialStart Name=TdTimeTrialStart_0 Archetype=TdTimeTrialStart\'TdGame.Default__TdTimeTrialStart\'\n\
+Begin Object Class=RequestedTextureResources Name=RequestedTextureResources_0 Archetype=RequestedTextureResources\'TdGame.Default__TdTimeTrialStart:PlayerStartTextureResourcesObject\'\n\
+End Object\n\
+TrackIndex={self.TrackIndex}\n\
+Location=({self.Location})\n\
+Rotation=({self.Rotation})\n\
+End Actor\n'
+        else:
+            return \
 f'Begin Actor Class=PlayerStart Name=PlayerStart_0 Archetype=PlayerStart\'Engine.Default__PlayerStart\'\n\
 Location=({self.Location})\n\
 Rotation=({self.Rotation})\n\
 End Actor\n'
+
+
+# =============================================================================
+class Checkpoint(Actor):
+    def __init__(self, 
+                 location: tuple[float, float, float] = (0, 0, 0), 
+                 track_index: TrackIndex = TrackIndex.ETTS_TUTORIAL_A01,
+                 order_index: int = 0,
+                 no_intermediate_time: bool = False,
+                 custom_height: float = 0.0,
+                 custom_width_scale: float = 0.0,
+                 no_respawn: bool = False,
+                 enabled: bool = True,
+                 should_be_based: bool = True) -> None:
+        super().__init__(location, (0, 0, 0))
+        self.TrackIndex = track_index
+        self.OrderIndex = order_index
+        self.NoIntermediateTime = no_intermediate_time
+        self.CustomHeight = custom_height
+        self.CustomWidthScale = custom_width_scale
+        self.NoRespawn = no_respawn
+        self.Enabled = enabled
+        self.ShouldBeBased = should_be_based
+    
+    def __str__(self) -> str:
+        return \
+f'Begin Actor Class=TdTimerCheckpoint Name=TdTimerCheckpoint_0 Archetype=TdTimerCheckpoint\'TdGame.Default__TdTimerCheckpoint\'\n\
+BelongToTracks(0)=(TrackIndex={self.TrackIndex},OrderIndex={self.OrderIndex},bNoIntermediateTime={self.NoIntermediateTime})\n\
+CustomHeight={self.CustomHeight}\n\
+CustomWidthScale={self.CustomWidthScale}\n\
+bNoRespawn={self.NoRespawn}\n\
+bEnabled={self.Enabled}\n\
+bShouldBeBased={self.ShouldBeBased}\n\
+Location=({self.Location})\n\
+End Actor\n'
+    
 
 # =============================================================================
 class StaticMesh(Actor):
@@ -150,6 +227,7 @@ Location=({self.Location})\n\
 Rotation=({self.Rotation})\n\
 End Actor\n'
 
+
 # =============================================================================
 class Brush(Actor):
     def __init__(self, 
@@ -160,11 +238,11 @@ class Brush(Actor):
                  package_name: str = 'Engine.Default__Brush',
                  csg_oper: str = 'CSG_Add') -> None:
         super().__init__(location, rotation)
-        self._Package = package_name
-        self._Class = class_name
-        self._Archetype = class_name + '\'' + package_name + '\''
-        self._CsgOper = csg_oper
-        self._Settings : list[str] = []
+        self.Package = package_name
+        self.Class = class_name
+        self.Archetype = class_name + '\'' + package_name + '\''
+        self.CsgOper = csg_oper
+        self.Settings : list[str] = []
         self.PolyList : list[Polygon] = polylist
 
     def __str__(self) -> str:
@@ -176,13 +254,13 @@ class Brush(Actor):
                 link += 1
             polylist += str(poly)
         props = ''
-        for prop in self._Settings:
+        for prop in self.Settings:
             props += prop + '\n'
         return \
-f'Begin Actor Class={self._Class} Name={self._Class}_0 Archetype={self._Archetype}\n\
-Begin Object Class=BrushComponent Name=BrushComponent0 Archetype=BrushComponent\'{self._Package}:BrushComponent0\'\n\
+f'Begin Actor Class={self.Class} Name={self.Class}_0 Archetype={self.Archetype}\n\
+Begin Object Class=BrushComponent Name=BrushComponent0 Archetype=BrushComponent\'{self.Package}:BrushComponent0\'\n\
 End Object\n\
-CsgOper={self._CsgOper}\n\
+CsgOper={self.CsgOper}\n\
 {props}\
 Begin Brush Name=Model_0\n\
 Begin PolyList\n\
@@ -193,6 +271,7 @@ Brush=Model\'Model_0\'\n\
 Location=({self.Location})\n\
 Rotation=({self.Rotation})\n\
 End Actor\n'
+
 
 # =============================================================================
 # VOLUMES
@@ -210,7 +289,8 @@ class Ladder(Brush):
                          'TdGame.Default__TdLadderVolume',
                          'CSG_Active')
         if is_pipe:
-            self._Settings.append('LadderType=LT_Pipe')
+            self.Settings.append('LadderType=LT_Pipe')
+
 
 # =============================================================================
 class Swing(Brush):
@@ -221,6 +301,7 @@ class Swing(Brush):
                          'TdSwingVolume',
                          'TdGame.Default__TdSwingVolume',
                          'CSG_Active')
+
 
 # =============================================================================
 class Zipline(Brush):
@@ -234,10 +315,11 @@ class Zipline(Brush):
                          'TdZiplineVolume',
                          'TdGame.Default__TdZiplineVolume',
                          'CSG_Active')
-        self._Settings.append(f'Start=({Location(start)})')
-        self._Settings.append(f'End=({Location(end)})')
-        self._Settings.append(f'Middle=({Location(middle)})')
-        self._Settings.append('bHideSplineMarkers=False')
-        self._Settings.append('bAllowSplineControl=True')
-        self._Settings.append('OldScale=(X=1.000000,Y=1.000000,Z=1.000000)')
-        self._Settings.append(f'OldLocation=({Location(start)})')
+        self.Settings.append(f'Start=({Location(start)})')
+        self.Settings.append(f'End=({Location(end)})')
+        self.Settings.append(f'Middle=({Location(middle)})')
+        self.Settings.append('bHideSplineMarkers=False')
+        self.Settings.append('bAllowSplineControl=True')
+        self.Settings.append('OldScale=(X=1.000000,Y=1.000000,Z=1.000000)')
+        self.Settings.append(f'OldLocation=({Location(start)})')
+

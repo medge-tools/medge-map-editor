@@ -1,5 +1,5 @@
 import bpy
-from mathutils import Matrix
+from mathutils import Vector, Matrix
 from ..t3d.scene import ActorType
 from . import utils
 from . import props
@@ -39,6 +39,24 @@ def new_actor(actor_type: ActorType, object_type = 'MESH', data = None) -> bpy.t
         utils.set_mesh(obj, data)
     return obj
 
+
+# =============================================================================
+def create_player_start(scale: tuple[float, float, float] = (1, 1, 1)) -> bpy.types.Mesh:
+    verts = [
+        Vector((-0.5        * scale[0], -1 * scale[1], 0)),
+        Vector((-0.5        * scale[0],  1 * scale[1], 0)),
+        Vector(( 0.866025   * scale[0],  0           , 0)),
+        Vector((-0.5        * scale[0],  0           , 1 * scale[2])),
+    ]
+    faces = [
+        (2, 1, 0),
+        (0, 1, 3),
+        (1, 2, 3),
+        (0, 3, 2)
+    ]
+    return utils.create_mesh(verts, [], faces, 'PLAYER START')
+
+
 # =============================================================================
 def create_springboard(scale: tuple[float, float, float] = (1, 1, 1)) -> bpy.types.Mesh:
     small_step = utils.create_cube((.24, .48, .32))
@@ -47,9 +65,10 @@ def create_springboard(scale: tuple[float, float, float] = (1, 1, 1)) -> bpy.typ
     utils.transform(big_step, [Matrix.Translation((1.82, .8, .72))])
     return utils.join_meshes([small_step, big_step])
 
+
 # =============================================================================
 def create_zipline() -> bpy.types.Object:
-    zipline = new_actor(ActorType.STATICMESH, 'CURVE')
+    zipline = new_actor(ActorType.STATIC_MESH, 'CURVE')
     utils.set_mesh(zipline, utils.create_curve(step=8))
     zipline.name= 'Zipline'
     zipline.data.bevel_depth = 0.04
@@ -57,3 +76,8 @@ def create_zipline() -> bpy.types.Object:
     sm = get_me_actor(zipline).static_mesh
     sm.ase_export = True
     return zipline
+
+
+# =============================================================================
+def create_checkpoint() -> bpy.types.Object:
+    return utils.create_cylinder(make_faces=False)

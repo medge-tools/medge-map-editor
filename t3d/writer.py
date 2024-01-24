@@ -7,11 +7,9 @@ class T3DWriter:
         self.fp : TextIOWrapper = None
 
     def write(self, filepath : str, scene : list[Actor] ):
-        s = ''
-        for a in scene:
-            s += str(a)
         with open(filepath, 'w') as self.fp:
             self.fp.write('Begin Map\nBegin Level NAME=PersistentLevel\n')
-            self.fp.write(s)
+            for a in scene:
+                self.fp.write(str(a))
             self.fp.write('End Level\nBegin Surface\nEnd Surface\nEnd Map')
             

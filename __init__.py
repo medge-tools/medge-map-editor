@@ -43,3 +43,4 @@ def unregister():
     del bpy.types.Object.me_actor
     
     auto_load.unregister()
+    

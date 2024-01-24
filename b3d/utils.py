@@ -1,7 +1,9 @@
 import bpy
 from bpy.types import Object
-import bmesh
 from mathutils import Vector, Matrix, Euler
+import bmesh
+import math
+import numpy as np
 
 # =============================================================================
 # HELPERS
@@ -22,22 +24,31 @@ def set_obj_mode(obj: Object, m = 'OBJECT') -> None:
 def set_obj_selectable(obj: Object, select: bool) -> None:
     obj.hide_select = not select
 
+
 # =============================================================================
 def select_obj(obj: Object):
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
 
+
+# =============================================================================
 def select_all() -> None:
     for obj in bpy.context.scene.objects:
         select_obj(obj)
+
 
 # =============================================================================
 def deselect_all() -> None:
     for obj in bpy.context.selected_objects:
         obj.select_set(False)
 
+
 # =============================================================================
-def add_object_to_scene(obj: Object, collection: str = None) -> None:
+def link_to_scene(obj: Object, collection: str = None) -> None:
+    """If the collection == None, then the object will be linked to the root collection"""
+    for uc in obj.users_collection:
+        uc.objects.unlink(obj)
+
     if collection is not None:
         c = bpy.context.blend_data.collections.get(collection)
         if c == None:
@@ -47,15 +58,36 @@ def add_object_to_scene(obj: Object, collection: str = None) -> None:
     else:
         bpy.context.scene.collection.objects.link(obj)
 
-def is_mesh(obj: Object) -> bool:
-    return obj.type == 'MESH'
+
+# =============================================================================
+def auto_properties(data, layout: bpy.types.UILayout):
+    for key in data.__annotations__.keys():
+        layout.prop(data, key)
+
+
+# =============================================================================
+# HANDLER CALLBACK
+# -----------------------------------------------------------------------------
+# =============================================================================
+def add_callback(handler, function) -> None:
+    for fn in handler:
+        if fn.__name__ == function.__name__: return
+    handler.append(function)
+
+# =============================================================================
+def remove_callback(handler, function) -> None:
+    for fn in handler:
+        if fn.__name__ == function.__name__:
+            handler.remove(fn)
+
+
 # =============================================================================
 # SCENE
 # -----------------------------------------------------------------------------
 # =============================================================================
 def new_object(name: str, data: bpy.types.ID, collection: str = None, parent: bpy.types.Object = None) -> None:
     obj = bpy.data.objects.new(name, data)
-    add_object_to_scene(obj, collection)
+    link_to_scene(obj, collection)
     if(parent): obj.parent = parent
     set_active(obj)
     return obj
@@ -68,7 +100,7 @@ def remove_object(obj: Object) -> None:
 def copy_object(obj: Object) -> bpy.types.Object:
     copy = obj.copy()
     copy.data = obj.data.copy()
-    add_object_to_scene(copy)
+    link_to_scene(copy)
     return copy
 
 # =============================================================================
@@ -157,7 +189,9 @@ def convert_to_new_mesh(obj: Object) -> bpy.types.Object:
 
 # =============================================================================
 #https://blender.stackexchange.com/questions/127603/how-to-specify-nurbs-path-vertices-in-python
-def create_curve(num_points : int = 3, step: int = 1, dir : tuple[float, float, float] = (1, 0, 0)) -> bpy.types.Curve:
+def create_curve(num_points = 3, 
+                 step = 1, 
+                 dir: tuple[float, float, float] = (1, 0, 0)) -> bpy.types.Curve:
     curve = bpy.data.curves.new('CURVE', 'CURVE')
     path = curve.splines.new('NURBS')
     curve.dimensions = '3D'
@@ -219,14 +253,14 @@ def apply_all_transforms(obj: Object) -> None:
 
 # =============================================================================
 # https://blender.stackexchange.com/questions/9200/how-to-make-object-a-a-parent-of-object-b-via-blenders-python-api
-def set_parent(child: Object, parent: Object, keep_world_location : bool = True):
+def set_parent(child: Object, parent: Object, keep_world_location = True):
     child.parent = parent
     if keep_world_location:
         child.matrix_parent_inverse = parent.matrix_world.inverted()
 
 # =============================================================================
 # https://blender.stackexchange.com/questions/9200/how-to-make-object-a-a-parent-of-object-b-via-blenders-python-api
-def unparent(obj: Object, keep_world_location : bool = True):
+def unparent(obj: Object, keep_world_location = True):
     parented_wm = obj.matrix_world.copy()
     obj.parent = None
     if keep_world_location:
@@ -280,33 +314,46 @@ def create_arrow(scale: tuple[float, float] = (1, 1)) -> bpy.types.Mesh:
     return create_mesh(verts, edges, [], 'ARROW')
 
 # =============================================================================
-def create_flag(scale: tuple[float, float, float] = (1, 1, 1)) -> bpy.types.Mesh:
-    verts = [
-        Vector((-0.5        * scale[0], -1 * scale[1], 0)),
-        Vector((-0.5        * scale[0],  1 * scale[1], 0)),
-        Vector(( 0.866025   * scale[0],  0           , 0)),
-        Vector((-0.5        * scale[0],  0           , 1 * scale[2])),
-    ]
-    faces = [
-        (2, 1, 0),
-        (0, 1, 3),
-        (1, 2, 3),
-        (0, 3, 2)
-    ]
-    return create_mesh(verts, [], faces, 'FLAG')
+def circle(radius, 
+           location, 
+           angle_step = 10) -> list[tuple[float, float, float]]:
+    (a, b, c) = location
+
+    verts = []
+    for angle in range(0, 360, angle_step):
+        angle_radius = math.radians(angle)
+        x = a + radius * math.cos(angle_radius)
+        y = b + radius * math.sin(angle_radius)
+        verts.append((x, y, c))
+    # Adding the first vertex as last vertex to close the loop
+    verts.append(verts[0])
+    return verts
 
 # =============================================================================
-# HANDLER CALLBACK
-# -----------------------------------------------------------------------------
-# =============================================================================
-def add_callback(handler, function) -> None:
-    for fn in handler:
-        if fn.__name__ == function.__name__: return
-    handler.append(function)
+def create_cylinder(radius = 2, 
+                    height = 2, 
+                    row_height = 1, 
+                    angle_step = 10, 
+                    make_faces = True) -> bpy.types.Mesh:
+    height += 1
+    verts = []
+    per_circle_verts = 0
 
-# =============================================================================
-def remove_callback(handler, function) -> None:
-    for fn in handler:
-        if fn.__name__ == function.__name__:
-            handler.remove(fn)
+    for z in np.arange(0, height, row_height):
+        c = circle(radius, (0, 0, z), angle_step)
+        per_circle_verts = len(c)
+        verts += c
 
+    rows = int(height / row_height)
+    faces = []
+
+    if make_faces:
+        for row in range(0, rows - 1):
+            for index in range(0, per_circle_verts - 1):
+                v1 = index + (row * per_circle_verts)
+                v2 = v1 + 1
+                v3 = v1 + per_circle_verts
+                v4 = v2 + per_circle_verts
+                faces.append((v1, v3, v4, v2))
+
+    return create_mesh(verts, [], faces, 'CYLINDER')
