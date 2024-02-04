@@ -1,9 +1,9 @@
 bl_info = {
-    "name" : "Mirror's Edge Editor",
+    "name" : "MEdge Tools: Map Editor",
     "author" : "Tariq Bakhtali (didibib)",
     "description" : "",
     "blender" : (3, 4, 0),
-    "version" : (0, 6, 9),
+    "version" : (1, 0, 0),
     "location" : "",
     "warning" : "",
     "category" : "MEdge Tools"

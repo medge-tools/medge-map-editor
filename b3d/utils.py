@@ -15,10 +15,12 @@ def set_active(obj: Object) -> None:
     bpy.context.view_layer.objects.active = obj
     obj.select_set(True)
 
+
 # =============================================================================
 def set_obj_mode(obj: Object, m = 'OBJECT') -> None:
     bpy.context.view_layer.objects.active = obj
     bpy.ops.object.mode_set(mode=m)
+
 
 # =============================================================================
 def set_obj_selectable(obj: Object, select: bool) -> None:
