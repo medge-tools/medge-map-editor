@@ -76,6 +76,7 @@ def add_callback(handler, function) -> None:
         if fn.__name__ == function.__name__: return
     handler.append(function)
 
+
 # =============================================================================
 def remove_callback(handler, function) -> None:
     for fn in handler:
@@ -94,9 +95,11 @@ def new_object(name: str, data: bpy.types.ID, collection: str = None, parent: bp
     set_active(obj)
     return obj
 
+
 # =============================================================================
 def remove_object(obj: Object) -> None:
     bpy.data.objects.remove(obj)
+
 
 # =============================================================================
 def copy_object(obj: Object) -> bpy.types.Object:
@@ -104,6 +107,7 @@ def copy_object(obj: Object) -> bpy.types.Object:
     copy.data = obj.data.copy()
     link_to_scene(copy)
     return copy
+
 
 # =============================================================================
 def create_mesh(
@@ -114,6 +118,7 @@ def create_mesh(
     mesh = bpy.data.meshes.new(name)
     mesh.from_pydata(verts, edges, faces)
     return mesh
+
 
 # =============================================================================
 def remove_mesh(mesh: bpy.types.Mesh) -> None:
@@ -132,12 +137,14 @@ def remove_mesh(mesh: bpy.types.Mesh) -> None:
     else: result = True
     return result
 
+
 # =============================================================================
 # https://blenderartists.org/t/how-to-replace-a-mesh/596225/4
 def set_mesh(obj: Object, mesh: bpy.types.Mesh) -> None:
     old_mesh = obj.data
     obj.data = mesh
     remove_mesh(old_mesh)
+
 
 # =============================================================================
 # https://blender.stackexchange.com/questions/50160/scripting-low-level-join-meshes-elements-hopefully-with-bmesh
@@ -177,10 +184,12 @@ def join_meshes(meshes: list[bpy.types.Mesh]) -> None:
     bm.free()
     return meshes[0]
 
+
 # =============================================================================
 def convert_to_mesh_in_place(obj: Object):
     set_active(obj)
     bpy.ops.object.convert(target='MESH') 
+
 
 # =============================================================================
 def convert_to_new_mesh(obj: Object) -> bpy.types.Object:
@@ -188,6 +197,7 @@ def convert_to_new_mesh(obj: Object) -> bpy.types.Object:
     new_obj = new_object(obj.name, mesh)
     new_obj.matrix_world = obj.matrix_world 
     return new_obj
+
 
 # =============================================================================
 #https://blender.stackexchange.com/questions/127603/how-to-specify-nurbs-path-vertices-in-python
@@ -206,6 +216,7 @@ def create_curve(num_points = 3,
         path.points[k].co = point
     path.use_endpoint_u = True
     return curve
+
 
 # =============================================================================
 def transform(mesh: bpy.types.Mesh, transforms: list[Matrix]) -> None:
@@ -228,6 +239,7 @@ def transform(mesh: bpy.types.Mesh, transforms: list[Matrix]) -> None:
         bmesh.update_edit_mesh(mesh)  
     bm.free()
 
+
 # =============================================================================
 # Rotation mode: 
 #   https://gist.github.com/behreajj/2dbb6fb7cee78c167cd85085e67bcdf6
@@ -242,6 +254,7 @@ def get_rotation_mirrored_x_axis(obj: Object) -> Euler:
     obj.rotation_mode = prev_rot_mode
     return q.to_euler()
 
+
 # =============================================================================
 # https://blender.stackexchange.com/questions/159538/how-to-apply-all-transformations-to-an-object-at-low-level
 def apply_all_transforms(obj: Object) -> None:
@@ -253,12 +266,14 @@ def apply_all_transforms(obj: Object) -> None:
         
     obj.matrix_basis.identity()
 
+
 # =============================================================================
 # https://blender.stackexchange.com/questions/9200/how-to-make-object-a-a-parent-of-object-b-via-blenders-python-api
 def set_parent(child: Object, parent: Object, keep_world_location = True):
     child.parent = parent
     if keep_world_location:
         child.matrix_parent_inverse = parent.matrix_world.inverted()
+
 
 # =============================================================================
 # https://blender.stackexchange.com/questions/9200/how-to-make-object-a-a-parent-of-object-b-via-blenders-python-api
@@ -267,6 +282,7 @@ def unparent(obj: Object, keep_world_location = True):
     obj.parent = None
     if keep_world_location:
         obj.matrix_world = parented_wm
+
 
 # =============================================================================
 # CREATE
@@ -293,6 +309,7 @@ def create_cube(scale: tuple[float, float, float] = (1, 1, 1)) -> bpy.types.Mesh
     ]
     return create_mesh(verts, [], faces, 'CUBE')
 
+
 # =============================================================================
 def create_arrow(scale: tuple[float, float] = (1, 1)) -> bpy.types.Mesh:
     verts = [
@@ -315,6 +332,7 @@ def create_arrow(scale: tuple[float, float] = (1, 1)) -> bpy.types.Mesh:
     ]
     return create_mesh(verts, edges, [], 'ARROW')
 
+
 # =============================================================================
 def circle(radius, 
            location, 
@@ -330,6 +348,7 @@ def circle(radius,
     # Adding the first vertex as last vertex to close the loop
     verts.append(verts[0])
     return verts
+
 
 # =============================================================================
 def create_cylinder(radius = 2, 

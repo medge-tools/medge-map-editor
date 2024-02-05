@@ -2,8 +2,16 @@ import bpy
 import bpy_extras
 
 from .builder import *
-from .writer import *
 from ..ase import *
+
+# =============================================================================
+class T3DWriter:
+    def write(self, filepath : str, scene : list[Actor] ):
+        with open(filepath, 'w') as fp:
+            fp.write('Begin Map\nBegin Level NAME=PersistentLevel\n')
+            for a in scene:
+                fp.write(str(a))
+            fp.write('End Level\nBegin Surface\nEnd Surface\nEnd Map')
 
 
 # =============================================================================
@@ -18,7 +26,7 @@ class ME_OT_T3D_Export(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
     filter_glob : bpy.props.StringProperty(
         default='*.t3d',
         options={'HIDDEN'},
-        maxlen=255) # Max internal buffer length, longer would be hilighted.
+        maxlen=255) 
 
 
     # These values are identical to the ASE Export addon
@@ -29,8 +37,8 @@ class ME_OT_T3D_Export(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
 
     units : bpy.props.EnumProperty(
         default='M',
-        items=(('M', 'Meters', f'1 Blender unit is {units_scale["M"]} Unreal units'),
-               ('U', 'Unreal', f'1 Blender unit is {units_scale["U"]} Unreal units')),
+        items=(('M', 'Meters', ''),
+               ('U', 'Unreal', '')),
         name='Units')
 
 
