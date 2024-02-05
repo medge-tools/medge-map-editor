@@ -62,7 +62,7 @@ def link_to_scene(obj: Object, collection: str = None) -> None:
 
 
 # =============================================================================
-def auto_properties(data, layout: bpy.types.UILayout):
+def auto_gui_properties(data, layout: bpy.types.UILayout):
     for key in data.__annotations__.keys():
         layout.prop(data, key)
 

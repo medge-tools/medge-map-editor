@@ -4,12 +4,12 @@ from ..t3d.scene import ActorType
 from . import medge_tools as medge
 
 # =============================================================================
-class ME_PT_Actor(bpy.types.Panel):
+class MET_PT_Actor(bpy.types.Panel):
     bl_idname = 'MET_PT_actor'
     bl_label = 'Actor'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = 'MEdge'
+    bl_category = 'MEdge Tools'
 
     def draw(self, context : bpy.types.Context):
         obj = context.active_object
@@ -24,12 +24,12 @@ class ME_PT_Actor(bpy.types.Panel):
         me_actor.draw(layout)
 
 # =============================================================================
-class ME_PT_Volume(bpy.types.Panel):
+class MET_PT_Volume(bpy.types.Panel):
     bl_idname = 'MET_PT_volume'
     bl_label = 'Add Actor'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = 'MEdge'
+    bl_category = 'MEdge Tools'
 
     def create_row(self, layout: bpy.types.UILayout) -> bpy.types.UILayout:
         row = layout.row(align=True)
@@ -44,7 +44,7 @@ class ME_PT_Volume(bpy.types.Panel):
             if type == ActorType.NONE:
                 row.label(text='')
                 continue
-            op = row.operator(ME_OT_AddActor.bl_idname, text=type)
+            op = row.operator(MET_OT_AddActor.bl_idname, text=type)
             op.type = type
 
     def draw(self, context : bpy.types.Context):
@@ -59,4 +59,4 @@ class ME_PT_Volume(bpy.types.Panel):
         self.row_actor(col, (ActorType.ZIPLINE, ActorType.CHECKPOINT))
         
         row = self.create_row(col)
-        row.operator(ME_OT_CleanupWidgets.bl_idname, text='Cleanup Widgets')
+        row.operator(MET_OT_CleanupWidgets.bl_idname, text='Cleanup Widgets')

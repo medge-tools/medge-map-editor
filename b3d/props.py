@@ -42,7 +42,7 @@ def TrackIndexProperty(callback: Callable = None):
 
 
 # =============================================================================
-class ME_MaterialProperty():
+class MET_MaterialProperty():
     def __filter_on_package(self, obj: Object):
         is_material = obj.name.startswith('M_')
         return self.material_package in obj.users_collection and is_material
@@ -56,7 +56,7 @@ class ME_MaterialProperty():
 
 
 # =============================================================================
-class ME_PG_Widget(PropertyGroup):
+class MET_PG_Widget(PropertyGroup):
     obj : PointerProperty(type=Object)
 
 
@@ -64,60 +64,36 @@ class ME_PG_Widget(PropertyGroup):
 # ACTORS
 # -----------------------------------------------------------------------------
 # =============================================================================
-class ME_ActorProperty():
+class MET_ActorProperty():
     
     def __clear_widgets(self):
         for gm in self.widgets:
             if gm.obj != None:
                 bpy.data.objects.remove(gm.obj)
         self.widgets.clear()
-
-    
-    def reset(self):
-        self.scale = (1, 1, 1)
-    
-    
-    def set_mesh(self):
-        pass
-
-    
-    def set_display_type(self):
-        self.id_data.display_type = 'TEXTURED'
-
-    
-    def add_widgets(self):
-        pass
-
     
     def init(self):
         self.__clear_widgets()
         utils.link_to_scene(self.id_data)
-        self.reset()
-        self.set_mesh()
-        self.set_display_type()
-        self.add_widgets()
+        self.scale = (1, 1, 1)
+        self.id_data.display_type = 'TEXTURED'
     
     def draw(self, layout: UILayout):
         pass
 
     
-    widgets: CollectionProperty(type=ME_PG_Widget)
+    widgets: CollectionProperty(type=MET_PG_Widget)
     scale: FloatVectorProperty(default=(1.0, 1.0, 1.0), subtype='TRANSLATION')
 
 
 # =============================================================================
-class ME_ACTOR_PG_PlayerStart(ME_ActorProperty, PropertyGroup):
+class MET_ACTOR_PG_PlayerStart(MET_ActorProperty, PropertyGroup):
     
-    def reset(self):
+    def init(self):
+        super().init()
         self.scale = (.5, .5, -1)
-
-    
-    def set_mesh(self):
         utils.set_mesh(self.id_data, medge.create_player_start(self.scale))
-    
-    def set_display_type(self):
         self.id_data.display_type = 'WIRE'
-
 
     def draw(self, layout: UILayout):
         layout.prop(self, 'is_time_trial')
@@ -127,19 +103,17 @@ class ME_ACTOR_PG_PlayerStart(ME_ActorProperty, PropertyGroup):
     is_time_trial: BoolProperty(name='Is Time Trial')
     track_index: TrackIndexProperty()
 
+
 # =============================================================================
-class ME_ACTOR_PG_TimeTrial_Checkpoint(ME_ActorProperty, PropertyGroup):
+class MET_ACTOR_PG_TimeTrial_Checkpoint(MET_ActorProperty, PropertyGroup):
     
-    def set_mesh(self):
+    def init(self):
+        super().init()
         utils.set_mesh(self.id_data, medge.create_checkpoint())
-
-
-    def set_display_type(self):
         self.id_data.display_type = 'WIRE'
 
-
     def draw(self, layout: UILayout):
-        utils.auto_properties(self, layout)
+        utils.auto_gui_properties(self, layout)
 
 
     track_index: TrackIndexProperty()
@@ -151,10 +125,12 @@ class ME_ACTOR_PG_TimeTrial_Checkpoint(ME_ActorProperty, PropertyGroup):
     no_respawn: BoolProperty(name='No Respawn')
     enabled: BoolProperty(name='Enabled')
 
+
 # =============================================================================
-class ME_ACTOR_PG_StaticMesh(ME_ActorProperty, ME_MaterialProperty, PropertyGroup):
+class MET_ACTOR_PG_StaticMesh(MET_ActorProperty, MET_MaterialProperty, PropertyGroup):
     
-    def set_mesh(self):
+    def init(self):
+        super().init()
         if self.id_data.type == 'MESH':
             utils.link_to_scene(self.id_data, medge.DEFAULT_PACKAGE)
             if self.id_data.data: return
@@ -207,42 +183,33 @@ class ME_ACTOR_PG_StaticMesh(ME_ActorProperty, ME_MaterialProperty, PropertyGrou
 
 
 # =============================================================================
-class ME_ACTOR_PG_Brush(ME_ActorProperty, ME_MaterialProperty, PropertyGroup):
+class MET_ACTOR_PG_Brush(MET_ActorProperty, MET_MaterialProperty, PropertyGroup):
     
+    def init(self):
+        super().init()
+        utils.set_mesh(self.id_data, utils.create_cube(self.scale))
+
     def draw(self, layout: UILayout):
         layout.prop(self, 'material_package')
         layout.prop(self, 'material')
 
-    
-    def set_mesh(self):        
-        utils.set_mesh(self.id_data, utils.create_cube(self.scale))
-
 
 # =============================================================================
-class ME_ACTOR_PG_Ladder(ME_ActorProperty, PropertyGroup):
+class MET_ACTOR_PG_Ladder(MET_ActorProperty, PropertyGroup):
     
-    def draw(self, layout: UILayout):
-        layout.prop(self, 'is_pipe')
-
-    
-    def reset(self):
+    def init(self):
+        super().init()
         self.scale = (.5, .5, 2)
-
-    
-    def set_mesh(self):        
         utils.set_mesh(self.id_data, utils.create_cube(self.scale))
-
-    
-    def set_display_type(self):
         self.id_data.display_type = 'WIRE'
-
-    
-    def add_widgets(self):
         arrow = self.widgets.add()
         arrow.obj = utils.new_object('ARROW', utils.create_arrow(self.scale), medge.COLLECTION_WIDGETS, self.id_data)
         utils.set_obj_selectable(arrow.obj, False)
-    
-    
+
+    def draw(self, layout: UILayout):
+        layout.prop(self, 'is_pipe')
+
+
     def __on_is_pipe_update(self, context: Context):
         self.id_data.name = 'LADDER'
         if self.is_pipe:
@@ -253,21 +220,17 @@ class ME_ACTOR_PG_Ladder(ME_ActorProperty, PropertyGroup):
 
 
 # =============================================================================
-class ME_ACTOR_PG_Swing(ME_ActorProperty, PropertyGroup):
+class MET_ACTOR_PG_Swing(MET_ActorProperty, PropertyGroup):
     
-    def reset(self):
+    def init(self):
+        super().init()
+        
         self.scale = (1, 1, .5)
 
-    
-    def set_mesh(self):        
         utils.set_mesh(self.id_data, utils.create_cube(self.scale))
 
-    
-    def set_display_type(self):
         self.id_data.display_type = 'WIRE'
 
-    
-    def add_widgets(self):
         m_t07_x = Matrix.Translation((.7, 0, 0))
         m_t035_x = Matrix.Translation((.2, 0, 0))
         m_r90_x = Matrix.Rotation(math.radians(90), 3, (1, 0, 0))
@@ -282,21 +245,18 @@ class ME_ACTOR_PG_Swing(ME_ActorProperty, PropertyGroup):
             utils.set_obj_selectable(arrow.obj, False)
         utils.transform(arrow0.obj.data, [m_t07_x , m_r90_x])
         utils.transform(arrow1.obj.data, [m_t035_x, m_r90_x, m_r90_y])
-        utils.transform(arrow2.obj.data, [m_t07_x , m_r90_x, m_mir_x])  
-
-
-# =============================================================================
-class ME_ACTOR_PG_Zipline(ME_ActorProperty, PropertyGroup):
+        utils.transform(arrow2.obj.data, [m_t07_x , m_r90_x, m_mir_x]) 
     
-    def set_mesh(self):  
+# =============================================================================
+class MET_ACTOR_PG_Zipline(MET_ActorProperty, PropertyGroup):
+    
+    def init(self):
+        super().init()  
         utils.set_mesh(self.id_data, utils.create_cube())      
         self.curve = medge.create_zipline()
         self.curve.location = self.id_data.location
         utils.set_parent(self.curve, self.id_data)
         utils.link_to_scene(self.curve, medge.DEFAULT_PACKAGE)
-
-    
-    def set_display_type(self):
         self.id_data.display_type = 'WIRE'
 
     
@@ -304,13 +264,15 @@ class ME_ACTOR_PG_Zipline(ME_ActorProperty, PropertyGroup):
         layout.column(align=True)
         layout.prop(self, 'curve')
 
+
     curve: PointerProperty(type=Object, name='Curve')
 
 
 # =============================================================================
-class ME_ACTOR_PG_SpringBoard(ME_ActorProperty, PropertyGroup):
+class MET_ACTOR_PG_SpringBoard(MET_ActorProperty, PropertyGroup):
     
-    def set_mesh(self):  
+    def init(self):
+        super().init()   
         utils.set_mesh(self.id_data, medge.create_springboard())
 
 
@@ -369,14 +331,14 @@ class ME_OBJECT_PG_Actor(PropertyGroup):
     
     type: ActorTypeProperty(__on_type_update)
 
-    player_start: PointerProperty(type=ME_ACTOR_PG_PlayerStart)
-    static_mesh: PointerProperty(type=ME_ACTOR_PG_StaticMesh)
-    brush: PointerProperty(type=ME_ACTOR_PG_Brush)
-    ladder: PointerProperty(type=ME_ACTOR_PG_Ladder)
-    swing: PointerProperty(type=ME_ACTOR_PG_Swing)
-    zipline: PointerProperty(type=ME_ACTOR_PG_Zipline)
-    springboard: PointerProperty(type=ME_ACTOR_PG_SpringBoard)
-    tt_checkpoint: PointerProperty(type=ME_ACTOR_PG_TimeTrial_Checkpoint)
+    player_start: PointerProperty(type=MET_ACTOR_PG_PlayerStart)
+    static_mesh: PointerProperty(type=MET_ACTOR_PG_StaticMesh)
+    brush: PointerProperty(type=MET_ACTOR_PG_Brush)
+    ladder: PointerProperty(type=MET_ACTOR_PG_Ladder)
+    swing: PointerProperty(type=MET_ACTOR_PG_Swing)
+    zipline: PointerProperty(type=MET_ACTOR_PG_Zipline)
+    springboard: PointerProperty(type=MET_ACTOR_PG_SpringBoard)
+    tt_checkpoint: PointerProperty(type=MET_ACTOR_PG_TimeTrial_Checkpoint)
 
 
 

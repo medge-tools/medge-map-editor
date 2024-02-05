@@ -7,7 +7,7 @@ from . import medge_tools as medge
 # ACTOR
 # -----------------------------------------------------------------------------
 # =============================================================================
-class ME_OT_AddActor(Operator):
+class MET_OT_AddActor(Operator):
     bl_idname = 'medge_map_editor.add_actor'
     bl_label = 'Add Actor'
     bl_options = {'UNDO'}
@@ -22,7 +22,7 @@ class ME_OT_AddActor(Operator):
 # HELPERS
 # -----------------------------------------------------------------------------
 # =============================================================================
-class ME_OT_CleanupWidgets(Operator):
+class MET_OT_CleanupWidgets(Operator):
     bl_idname = 'medge_map_editor.cleanup_gizmos'
     bl_label = 'Cleanup Gizmos'
     bl_options = {'UNDO'}
