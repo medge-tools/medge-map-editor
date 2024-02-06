@@ -1,7 +1,7 @@
 import bpy
 from .ops import *
-from ..t3d.scene import ActorType
-from . import medge_tools as medge
+from ..io.t3d.scene import ActorType
+from . import scene_utils as scene
 
 # =============================================================================
 class MET_PT_Actor(bpy.types.Panel):
@@ -15,7 +15,7 @@ class MET_PT_Actor(bpy.types.Panel):
         obj = context.active_object
         if not obj: return
         
-        me_actor = medge.get_me_actor(obj)
+        me_actor = scene.get_me_actor(obj)
 
         layout = self.layout
         layout.use_property_decorate = False

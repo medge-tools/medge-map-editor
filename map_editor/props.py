@@ -6,9 +6,9 @@ from mathutils import Matrix
 
 import math
 
-from ..t3d.scene import ActorType, TrackIndex
-from . import utils
-from . import medge_tools as medge
+from ..io.t3d.scene import ActorType, TrackIndex
+from . import b3d_utils
+from . import scene_utils as scene
 
 # ACTOR_DEFAULT_STATIC_MESH = {
 #     ActorType.PLAYERSTART   : ('MyPackage', ''),
@@ -20,6 +20,7 @@ from . import medge_tools as medge
 #     ActorType.SPRINGBOARD   : ('P_Gameplay.SpringBoard', 'SpringBoardHigh_layoutMesh'),
 #     ActorType.STATICMESH    : ('MyPackage', ''),
 # }
+
 def ActorTypeProperty(callback: Callable = None):
     def get_actor_type_items(self, context: Context):
         return [(data.name, data.value, '') for data in ActorType]
@@ -74,7 +75,7 @@ class MET_ActorProperty():
     
     def init(self):
         self.__clear_widgets()
-        utils.link_to_scene(self.id_data)
+        b3d_utils.link_to_scene(self.id_data)
         self.scale = (1, 1, 1)
         self.id_data.display_type = 'TEXTURED'
     
@@ -92,7 +93,7 @@ class MET_ACTOR_PG_PlayerStart(MET_ActorProperty, PropertyGroup):
     def init(self):
         super().init()
         self.scale = (.5, .5, -1)
-        utils.set_mesh(self.id_data, medge.create_player_start(self.scale))
+        b3d_utils.set_mesh(self.id_data, scene.create_player_start(self.scale))
         self.id_data.display_type = 'WIRE'
 
     def draw(self, layout: UILayout):
@@ -109,11 +110,11 @@ class MET_ACTOR_PG_TimeTrial_Checkpoint(MET_ActorProperty, PropertyGroup):
     
     def init(self):
         super().init()
-        utils.set_mesh(self.id_data, medge.create_checkpoint())
+        b3d_utils.set_mesh(self.id_data, scene.create_checkpoint())
         self.id_data.display_type = 'WIRE'
 
     def draw(self, layout: UILayout):
-        utils.auto_gui_properties(self, layout)
+        b3d_utils.auto_gui_properties(self, layout)
 
 
     track_index: TrackIndexProperty()
@@ -132,9 +133,9 @@ class MET_ACTOR_PG_StaticMesh(MET_ActorProperty, MET_MaterialProperty, PropertyG
     def init(self):
         super().init()
         if self.id_data.type == 'MESH':
-            utils.link_to_scene(self.id_data, medge.DEFAULT_PACKAGE)
+            b3d_utils.link_to_scene(self.id_data, scene.DEFAULT_PACKAGE)
             if self.id_data.data: return
-            utils.set_mesh(self.id_data, utils.create_cube())
+            b3d_utils.set_mesh(self.id_data, b3d_utils.create_cube())
     
     
     def draw(self, layout: UILayout):
@@ -173,7 +174,7 @@ class MET_ACTOR_PG_StaticMesh(MET_ActorProperty, MET_MaterialProperty, PropertyG
         if not prefab: 
             self.set_mesh(self.id_data)
             return
-        utils.set_mesh(self.id_data, prefab.data)
+        b3d_utils.set_mesh(self.id_data, prefab.data)
         self.id_data.name = prefab.name + '_PREFAB'
 
     
@@ -187,7 +188,7 @@ class MET_ACTOR_PG_Brush(MET_ActorProperty, MET_MaterialProperty, PropertyGroup)
     
     def init(self):
         super().init()
-        utils.set_mesh(self.id_data, utils.create_cube(self.scale))
+        b3d_utils.set_mesh(self.id_data, b3d_utils.create_cube(self.scale))
 
     def draw(self, layout: UILayout):
         layout.prop(self, 'material_package')
@@ -200,11 +201,11 @@ class MET_ACTOR_PG_Ladder(MET_ActorProperty, PropertyGroup):
     def init(self):
         super().init()
         self.scale = (.5, .5, 2)
-        utils.set_mesh(self.id_data, utils.create_cube(self.scale))
+        b3d_utils.set_mesh(self.id_data, b3d_utils.create_cube(self.scale))
         self.id_data.display_type = 'WIRE'
         arrow = self.widgets.add()
-        arrow.obj = utils.new_object('ARROW', utils.create_arrow(self.scale), medge.COLLECTION_WIDGETS, self.id_data)
-        utils.set_obj_selectable(arrow.obj, False)
+        arrow.obj = b3d_utils.new_object('ARROW', b3d_utils.create_arrow(self.scale), scene.COLLECTION_WIDGETS, self.id_data)
+        b3d_utils.set_obj_selectable(arrow.obj, False)
 
     def draw(self, layout: UILayout):
         layout.prop(self, 'is_pipe')
@@ -227,7 +228,7 @@ class MET_ACTOR_PG_Swing(MET_ActorProperty, PropertyGroup):
         
         self.scale = (1, 1, .5)
 
-        utils.set_mesh(self.id_data, utils.create_cube(self.scale))
+        b3d_utils.set_mesh(self.id_data, b3d_utils.create_cube(self.scale))
 
         self.id_data.display_type = 'WIRE'
 
@@ -241,22 +242,22 @@ class MET_ACTOR_PG_Swing(MET_ActorProperty, PropertyGroup):
         arrow2 = self.widgets.add()
         for arrow in self.widgets:
             scale = self.scale * .3
-            arrow.obj = utils.new_object('ARROW', utils.create_arrow(scale), medge.COLLECTION_WIDGETS, self.id_data)
-            utils.set_obj_selectable(arrow.obj, False)
-        utils.transform(arrow0.obj.data, [m_t07_x , m_r90_x])
-        utils.transform(arrow1.obj.data, [m_t035_x, m_r90_x, m_r90_y])
-        utils.transform(arrow2.obj.data, [m_t07_x , m_r90_x, m_mir_x]) 
+            arrow.obj = b3d_utils.new_object('ARROW', b3d_utils.create_arrow(scale), scene.COLLECTION_WIDGETS, self.id_data)
+            b3d_utils.set_obj_selectable(arrow.obj, False)
+        b3d_utils.transform(arrow0.obj.data, [m_t07_x , m_r90_x])
+        b3d_utils.transform(arrow1.obj.data, [m_t035_x, m_r90_x, m_r90_y])
+        b3d_utils.transform(arrow2.obj.data, [m_t07_x , m_r90_x, m_mir_x]) 
     
 # =============================================================================
 class MET_ACTOR_PG_Zipline(MET_ActorProperty, PropertyGroup):
     
     def init(self):
         super().init()  
-        utils.set_mesh(self.id_data, utils.create_cube())      
-        self.curve = medge.create_zipline()
+        b3d_utils.set_mesh(self.id_data, b3d_utils.create_cube())      
+        self.curve = scene.create_zipline()
         self.curve.location = self.id_data.location
-        utils.set_parent(self.curve, self.id_data)
-        utils.link_to_scene(self.curve, medge.DEFAULT_PACKAGE)
+        b3d_utils.set_parent(self.curve, self.id_data)
+        b3d_utils.link_to_scene(self.curve, scene.DEFAULT_PACKAGE)
         self.id_data.display_type = 'WIRE'
 
     
@@ -273,7 +274,7 @@ class MET_ACTOR_PG_SpringBoard(MET_ActorProperty, PropertyGroup):
     
     def init(self):
         super().init()   
-        utils.set_mesh(self.id_data, medge.create_springboard())
+        b3d_utils.set_mesh(self.id_data, scene.create_springboard())
 
 
 # =============================================================================
@@ -288,7 +289,7 @@ class ME_OBJECT_PG_Actor(PropertyGroup):
         col = layout.column(align=True)
         match(self.type):
             case ActorType.NONE:
-                utils.link_to_scene(self.id_data)
+                b3d_utils.link_to_scene(self.id_data)
             case ActorType.PLAYER_START:
                 self.player_start.draw(col)
             case ActorType.BRUSH:
@@ -308,7 +309,7 @@ class ME_OBJECT_PG_Actor(PropertyGroup):
 
     
     def __on_type_update(self, context: Context):
-        utils.set_active(self.id_data)
+        b3d_utils.set_active(self.id_data)
 
         match(self.type):
             case ActorType.PLAYER_START:

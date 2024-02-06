@@ -1,11 +1,10 @@
 import bpy
 import bmesh
 from mathutils import Vector
-import math
 
 from .scene import *
-from ..b3d import utils
-from ..b3d import medge_tools as medge
+from ...map_editor import b3d_utils
+from ...map_editor import scene_utils as scene
 
 
 # =============================================================================
@@ -26,7 +25,7 @@ class Builder:
 
     # Transform to left-handed coordinate system
     def get_location_rotation(self, obj: bpy.types.Object) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
-        rot = utils.get_rotation_mirrored_x_axis(obj)
+        rot = b3d_utils.get_rotation_mirrored_x_axis(obj)
         location = obj.matrix_world.translation * self.scale * self.mirror
         rotation = (rot.x, rot.y, rot.z)
         return location, rotation
@@ -63,7 +62,7 @@ class Builder:
 class PlayerStartBuilder(Builder):
     def build(self, obj: bpy.types.Object, options: T3DBuilderOptions) -> Actor | None:
         super().build(obj, options)
-        player_start = medge.get_me_actor(obj).player_start
+        player_start = scene.get_me_actor(obj).player_start
         return PlayerStart(*self.get_location_rotation(obj), player_start.is_time_trial, player_start.track_index)
 
 
@@ -72,7 +71,7 @@ class TTCheckpointBuilder(Builder):
     def build(self, obj: bpy.types.Object, options: T3DBuilderOptions) -> Actor | None:
         super().build(obj, options)
         location, _ = self.get_location_rotation(obj)
-        checkpoint = medge.get_me_actor(obj).tt_checkpoint
+        checkpoint = scene.get_me_actor(obj).tt_checkpoint
         return Checkpoint(location, 
                             checkpoint.track_index,
                             checkpoint.order_index,
@@ -88,7 +87,7 @@ class TTCheckpointBuilder(Builder):
 class StaticMeshBuilder(Builder):
     def build(self, obj: bpy.types.Object, options: T3DBuilderOptions) -> Actor | None:
         super().build(obj, options)
-        static_mesh = medge.get_me_actor(obj).static_mesh
+        static_mesh = scene.get_me_actor(obj).static_mesh
         location, rotation = self.get_location_rotation(obj)
         if static_mesh.use_prefab:
             return StaticMesh(location, rotation, static_mesh.get_prefab_path())
@@ -111,7 +110,7 @@ class BrushBuilder(VolumeBuilder):
         super().build(obj, options)
         polylist, location, rotation = self.get_arguments(obj)
         for poly in polylist:
-            poly.Texture = medge.get_me_actor(obj).brush.get_material_path()
+            poly.Texture = scene.get_me_actor(obj).brush.get_material_path()
 
         return Brush(polylist, location, rotation)
 
@@ -121,7 +120,7 @@ class LadderBuilder(VolumeBuilder):
     def build(self, obj: bpy.types.Object, options: T3DBuilderOptions) -> Actor | None:
         super().build(obj, options)
         arguments = self.get_arguments(obj)
-        ladder = medge.get_me_actor(obj).ladder
+        ladder = scene.get_me_actor(obj).ladder
         return Ladder(*arguments, ladder.is_pipe)
 
 
@@ -137,7 +136,7 @@ class SwingBuilder(VolumeBuilder):
 class ZiplineBuilder(Builder):
     def build(self, obj: bpy.types.Object, options: T3DBuilderOptions) -> Actor | None:
         super().build(obj, options)
-        curve = medge.get_me_actor(obj).zipline.curve
+        curve = scene.get_me_actor(obj).zipline.curve
         t = Vector((*(self.scale * self.mirror), 1.0)) 
         mworld = curve.matrix_world
         points = curve.data.splines[0].points
@@ -168,11 +167,11 @@ class T3DBuilderError(Exception):
 # =============================================================================
 class T3DBuilder():
     def build_actor(self, obj: bpy.types.Object, options: T3DBuilderOptions) -> Actor | None:
-        me_actor = medge.get_me_actor(obj)
+        me_actor = scene.get_me_actor(obj)
         
         if me_actor.type == ActorType.NONE: return None
 
-        utils.set_obj_mode(obj, 'OBJECT')
+        b3d_utils.set_obj_mode(obj, 'OBJECT')
 
         match(me_actor.type):
             case ActorType.PLAYER_START:

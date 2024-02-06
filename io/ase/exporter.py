@@ -2,8 +2,8 @@ import bpy
 from bpy.props import *
 import bpy_extras
 from mathutils import Matrix
-from ..b3d import medge_tools as medge
-from ..b3d import utils
+from ...map_editor import scene_utils as scene
+from ...map_editor import b3d_utils
 from ..t3d.scene import ActorType
 
 # =============================================================================
@@ -54,21 +54,21 @@ class ME_OT_ASE_Export(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         orig_obj_names = []
         for obj in context.scene.objects:
 
-            me_actor = medge.get_me_actor(obj)
+            me_actor = scene.get_me_actor(obj)
             if me_actor.type != ActorType.STATIC_MESH: continue
             if me_actor.static_mesh.use_prefab: continue
 
             # Convert to mesh
             if obj.type == 'CURVE':
-                new_obj = utils.copy_object(obj)
-                utils.convert_to_mesh_in_place(new_obj)
+                new_obj = b3d_utils.copy_object(obj)
+                b3d_utils.convert_to_mesh_in_place(new_obj)
             else:
-                new_obj = utils.copy_object(obj)
+                new_obj = b3d_utils.copy_object(obj)
             
-            utils.apply_all_transforms(new_obj)
+            b3d_utils.apply_all_transforms(new_obj)
             # Mirror x, y because the ASE exporter rotates the models 180 degrees around z
-            utils.transform(new_obj.data, [Matrix.Scale(-1, 3, (1, 0, 0))])
-            utils.transform(new_obj.data, [Matrix.Scale(-1, 3, (0, 1, 0))])
+            b3d_utils.transform(new_obj.data, [Matrix.Scale(-1, 3, (1, 0, 0))])
+            b3d_utils.transform(new_obj.data, [Matrix.Scale(-1, 3, (0, 1, 0))])
             temp_objs_to_export.append(new_obj)
             orig_obj_names.append((obj, obj.name))
             self.__swap_names(obj, new_obj)
@@ -79,9 +79,9 @@ class ME_OT_ASE_Export(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
 
 
         # Select objects to export
-        utils.deselect_all()
+        b3d_utils.deselect_all()
         for obj in temp_objs_to_export:
-            utils.select_obj(obj)
+            b3d_utils.select_obj(obj)
 
 
         try:
@@ -97,7 +97,7 @@ class ME_OT_ASE_Export(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
 
         # Remove temp objects
         for obj in temp_objs_to_export:
-            utils.remove_object(obj)
+            b3d_utils.remove_object(obj)
 
             
         return {'FINISHED'}

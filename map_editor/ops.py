@@ -1,21 +1,21 @@
 import bpy
 from bpy.types import Operator
 from . import props
-from . import medge_tools as medge
+from . import scene_utils as scene
 
 # =============================================================================
 # ACTOR
 # -----------------------------------------------------------------------------
 # =============================================================================
 class MET_OT_AddActor(Operator):
-    bl_idname = 'medge_map_editor.add_actor'
-    bl_label = 'Add Actor'
-    bl_options = {'UNDO'}
+    bl_idname   = 'medge_map_editor.add_actor'
+    bl_label    = 'Add Actor'
+    bl_options  = {'UNDO'}
 
     type: props.ActorTypeProperty()
 
     def execute(self, context : bpy.types.Context):
-        medge.new_actor(self.type)
+        scene.new_actor(self.type)
         return {'FINISHED'}
 
 # =============================================================================
@@ -23,10 +23,10 @@ class MET_OT_AddActor(Operator):
 # -----------------------------------------------------------------------------
 # =============================================================================
 class MET_OT_CleanupWidgets(Operator):
-    bl_idname = 'medge_map_editor.cleanup_gizmos'
-    bl_label = 'Cleanup Gizmos'
-    bl_options = {'UNDO'}
+    bl_idname   = 'medge_map_editor.cleanup_gizmos'
+    bl_label    = 'Cleanup Gizmos'
+    bl_options  = {'UNDO'}
 
     def execute(self, context: bpy.types.Context):
-        medge.cleanup_widgets()
+        scene.cleanup_widgets()
         return {'FINISHED'}

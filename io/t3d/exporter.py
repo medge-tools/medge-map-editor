@@ -17,11 +17,11 @@ class T3DWriter:
 # =============================================================================
 class ME_OT_T3D_Export(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
     '''Export scene to a .t3d file'''
-    bl_idname = 'medge_tools.t3d_export'
-    bl_label = 'Export T3D'
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
-    filename_ext = '.t3d'
+    bl_idname       = 'medge_map_editor.t3d_export'
+    bl_label        = 'Export T3D'
+    bl_space_type   = 'PROPERTIES'
+    bl_region_type  = 'WINDOW'
+    filename_ext    = '.t3d'
 
     filter_glob : bpy.props.StringProperty(
         default='*.t3d',
