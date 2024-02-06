@@ -200,25 +200,6 @@ def convert_to_new_mesh(obj: Object) -> bpy.types.Object:
 
 
 # =============================================================================
-#https://blender.stackexchange.com/questions/127603/how-to-specify-nurbs-path-vertices-in-python
-def create_curve(num_points = 3, 
-                 step = 1, 
-                 dir: tuple[float, float, float] = (1, 0, 0)) -> bpy.types.Curve:
-    curve = bpy.data.curves.new('CURVE', 'CURVE')
-    path = curve.splines.new('NURBS')
-    curve.dimensions = '3D'
-    points = []
-    for k in range(num_points):
-        p = Vector(dir) * Vector((1, 1, 1)) * step * k
-        points.append((*p, 1))
-    path.points.add(len(points)-1)
-    for k, point in enumerate(points):
-        path.points[k].co = point
-    path.use_endpoint_u = True
-    return curve
-
-
-# =============================================================================
 def transform(mesh: bpy.types.Mesh, transforms: list[Matrix]) -> None:
     mode = bpy.context.mode
     bm = bmesh.new()
@@ -378,3 +359,22 @@ def create_cylinder(radius = 2,
                 faces.append((v1, v3, v4, v2))
 
     return create_mesh(verts, [], faces, 'CYLINDER')
+
+
+# =============================================================================
+#https://blender.stackexchange.com/questions/127603/how-to-specify-nurbs-path-vertices-in-python
+def create_curve(num_points = 3, 
+                 step = 1, 
+                 dir: tuple[float, float, float] = (1, 0, 0)) -> bpy.types.Curve:
+    curve = bpy.data.curves.new('CURVE', 'CURVE')
+    path = curve.splines.new('NURBS')
+    curve.dimensions = '3D'
+    points = []
+    for k in range(num_points):
+        p = Vector(dir) * Vector((1, 1, 1)) * step * k
+        points.append((*p, 1))
+    path.points.add(len(points)-1)
+    for k, point in enumerate(points):
+        path.points[k].co = point
+    path.use_endpoint_u = True
+    return curve
