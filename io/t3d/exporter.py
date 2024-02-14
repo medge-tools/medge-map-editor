@@ -1,10 +1,12 @@
 import bpy
-import bpy_extras
+from bpy.types import Operator
+from bpy_extras.io_utils import ExportHelper
 
 from .builder import *
 from ..ase import *
 
-# =============================================================================
+
+# -----------------------------------------------------------------------------
 class T3DWriter:
     def write(self, filepath : str, scene : list[Actor] ):
         with open(filepath, 'w') as fp:
@@ -14,8 +16,8 @@ class T3DWriter:
             fp.write('End Level\nBegin Surface\nEnd Surface\nEnd Map')
 
 
-# =============================================================================
-class ME_OT_T3D_Export(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
+# -----------------------------------------------------------------------------
+class MET_OT_T3D_Export(Operator, ExportHelper):
     '''Export scene to a .t3d file'''
     bl_idname       = 'medge_map_editor.t3d_export'
     bl_label        = 'Export T3D'
@@ -59,7 +61,7 @@ class ME_OT_T3D_Export(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         layout.use_property_decorate = False
         layout.use_property_split = True
         layout.prop(self, 'units')
-        layout.prop(self, 'selected_objs')
+        layout.prop(self, 'selected_objects')
         layout.prop(self, 'export_static_meshes')
 
 
@@ -73,7 +75,7 @@ class ME_OT_T3D_Export(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
             scene = T3DBuilder().build(context, options)
             T3DWriter().write(self.filepath, scene)
             self.report({'INFO'}, 'T3D exported successful')
-        except T3DBuilderError as e:
+        except Exception as e:
             self.report({'ERROR'}, str(e))
 
 

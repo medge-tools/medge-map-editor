@@ -1,7 +1,9 @@
 import bpy
 from bpy.props import *
-import bpy_extras
+from bpy.types import Operator
+from bpy_extras.io_utils import ExportHelper
 from mathutils import Matrix
+
 from ...map_editor import scene_utils as scene
 from ...map_editor import b3d_utils
 from ..t3d.scene import ActorType
@@ -11,7 +13,7 @@ class ASEExportError(Exception):
     pass
 
 # =============================================================================
-class ME_OT_ASE_Export(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
+class MET_OT_ASE_Export(Operator, ExportHelper):
     '''Process selection before exporting to a .ase files'''
     bl_idname = 'medge_map_editor.ase_export'
     bl_label = 'Export ASE'
@@ -54,7 +56,7 @@ class ME_OT_ASE_Export(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
         orig_obj_names = []
         for obj in context.scene.objects:
 
-            me_actor = scene.get_me_actor(obj)
+            me_actor = scene.get_medge_actor(obj)
             if me_actor.type != ActorType.STATIC_MESH: continue
             if me_actor.static_mesh.use_prefab: continue
 
@@ -79,9 +81,9 @@ class ME_OT_ASE_Export(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
 
 
         # Select objects to export
-        b3d_utils.deselect_all()
+        b3d_utils.deselect_all_objects()
         for obj in temp_objs_to_export:
-            b3d_utils.select_obj(obj)
+            b3d_utils.select_object(obj)
 
 
         try:

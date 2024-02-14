@@ -2,7 +2,7 @@ import bpy
 from bpy.props import *
 from bpy.types import Object, PropertyGroup, Context, UILayout
 from typing import Callable
-from mathutils import Matrix
+from mathutils import Matrix, Vector
 
 import math
 
@@ -42,8 +42,8 @@ def TrackIndexProperty(callback: Callable = None):
     )
 
 
-# =============================================================================
-class MET_MaterialProperty():
+# -----------------------------------------------------------------------------
+class MaterialProperty():
     def __filter_on_package(self, obj: Object):
         is_material = obj.name.startswith('M_')
         return self.material_package in obj.users_collection and is_material
@@ -56,45 +56,46 @@ class MET_MaterialProperty():
     material: PointerProperty(type=Object, name='Material', poll=__filter_on_package)
 
 
-# =============================================================================
+# -----------------------------------------------------------------------------
 class MET_PG_Widget(PropertyGroup):
     obj : PointerProperty(type=Object)
 
 
-# =============================================================================
+# -----------------------------------------------------------------------------
 # ACTORS
 # -----------------------------------------------------------------------------
-# =============================================================================
-class MET_ActorProperty():
+# -----------------------------------------------------------------------------
+class ActorProperty():
+
+    def init(self):
+        self.clear_widgets()
+        b3d_utils.link_to_scene(self.id_data)
+        self.id_data.display_type = 'TEXTURED'
     
-    def __clear_widgets(self):
+
+    def draw(self, layout: UILayout):
+        pass
+
+    
+    def clear_widgets(self):
         for gm in self.widgets:
             if gm.obj != None:
                 bpy.data.objects.remove(gm.obj)
         self.widgets.clear()
     
-    def init(self):
-        self.__clear_widgets()
-        b3d_utils.link_to_scene(self.id_data)
-        self.scale = (1, 1, 1)
-        self.id_data.display_type = 'TEXTURED'
-    
-    def draw(self, layout: UILayout):
-        pass
-
     
     widgets: CollectionProperty(type=MET_PG_Widget)
-    scale: FloatVectorProperty(default=(1.0, 1.0, 1.0), subtype='TRANSLATION')
 
 
-# =============================================================================
-class MET_ACTOR_PG_PlayerStart(MET_ActorProperty, PropertyGroup):
+# -----------------------------------------------------------------------------
+class MET_ACTOR_PG_PlayerStart(ActorProperty, PropertyGroup):
     
     def init(self):
         super().init()
-        self.scale = (.5, .5, -1)
-        b3d_utils.set_mesh(self.id_data, scene.create_player_start(self.scale))
+        scale = (.5, .5, -1)
+        b3d_utils.set_mesh(self.id_data, scene.create_player_start(scale))
         self.id_data.display_type = 'WIRE'
+        self.id_data.name = 'Player Start'
 
     def draw(self, layout: UILayout):
         layout.prop(self, 'is_time_trial')
@@ -105,30 +106,8 @@ class MET_ACTOR_PG_PlayerStart(MET_ActorProperty, PropertyGroup):
     track_index: TrackIndexProperty()
 
 
-# =============================================================================
-class MET_ACTOR_PG_TimeTrial_Checkpoint(MET_ActorProperty, PropertyGroup):
-    
-    def init(self):
-        super().init()
-        b3d_utils.set_mesh(self.id_data, scene.create_checkpoint())
-        self.id_data.display_type = 'WIRE'
-
-    def draw(self, layout: UILayout):
-        b3d_utils.auto_gui_properties(self, layout)
-
-
-    track_index: TrackIndexProperty()
-    order_index: IntProperty(name='Order Index')
-    custom_height: FloatProperty(name='CustomHeight')
-    custom_width_scale: FloatProperty(name='Custom Width Scale')
-    should_be_based: BoolProperty(name='Should Be Based')
-    no_intermediate_time: BoolProperty(name='No Intermediate Time')
-    no_respawn: BoolProperty(name='No Respawn')
-    enabled: BoolProperty(name='Enabled')
-
-
-# =============================================================================
-class MET_ACTOR_PG_StaticMesh(MET_ActorProperty, MET_MaterialProperty, PropertyGroup):
+# -----------------------------------------------------------------------------
+class MET_ACTOR_PG_StaticMesh(ActorProperty, MaterialProperty, PropertyGroup):
     
     def init(self):
         super().init()
@@ -136,6 +115,7 @@ class MET_ACTOR_PG_StaticMesh(MET_ActorProperty, MET_MaterialProperty, PropertyG
             b3d_utils.link_to_scene(self.id_data, scene.DEFAULT_PACKAGE)
             if self.id_data.data: return
             b3d_utils.set_mesh(self.id_data, b3d_utils.create_cube())
+        self.id_data.name = 'Static Mesh'
     
     
     def draw(self, layout: UILayout):
@@ -183,29 +163,31 @@ class MET_ACTOR_PG_StaticMesh(MET_ActorProperty, MET_MaterialProperty, PropertyG
     prefab: PointerProperty(type=Object, name='Prefab', update=__on_prefab_update)
 
 
-# =============================================================================
-class MET_ACTOR_PG_Brush(MET_ActorProperty, MET_MaterialProperty, PropertyGroup):
+# -----------------------------------------------------------------------------
+class MET_ACTOR_PG_Brush(ActorProperty, MaterialProperty, PropertyGroup):
     
     def init(self):
         super().init()
-        b3d_utils.set_mesh(self.id_data, b3d_utils.create_cube(self.scale))
+        b3d_utils.set_mesh(self.id_data, b3d_utils.create_cube())
+        self.id_data.name = 'Brush'
 
     def draw(self, layout: UILayout):
         layout.prop(self, 'material_package')
         layout.prop(self, 'material')
 
 
-# =============================================================================
-class MET_ACTOR_PG_Ladder(MET_ActorProperty, PropertyGroup):
+# -----------------------------------------------------------------------------
+class MET_ACTOR_PG_Ladder(ActorProperty, PropertyGroup):
     
     def init(self):
         super().init()
-        self.scale = (.5, .5, 2)
-        b3d_utils.set_mesh(self.id_data, b3d_utils.create_cube(self.scale))
+        scale = (.5, .5, 2)
+        b3d_utils.set_mesh(self.id_data, b3d_utils.create_cube(scale))
         self.id_data.display_type = 'WIRE'
         arrow = self.widgets.add()
-        arrow.obj = b3d_utils.new_object('ARROW', b3d_utils.create_arrow(self.scale), scene.COLLECTION_WIDGETS, self.id_data)
-        b3d_utils.set_obj_selectable(arrow.obj, False)
+        arrow.obj = b3d_utils.new_object('ARROW', b3d_utils.create_arrow(scale), scene.COLLECTION_WIDGETS, self.id_data)
+        b3d_utils.set_object_selectable(arrow.obj, False)
+        self.id_data.name = 'Ladder'
 
     def draw(self, layout: UILayout):
         layout.prop(self, 'is_pipe')
@@ -220,17 +202,16 @@ class MET_ACTOR_PG_Ladder(MET_ActorProperty, PropertyGroup):
     is_pipe: BoolProperty(name='Is Pipe', update=__on_is_pipe_update)
 
 
-# =============================================================================
-class MET_ACTOR_PG_Swing(MET_ActorProperty, PropertyGroup):
+# -----------------------------------------------------------------------------
+class MET_ACTOR_PG_Swing(ActorProperty, PropertyGroup):
     
     def init(self):
         super().init()
-        
-        self.scale = (1, 1, .5)
-
-        b3d_utils.set_mesh(self.id_data, b3d_utils.create_cube(self.scale))
-
         self.id_data.display_type = 'WIRE'
+        
+        scale = Vector((1, 1, .5))
+
+        b3d_utils.set_mesh(self.id_data, b3d_utils.create_cube(scale))
 
         m_t07_x = Matrix.Translation((.7, 0, 0))
         m_t035_x = Matrix.Translation((.2, 0, 0))
@@ -241,15 +222,16 @@ class MET_ACTOR_PG_Swing(MET_ActorProperty, PropertyGroup):
         arrow1 = self.widgets.add()
         arrow2 = self.widgets.add()
         for arrow in self.widgets:
-            scale = self.scale * .3
-            arrow.obj = b3d_utils.new_object('ARROW', b3d_utils.create_arrow(scale), scene.COLLECTION_WIDGETS, self.id_data)
-            b3d_utils.set_obj_selectable(arrow.obj, False)
+            s = scale * .3
+            arrow.obj = b3d_utils.new_object('ARROW', b3d_utils.create_arrow(s), scene.COLLECTION_WIDGETS, self.id_data)
+            b3d_utils.set_object_selectable(arrow.obj, False)
         b3d_utils.transform(arrow0.obj.data, [m_t07_x , m_r90_x])
         b3d_utils.transform(arrow1.obj.data, [m_t035_x, m_r90_x, m_r90_y])
         b3d_utils.transform(arrow2.obj.data, [m_t07_x , m_r90_x, m_mir_x]) 
+        self.id_data.name = 'Swing'
     
-# =============================================================================
-class MET_ACTOR_PG_Zipline(MET_ActorProperty, PropertyGroup):
+# -----------------------------------------------------------------------------
+class MET_ACTOR_PG_Zipline(ActorProperty, PropertyGroup):
     
     def init(self):
         super().init()  
@@ -259,6 +241,7 @@ class MET_ACTOR_PG_Zipline(MET_ActorProperty, PropertyGroup):
         b3d_utils.set_parent(self.curve, self.id_data)
         b3d_utils.link_to_scene(self.curve, scene.DEFAULT_PACKAGE)
         self.id_data.display_type = 'WIRE'
+        self.id_data.name = 'Zipline'
 
     
     def draw(self, layout: UILayout):
@@ -269,19 +252,43 @@ class MET_ACTOR_PG_Zipline(MET_ActorProperty, PropertyGroup):
     curve: PointerProperty(type=Object, name='Curve')
 
 
-# =============================================================================
-class MET_ACTOR_PG_SpringBoard(MET_ActorProperty, PropertyGroup):
+# -----------------------------------------------------------------------------
+class MET_ACTOR_PG_SpringBoard(ActorProperty, PropertyGroup):
     
     def init(self):
         super().init()   
         b3d_utils.set_mesh(self.id_data, scene.create_springboard())
+        self.id_data.name = 'Spring Board'
 
 
-# =============================================================================
+# -----------------------------------------------------------------------------
+class MET_ACTOR_PG_Checkpoint(ActorProperty, PropertyGroup):
+    
+    def init(self):
+        super().init()
+        b3d_utils.set_mesh(self.id_data, scene.create_checkpoint())
+        self.id_data.display_type = 'WIRE'
+        self.id_data.name = 'Time Trial Checkpoint'
+
+    def draw(self, layout: UILayout):
+        b3d_utils.auto_gui_properties(self, layout)
+
+
+    track_index: TrackIndexProperty()
+    order_index: IntProperty(name='Order Index')
+    custom_height: FloatProperty(name='CustomHeight')
+    custom_width_scale: FloatProperty(name='Custom Width Scale')
+    should_be_based: BoolProperty(name='Should Be Based')
+    no_intermediate_time: BoolProperty(name='No Intermediate Time')
+    no_respawn: BoolProperty(name='No Respawn')
+    enabled: BoolProperty(name='Enabled')
+
+
+# -----------------------------------------------------------------------------
 # 
 # -----------------------------------------------------------------------------
-# =============================================================================
-class ME_OBJECT_PG_Actor(PropertyGroup):
+# -----------------------------------------------------------------------------
+class MET_OBJECT_PG_Actor(PropertyGroup):
     def draw(self, layout: UILayout):
         col = layout.column(align=True)
         col.prop(self, 'type')
@@ -305,7 +312,7 @@ class ME_OBJECT_PG_Actor(PropertyGroup):
             case ActorType.STATIC_MESH:
                 self.static_mesh.draw(col)
             case ActorType.CHECKPOINT:
-                self.tt_checkpoint.draw(col)
+                self.checkpoint.draw(col)
 
     
     def __on_type_update(self, context: Context):
@@ -327,7 +334,7 @@ class ME_OBJECT_PG_Actor(PropertyGroup):
             case ActorType.SPRINGBOARD:
                 self.springboard.init()
             case ActorType.CHECKPOINT:
-                self.tt_checkpoint.init()
+                self.checkpoint.init()
 
     
     type: ActorTypeProperty(__on_type_update)
@@ -339,7 +346,7 @@ class ME_OBJECT_PG_Actor(PropertyGroup):
     swing: PointerProperty(type=MET_ACTOR_PG_Swing)
     zipline: PointerProperty(type=MET_ACTOR_PG_Zipline)
     springboard: PointerProperty(type=MET_ACTOR_PG_SpringBoard)
-    tt_checkpoint: PointerProperty(type=MET_ACTOR_PG_TimeTrial_Checkpoint)
+    checkpoint: PointerProperty(type=MET_ACTOR_PG_Checkpoint)
 
 
 
