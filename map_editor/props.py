@@ -2,7 +2,7 @@ import bpy
 from bpy.props import *
 from bpy.types import Object, PropertyGroup, Context, UILayout
 from typing import Callable
-from mathutils import Matrix, Vector
+from mathutils import Matrix, Vector, geometry
 
 import math
 
@@ -235,21 +235,130 @@ class MET_ACTOR_PG_Zipline(ActorProperty, PropertyGroup):
     
     def init(self):
         super().init()  
-        b3d_utils.set_mesh(self.id_data, b3d_utils.create_cube())      
+        b3d_utils.set_mesh(self.id_data, b3d_utils.create_cube())  
+
+        if self.curve:
+            b3d_utils.remove_object(self.curve)
+
         self.curve = scene.create_zipline()
         self.curve.location = self.id_data.location
         b3d_utils.set_parent(self.curve, self.id_data)
         b3d_utils.link_to_scene(self.curve, scene.DEFAULT_PACKAGE)
         self.id_data.display_type = 'WIRE'
         self.id_data.name = 'Zipline'
+        b3d_utils.set_active(self.id_data)
+        self.update_bounds()
 
     
     def draw(self, layout: UILayout):
-        layout.column(align=True)
         layout.prop(self, 'curve')
+        layout.prop(self, 'auto_bb')
+        layout.separator()
 
+        if self.auto_bb:
+            layout.prop(self, 'bb_resolution')
+            layout.separator()
+            layout.prop(self, 'bb_scale')
+            layout.separator()
+            layout.prop(self, 'bb_offset')
+
+
+    def update_bounds(self, force=False):   
+        if not self.auto_bb: 
+            return
+
+        spline = self.curve.data.splines[0]
+        points = spline.points
+        
+        p1 = points[0].co.xyz
+        p2 = points[1].co.xyz
+        p3 = points[2].co.xyz
+
+        if not force:
+            if p1 == self.c1 and p2 == self.c2 and p3 == self.c3:
+                return
+        
+        self.c1 = p1; self.c2 = p2; self.c3 = p3
+
+        verts = []; edges = []; segments = []; 
+
+        def local_bounds(center, p1, p2):
+            forward = (p2 - p1).normalized()
+            right = Vector((forward.y, -forward.x, 0)).normalized() * self.bb_scale
+            up = forward.cross(right).normalized() * self.bb_scale
+
+            center += self.bb_offset
+
+            e1 = len(verts)
+            verts.append(center + up + right)
+
+            e2 = len(verts)
+            verts.append(center + -up + right)
+
+            e3 = len(verts)
+            verts.append(center + -up + -right)
+
+            e4 = len(verts)
+            verts.append(center + up + -right)
+
+            edges.append((e1, e2))
+            edges.append((e2, e3))
+            edges.append((e3, e4))
+            edges.append((e4, e1))
+            segments.append((e1, e2, e3, e4))
+
+        length = spline.calc_length()
+
+        v1 = (p2 - p1)
+        v2 = (p2 - p3)
+
+        handle1 = p1 + v1 * v1.length / length
+        handle2 = p3 + v2 * v2.length / length
+
+        ipoints = geometry.interpolate_bezier(p1, handle1, handle2, p3, self.bb_resolution + 1)
+
+        for k in range(len(ipoints) - 1):
+            ip1 = ipoints[k]
+            ip2 = ipoints[k + 1]
+            local_bounds(ip1, ip1, ip2)
+
+        local_bounds(p3, p2, p3)
+        
+        faces = []
+        faces.append((0, 1, 2, 3))
+
+        for k in range(len(segments) - 1):
+            s1 = segments[k]
+            s2 = segments[k + 1]
+            edges.append((s1[0], s2[0]))
+            edges.append((s1[1], s2[1]))
+            edges.append((s1[2], s2[2]))
+            edges.append((s1[3], s2[3]))
+            
+            faces.append((s1[0], s2[0], s2[1], s1[1]))
+            faces.append((s1[0], s1[3], s2[3], s2[0]))
+            faces.append((s1[0], s1[3], s2[3], s2[0]))
+            faces.append((s1[3], s1[2], s2[2], s2[3]))
+            faces.append((s1[2], s1[1], s2[1], s2[2]))
+        
+        l = len(verts)
+        faces.append((l-1, l-2, l-3, l-4))
+
+        b3d_utils.set_mesh(self.id_data, b3d_utils.create_mesh(verts, edges, faces, self.id_data.name))
+
+
+    def __force_update_bb_bounds(self, context):
+        self.update_bounds(True)
 
     curve: PointerProperty(type=Object, name='Curve')
+    auto_bb: BoolProperty(name='Automatic Bounding Box', default=True)
+    bb_resolution: IntProperty(name='Resolution', default=1, min=1, update=__force_update_bb_bounds)
+    bb_scale: FloatVectorProperty(name='Scale', subtype='TRANSLATION', default=(1, 1, 1), update=__force_update_bb_bounds)
+    bb_offset: FloatVectorProperty(name='Offset', subtype='TRANSLATION', update=__force_update_bb_bounds)
+
+    c1: FloatVectorProperty(subtype='TRANSLATION')
+    c2: FloatVectorProperty(subtype='TRANSLATION')
+    c3: FloatVectorProperty(subtype='TRANSLATION')
 
 
 # -----------------------------------------------------------------------------

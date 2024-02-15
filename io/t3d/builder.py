@@ -67,7 +67,7 @@ class PlayerStartBuilder(Builder):
 
 
 # -----------------------------------------------------------------------------
-class TTCheckpointBuilder(Builder):
+class CheckpointBuilder(Builder):
     def build(self, obj: bpy.types.Object, options: T3DBuilderOptions) -> Actor | None:
         super().build(obj, options)
         location, _ = self.get_location_rotation(obj)
@@ -184,7 +184,7 @@ class T3DBuilder():
             case ActorType.SPRINGBOARD:
                 return SpringBoardBuilder().build(obj, options)
             case ActorType.CHECKPOINT:
-                return TTCheckpointBuilder().build(obj, options)
+                return CheckpointBuilder().build(obj, options)
 
     def build(self, context : bpy.types.Context, options : T3DBuilderOptions) -> list[Actor]:
         scene : list[Actor] = []

@@ -12,11 +12,15 @@ bl_info = {
 
 # -----------------------------------------------------------------------------
 import bpy
+from bpy.app.handlers import depsgraph_update_post
+
 from .io.t3d.exporter import MET_OT_T3D_Export
 from .io.ase.exporter import MET_OT_ASE_Export
 from .map_editor.props import *
 from .map_editor.gui import *
 from . import auto_load
+from .map_editor import b3d_utils
+from .map_editor import scene_utils
 
 
 # -----------------------------------------------------------------------------
@@ -39,9 +43,13 @@ def register():
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export_t3d)
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export_ase)
 
+    b3d_utils.add_callback(depsgraph_update_post, scene_utils.on_depsgraph_update_post)
+
 
 # -----------------------------------------------------------------------------
 def unregister():
+    b3d_utils.remove_callback(depsgraph_update_post, scene_utils.on_depsgraph_update_post)
+
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export_ase)
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export_t3d)
 
