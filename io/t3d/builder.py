@@ -91,10 +91,10 @@ class StaticMeshBuilder(Builder):
         static_mesh = scene.get_medge_actor(obj).static_mesh
         location, rotation = self.get_location_rotation(obj)
         if static_mesh.use_prefab:
-            return StaticMesh(location, rotation, static_mesh.get_prefab_path())
+            return StaticMesh(location, rotation, obj.scale, static_mesh.get_prefab_path())
         else:
             location = (0.0, 0.0, 0.0)
-            return StaticMesh(location, rotation, static_mesh.get_path())
+            return StaticMesh(location, rotation, obj.scale, static_mesh.get_path())
 
 
 # -----------------------------------------------------------------------------
@@ -154,7 +154,7 @@ class SpringBoardBuilder(Builder):
     def build(self, obj: Object, options: T3DBuilderOptions) -> Actor | None:
         super().build(obj, options)
         location, rotation = self.get_location_rotation(obj)
-        return StaticMesh(location, rotation, 'P_Gameplay.SpringBoard.SpringBoardHigh_ColMesh')
+        return StaticMesh(location, rotation, (1, 1, 1), 'P_Gameplay.SpringBoard.SpringBoardHigh_ColMesh')
    
 
 # -----------------------------------------------------------------------------

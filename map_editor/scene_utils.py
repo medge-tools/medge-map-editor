@@ -1,4 +1,5 @@
 import bpy
+import bmesh
 from bpy.types import Scene, Depsgraph
 from mathutils import Vector, Matrix
 
@@ -86,6 +87,28 @@ def create_zipline() -> bpy.types.Object:
 def create_checkpoint() -> bpy.types.Object:
     return b3d_utils.create_cylinder(make_faces=False)
 
+
+# -----------------------------------------------------------------------------
+def create_skydome() -> bpy.types.Object:
+    bpy.ops.mesh.primitive_uv_sphere_add()
+    obj = bpy.context.object
+    obj.name = 'Skydome'
+
+    actor = get_medge_actor(obj)
+    actor.type = ActorType.STATIC_MESH
+    
+    sm = actor.static_mesh
+    sm.use_prefab = True
+
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+
+    for v in bm.verts:
+        if v.co.z < 0:
+            bm.verts.remove(v)
+
+    bm.to_mesh(obj.data)
+    bm.free()
 
 # -----------------------------------------------------------------------------
 # CALLBACKS

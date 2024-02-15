@@ -7,16 +7,6 @@ from ..ase import *
 
 
 # -----------------------------------------------------------------------------
-class T3DWriter:
-    def write(self, filepath : str, scene : list[Actor] ):
-        with open(filepath, 'w') as fp:
-            fp.write('Begin Map\nBegin Level NAME=PersistentLevel\n')
-            for a in scene:
-                fp.write(str(a))
-            fp.write('End Level\nBegin Surface\nEnd Surface\nEnd Map')
-
-
-# -----------------------------------------------------------------------------
 class MET_OT_T3D_Export(Operator, ExportHelper):
     '''Export scene to a .t3d file'''
     bl_idname       = 'medge_map_editor.t3d_export'
@@ -65,6 +55,15 @@ class MET_OT_T3D_Export(Operator, ExportHelper):
         layout.prop(self, 'export_static_meshes')
 
 
+    def write(self, filepath : str, scene : list[Actor] ):
+        with open(filepath, 'w') as f:
+            f.write('Begin Map\nBegin Level NAME=PersistentLevel\n')
+            f.write(str(SkyLight()))
+            for a in scene:
+                f.write(str(a))
+            f.write('End Level\nBegin Surface\nEnd Surface\nEnd Map')
+
+
     def execute(self, context : bpy.types.Context):
         # Export T3D
         try:
@@ -73,7 +72,7 @@ class MET_OT_T3D_Export(Operator, ExportHelper):
             us = self.units_scale[self.units]
             options.scale = Vector((us, us, us))
             scene = T3DBuilder().build(context, options)
-            T3DWriter().write(self.filepath, scene)
+            self.write(self.filepath, scene)
             self.report({'INFO'}, 'T3D exported successful')
         except Exception as e:
             self.report({'ERROR'}, str(e))

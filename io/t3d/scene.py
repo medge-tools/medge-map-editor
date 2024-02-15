@@ -148,9 +148,11 @@ End Polygon\n'
 class Actor:
     def __init__(self, 
                  location: tuple[float, float, float] = (0, 0, 0),
-                 rotation: tuple[float, float, float] = (0, 0, 0)) -> None:
+                 rotation: tuple[float, float, float] = (0, 0, 0),
+                 scale: tuple[float, float, float] = (1, 1, 1)) -> None:
         self.Location = Location(location)
         self.Rotation = Rotation(rotation)
+        self.DrawScale3D = Location(scale)
 
     def __str__(self) -> str:
         pass
@@ -225,9 +227,10 @@ class StaticMesh(Actor):
     def __init__(self, 
                  location: tuple[float, float, float], 
                  rotation: tuple[float, float, float],
+                 scale: tuple[float, float, float],
                  static_mesh: str,
                  material: str = '') -> None:
-        super().__init__(location, rotation)
+        super().__init__(location, rotation, scale)
         self.StaticMesh: str = static_mesh
         self.Material: str = material
     
@@ -240,6 +243,7 @@ f'Begin Actor Class=StaticMeshActor Name=StaticMeshActor_0 Archetype=StaticMeshA
 \tEnd Object\n\
 \tLocation=({self.Location})\n\
 \tRotation=({self.Rotation})\n\
+\tDrawScale3D=({self.DrawScale3D})\n\
 End Actor\n'
 
 
@@ -344,6 +348,18 @@ class Zipline(Brush):
 # LIGHTS
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
+class SkyLight(Actor):
+    def __str__(self) -> str:
+        return \
+f'Begin Actor Class=SkyLight Name=SkyLight_0 Archetype=SkyLight\'Engine.Default__SkyLight\'\n\
+Begin Object Class=SkyLightComponent Name=SkyLightComponent0 Archetype=SkyLightComponent\'Engine.Default__SkyLight:SkyLightComponent0\'\n\
+End Object\n\
+Location=(X=0.000000,Y=0.000000,Z=300.000000)\n\
+DrawScale=3.000000\n\
+End Actor\n'        
+
+
+# -----------------------------------------------------------------------------
 class DirectionalLight(Actor):
     def __init__(self,
                  location: tuple[float, float, float], 
@@ -360,4 +376,4 @@ f'Begin Actor Class=DirectionalLight Name=DirectionalLight_0 Archetype=Direction
 \tEnd Object\n\
 \tLocation=({self.Location})\n\
 \tRotation=({self.Rotation})\n\
-End Actor'
+End Actor\n'

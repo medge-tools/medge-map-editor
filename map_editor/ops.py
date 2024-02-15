@@ -18,6 +18,17 @@ class MET_OT_AddActor(Operator):
         scene.new_actor(self.type)
         return {'FINISHED'}
 
+
+# -----------------------------------------------------------------------------
+class MET_OT_AddSkydome(Operator):
+    bl_idname   = 'medge_map_editor.add_skydome'
+    bl_label    = 'Add Skydome'
+    bl_options  = {'UNDO'}
+
+    def execute(self, context : bpy.types.Context):
+        scene.create_skydome()
+        return {'FINISHED'}
+
 # -----------------------------------------------------------------------------
 # HELPERS
 # -----------------------------------------------------------------------------

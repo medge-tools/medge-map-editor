@@ -347,10 +347,10 @@ def circle(radius,
 
 
 # -----------------------------------------------------------------------------
-def create_cylinder(radius = 2, 
+def create_cylinder(radius = 1, 
                     height = 2, 
-                    row_height = 1, 
-                    angle_step = 10, 
+                    row_height = 2, 
+                    angle_step = 20, 
                     make_faces = True) -> Mesh:
     height += 1
     verts = []

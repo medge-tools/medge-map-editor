@@ -58,6 +58,9 @@ class MET_PT_Volume(bpy.types.Panel):
         self.row_actor(col, (ActorType.LADDER, ActorType.SWING), ('Ladder', 'Swing'))
         self.row_actor(col, (ActorType.SPRINGBOARD, ActorType.STATIC_MESH), ('Springboard', 'Static Mesh'))
         self.row_actor(col, (ActorType.ZIPLINE, ActorType.CHECKPOINT), ('Zipline', 'Checkpoint'))
+        row = self.create_row(col)
+        row.operator(MET_OT_AddSkydome.bl_idname, text='Skydome')
+        row.label(text='')
         
         row = self.create_row(col)
         row.operator(MET_OT_CleanupWidgets.bl_idname, text='Cleanup Widgets')

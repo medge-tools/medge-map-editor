@@ -97,10 +97,12 @@ class MET_ACTOR_PG_PlayerStart(ActorProperty, PropertyGroup):
         self.id_data.display_type = 'WIRE'
         self.id_data.name = 'Player Start'
 
+
     def draw(self, layout: UILayout):
         layout.prop(self, 'is_time_trial')
         if self.is_time_trial:
             layout.prop(self, 'track_index')
+
 
     is_time_trial: BoolProperty(name='Is Time Trial')
     track_index: TrackIndexProperty()
@@ -188,6 +190,7 @@ class MET_ACTOR_PG_Ladder(ActorProperty, PropertyGroup):
         arrow.obj = b3d_utils.new_object('ARROW', b3d_utils.create_arrow(scale), scene.COLLECTION_WIDGETS, self.id_data)
         b3d_utils.set_object_selectable(arrow.obj, False)
         self.id_data.name = 'Ladder'
+
 
     def draw(self, layout: UILayout):
         layout.prop(self, 'is_pipe')
