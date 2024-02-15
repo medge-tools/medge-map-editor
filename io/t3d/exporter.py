@@ -33,7 +33,7 @@ class MET_OT_T3D_Export(Operator, ExportHelper):
 
     # These values are identical to the ASE Export addon
     units_scale = {
-        'M': 60.352,
+        'M': 100.0,
         'U': 1.0}
 
 

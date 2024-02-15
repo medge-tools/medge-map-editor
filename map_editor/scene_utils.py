@@ -4,7 +4,7 @@ from mathutils import Vector, Matrix
 
 from ..io.t3d.scene import ActorType
 from . import b3d_utils
-from . import props
+from .props import *
 
 COLLECTION_WIDGETS = 'WIDGET'
 DEFAULT_PACKAGE = 'MyPackage'
@@ -14,8 +14,9 @@ DEFAULT_PACKAGE = 'MyPackage'
 # HELPERS
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-def get_medge_actor(obj: bpy.types.Object) -> props.MET_OBJECT_PG_Actor:
+def get_medge_actor(obj: bpy.types.Object) -> MET_OBJECT_PG_Actor | MET_ACTOR_PG_StaticMesh:
     return obj.medge_actor
+    
 
 # -----------------------------------------------------------------------------
 def cleanup_widgets():
@@ -92,6 +93,13 @@ def create_checkpoint() -> bpy.types.Object:
 # -----------------------------------------------------------------------------
 def on_depsgraph_update_post(scene: Scene, depsgraph: Depsgraph):
     for obj in scene.objects:
+
         actor = get_medge_actor(obj)
-        if actor.type == ActorType.ZIPLINE:
-            actor.zipline.update_bounds()
+        
+        match(obj.type):
+            case 'LIGHT' | 'CURVE': 
+                actor.user_editable = False
+
+        match(actor.type):
+            case ActorType.ZIPLINE:
+                actor.zipline.update_bounds()

@@ -4,6 +4,10 @@ from enum import Enum
 
 EULER_TO_URU = 65536 / math.tau
 
+def map_range(value, in_min, in_max, out_min, out_max):
+    return out_min + (value - in_min) / (in_max - in_min) * (out_max - out_min)
+
+
 # -----------------------------------------------------------------------------
 # RHS needs to be exactly the same as LHS it to work in Blender
 class ActorType(str, Enum):
@@ -91,6 +95,17 @@ class Rotation(Point3D):
 
 
 # -----------------------------------------------------------------------------
+class Color(Point3D):
+    def __init__(self, point: tuple[float, float, float] = (0, 0, 0)) -> None:
+        super().__init__(point)
+        self.x = map_range(self.x, 0, 1, 0, 255)
+        self.y = map_range(self.y, 0, 1, 0, 255)
+        self.z = map_range(self.z, 0, 1, 0, 255)
+        self.set_prefix('R', 'G', 'B')
+        self.set_format('{:.0f}')
+
+
+# -----------------------------------------------------------------------------
 class Polygon:
     def __init__(
             self, 
@@ -156,17 +171,17 @@ class PlayerStart(Actor):
         if self.is_time_trial: 
             return\
 f'Begin Actor Class=TdTimeTrialStart Name=TdTimeTrialStart_0 Archetype=TdTimeTrialStart\'TdGame.Default__TdTimeTrialStart\'\n\
-Begin Object Class=RequestedTextureResources Name=RequestedTextureResources_0 Archetype=RequestedTextureResources\'TdGame.Default__TdTimeTrialStart:PlayerStartTextureResourcesObject\'\n\
-End Object\n\
-TrackIndex={self.TrackIndex}\n\
-Location=({self.Location})\n\
-Rotation=({self.Rotation})\n\
-End Actor\n'
+\tBegin Object Class=RequestedTextureResources Name=RequestedTextureResources_0 Archetype=RequestedTextureResources\'TdGame.Default__TdTimeTrialStart:PlayerStartTextureResourcesObject\'\n\
+\tEnd Object\n\
+\tTrackIndex={self.TrackIndex}\n\
+\tLocation=({self.Location})\n\
+\tRotation=({self.Rotation})\n\
+\tEnd Actor\n'
         else:
             return \
 f'Begin Actor Class=PlayerStart Name=PlayerStart_0 Archetype=PlayerStart\'Engine.Default__PlayerStart\'\n\
-Location=({self.Location})\n\
-Rotation=({self.Rotation})\n\
+\tLocation=({self.Location})\n\
+\tRotation=({self.Rotation})\n\
 End Actor\n'
 
 
@@ -195,13 +210,13 @@ class Checkpoint(Actor):
     def __str__(self) -> str:
         return \
 f'Begin Actor Class=TdTimerCheckpoint Name=TdTimerCheckpoint_0 Archetype=TdTimerCheckpoint\'TdGame.Default__TdTimerCheckpoint\'\n\
-BelongToTracks(0)=(TrackIndex={self.TrackIndex},OrderIndex={self.OrderIndex},bNoIntermediateTime={self.NoIntermediateTime})\n\
-CustomHeight={self.CustomHeight}\n\
-CustomWidthScale={self.CustomWidthScale}\n\
-bNoRespawn={self.NoRespawn}\n\
-bEnabled={self.Enabled}\n\
-bShouldBeBased={self.ShouldBeBased}\n\
-Location=({self.Location})\n\
+\tBelongToTracks(0)=(TrackIndex={self.TrackIndex},OrderIndex={self.OrderIndex},bNoIntermediateTime={self.NoIntermediateTime})\n\
+\tCustomHeight={self.CustomHeight}\n\
+\tCustomWidthScale={self.CustomWidthScale}\n\
+\tbNoRespawn={self.NoRespawn}\n\
+\tbEnabled={self.Enabled}\n\
+\tbShouldBeBased={self.ShouldBeBased}\n\
+\tLocation=({self.Location})\n\
 End Actor\n'
     
 
@@ -219,12 +234,12 @@ class StaticMesh(Actor):
     def __str__(self) -> str:
         return \
 f'Begin Actor Class=StaticMeshActor Name=StaticMeshActor_0 Archetype=StaticMeshActor\'Engine.Default__StaticMeshActor\'\n\
-Begin Object Class=StaticMeshComponent Name=StaticMeshComponent0 Archetype=StaticMeshComponent\'Engine.Default__StaticMeshActor:StaticMeshComponent0\'\n\
-StaticMesh=StaticMesh\'{self.StaticMesh}\'\n\
-Materials(0)=Material\'{self.Material}\'\n\
-End Object\n\
-Location=({self.Location})\n\
-Rotation=({self.Rotation})\n\
+\tBegin Object Class=StaticMeshComponent Name=StaticMeshComponent0 Archetype=StaticMeshComponent\'Engine.Default__StaticMeshActor:StaticMeshComponent0\'\n\
+\t\tStaticMesh=StaticMesh\'{self.StaticMesh}\'\n\
+\t\tMaterials(0)=Material\'{self.Material}\'\n\
+\tEnd Object\n\
+\tLocation=({self.Location})\n\
+\tRotation=({self.Rotation})\n\
 End Actor\n'
 
 
@@ -258,18 +273,18 @@ class Brush(Actor):
             props += prop + '\n'
         return \
 f'Begin Actor Class={self.Class} Name={self.Class}_0 Archetype={self.Archetype}\n\
-Begin Object Class=BrushComponent Name=BrushComponent0 Archetype=BrushComponent\'{self.Package}:BrushComponent0\'\n\
-End Object\n\
-CsgOper={self.CsgOper}\n\
+\tBegin Object Class=BrushComponent Name=BrushComponent0 Archetype=BrushComponent\'{self.Package}:BrushComponent0\'\n\
+\tEnd Object\n\
+\tCsgOper={self.CsgOper}\n\
 {props}\
-Begin Brush Name=Model_0\n\
-Begin PolyList\n\
-{polylist}\
-End PolyList\n\
-End Brush\n\
-Brush=Model\'Model_0\'\n\
-Location=({self.Location})\n\
-Rotation=({self.Rotation})\n\
+\tBegin Brush Name=Model_0\n\
+\t\tBegin PolyList\n\
+\t\t\t{polylist}\
+\t\tEnd PolyList\n\
+\tEnd Brush\n\
+\tBrush=Model\'Model_0\'\n\
+\tLocation=({self.Location})\n\
+\tRotation=({self.Rotation})\n\
 End Actor\n'
 
 
@@ -294,7 +309,8 @@ class Ladder(Brush):
 
 # -----------------------------------------------------------------------------
 class Swing(Brush):
-    def __init__(self, polylist: list[Polygon],
+    def __init__(self, 
+                 polylist: list[Polygon],
                  location: tuple[float, float, float], 
                  rotation: tuple[float, float, float]) -> None:
         super().__init__(polylist, location, rotation,
@@ -323,3 +339,25 @@ class Zipline(Brush):
         self.Settings.append('OldScale=(X=1.000000,Y=1.000000,Z=1.000000)')
         self.Settings.append(f'OldLocation=({Location(start)})')
 
+
+# -----------------------------------------------------------------------------
+# LIGHTS
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+class DirectionalLight(Actor):
+    def __init__(self,
+                 location: tuple[float, float, float], 
+                 rotation: tuple[float, float, float],
+                 color: tuple[int, int, int] ) -> None:
+        super().__init__(location, rotation)
+        self.Color = Color(color)
+
+    def __str__(self) -> str:
+        return \
+f'Begin Actor Class=DirectionalLight Name=DirectionalLight_0 Archetype=DirectionalLight\'Engine.Default__DirectionalLight\'\n\
+\tBegin Object Class=DirectionalLightComponent Name=DirectionalLightComponent0 Archetype=DirectionalLightComponent\'Engine.Default__DirectionalLight:DirectionalLightComponent0\'\n\
+\t\tLightColor=({self.Color},A=0)\n\
+\tEnd Object\n\
+\tLocation=({self.Location})\n\
+\tRotation=({self.Rotation})\n\
+End Actor'

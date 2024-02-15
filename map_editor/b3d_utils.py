@@ -1,16 +1,18 @@
-import bpy
-import bmesh
-from bpy.types import Object
-from mathutils import Vector, Matrix, Euler
+import  bpy
+import  bmesh
+from    bpy.types   import Object, Mesh
+from    bmesh.types import BMesh
+from    mathutils   import Vector, Matrix, Euler
 
 import math
 import numpy as np
+
 
 # -----------------------------------------------------------------------------
 # HELPERS
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-def set_active(obj: Object) -> None:
+def set_active(obj: Object):
     active = bpy.context.active_object
     if active: active.select_set(False)
     bpy.context.view_layer.objects.active = obj
@@ -18,13 +20,13 @@ def set_active(obj: Object) -> None:
 
 
 # -----------------------------------------------------------------------------
-def set_object_mode(obj: Object, m = 'OBJECT') -> None:
+def set_object_mode(obj: Object, m = 'OBJECT'):
     bpy.context.view_layer.objects.active = obj
     bpy.ops.object.mode_set(mode=m)
 
 
 # -----------------------------------------------------------------------------
-def set_object_selectable(obj: Object, select: bool) -> None:
+def set_object_selectable(obj: Object, select: bool):
     obj.hide_select = not select
 
 
@@ -35,19 +37,31 @@ def select_object(obj: Object):
 
 
 # -----------------------------------------------------------------------------
-def select_all_objects() -> None:
+def select_all_objects():
     for obj in bpy.context.scene.objects:
         select_object(obj)
 
 
 # -----------------------------------------------------------------------------
-def deselect_all_objects() -> None:
+def deselect_all_objects():
     for obj in bpy.context.selected_objects:
         obj.select_set(False)
 
 
 # -----------------------------------------------------------------------------
-def link_to_scene(obj: Object, collection: str = None) -> None:
+def select_all_vertices(bm: BMesh):
+    for vert in bm.verts:
+        vert.select = True
+
+
+# -----------------------------------------------------------------------------
+def deselect_all_vertices(bm: BMesh):
+    for vert in bm.verts:
+        vert.select = False
+
+
+# -----------------------------------------------------------------------------
+def link_to_scene(obj: Object, collection: str = None):
     """If the collection == None, then the object will be linked to the root collection"""
     for uc in obj.users_collection:
         uc.objects.unlink(obj)
@@ -72,14 +86,14 @@ def auto_gui_properties(data, layout: bpy.types.UILayout):
 # HANDLER CALLBACK
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-def add_callback(handler, function) -> None:
+def add_callback(handler, function):
     for fn in handler:
         if fn.__name__ == function.__name__: return
     handler.append(function)
 
 
 # -----------------------------------------------------------------------------
-def remove_callback(handler, function) -> None:
+def remove_callback(handler, function):
     for fn in handler:
         if fn.__name__ == function.__name__:
             handler.remove(fn)
@@ -89,7 +103,7 @@ def remove_callback(handler, function) -> None:
 # SCENE
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-def new_object(name: str, data: bpy.types.ID, collection: str = None, parent: bpy.types.Object = None) -> None:
+def new_object(name: str, data: bpy.types.ID, collection: str = None, parent: bpy.types.Object = None):
     obj = bpy.data.objects.new(name, data)
     link_to_scene(obj, collection)
     if(parent): obj.parent = parent
@@ -98,12 +112,12 @@ def new_object(name: str, data: bpy.types.ID, collection: str = None, parent: bp
 
 
 # -----------------------------------------------------------------------------
-def remove_object(obj: Object) -> None:
+def remove_object(obj: Object):
     bpy.data.objects.remove(obj)
 
 
 # -----------------------------------------------------------------------------
-def copy_object(obj: Object) -> bpy.types.Object:
+def copy_object(obj: Object) -> Object:
     copy = obj.copy()
     copy.data = obj.data.copy()
     link_to_scene(copy)
@@ -115,14 +129,14 @@ def create_mesh(
         verts: list[tuple[float, float, float]], 
         edges: list[tuple[int, int]], 
         faces: list[tuple[int, ...]], 
-        name: str) -> bpy.types.Mesh:
+        name: str) -> Mesh:
     mesh = bpy.data.meshes.new(name)
     mesh.from_pydata(verts, edges, faces)
     return mesh
 
 
 # -----------------------------------------------------------------------------
-def remove_mesh(mesh: bpy.types.Mesh) -> None:
+def remove_mesh(mesh: Mesh):
     # Extra test because this can crash Blender if not done correctly.
     result = False
     if mesh and mesh.users == 0: 
@@ -141,7 +155,7 @@ def remove_mesh(mesh: bpy.types.Mesh) -> None:
 
 # -----------------------------------------------------------------------------
 # https://blenderartists.org/t/how-to-replace-a-mesh/596225/4
-def set_mesh(obj: Object, mesh: bpy.types.Mesh) -> None:
+def set_mesh(obj: Object, mesh: Mesh):
     old_mesh = obj.data
     obj.data = mesh
     remove_mesh(old_mesh)
@@ -149,7 +163,7 @@ def set_mesh(obj: Object, mesh: bpy.types.Mesh) -> None:
 
 # -----------------------------------------------------------------------------
 # https://blender.stackexchange.com/questions/50160/scripting-low-level-join-meshes-elements-hopefully-with-bmesh
-def join_meshes(meshes: list[bpy.types.Mesh]) -> None:
+def join_meshes(meshes: list[Mesh]):
     bm = bmesh.new()
     bm_verts = bm.verts.new
     bm_faces = bm.faces.new
@@ -201,7 +215,7 @@ def convert_to_new_mesh(obj: Object) -> bpy.types.Object:
 
 
 # -----------------------------------------------------------------------------
-def transform(mesh: bpy.types.Mesh, transforms: list[Matrix]) -> None:
+def transform(mesh: Mesh, transforms: list[Matrix]):
     mode = bpy.context.mode
     bm = bmesh.new()
 
@@ -239,7 +253,7 @@ def get_rotation_mirrored_x_axis(obj: Object) -> Euler:
 
 # -----------------------------------------------------------------------------
 # https://blender.stackexchange.com/questions/159538/how-to-apply-all-transformations-to-an-object-at-low-level
-def apply_all_transforms(obj: Object) -> None:
+def apply_all_transforms(obj: Object):
     mb = obj.matrix_basis
     if hasattr(obj.data, 'transform'):
         obj.data.transform(mb)
@@ -270,7 +284,7 @@ def unparent(obj: Object, keep_world_location = True):
 # CREATE
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-def create_cube(scale: tuple[float, float, float] = (1, 1, 1)) -> bpy.types.Mesh:
+def create_cube(scale: tuple[float, float, float] = (1, 1, 1)) -> Mesh:
     verts = [
         Vector((-1 * scale[0], -1 * scale[1], -1 * scale[2])),
         Vector((-1 * scale[0],  1 * scale[1], -1 * scale[2])),
@@ -293,7 +307,7 @@ def create_cube(scale: tuple[float, float, float] = (1, 1, 1)) -> bpy.types.Mesh
 
 
 # -----------------------------------------------------------------------------
-def create_arrow(scale: tuple[float, float] = (1, 1)) -> bpy.types.Mesh:
+def create_arrow(scale: tuple[float, float] = (1, 1)) -> Mesh:
     verts = [
         Vector((-1 * scale[0],  0.4 * scale[1], 0)),
         Vector(( 0 * scale[0],  0.4 * scale[1], 0)),
@@ -335,9 +349,9 @@ def circle(radius,
 # -----------------------------------------------------------------------------
 def create_cylinder(radius = 2, 
                     height = 2, 
-                    row_height = 2, 
+                    row_height = 1, 
                     angle_step = 10, 
-                    make_faces = True) -> bpy.types.Mesh:
+                    make_faces = True) -> Mesh:
     height += 1
     verts = []
     per_circle_verts = 0
@@ -373,7 +387,7 @@ def create_curve(num_points = 3,
     path.points.add(num_points - 1)
 
     for k in range(num_points):
-        p = Vector(dir) * Vector((1, 1, 1)) * step * k
+        p = Vector(dir) * step * k
         path.points[k].co = (*p, 1)
 
     path.use_endpoint_u = True

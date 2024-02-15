@@ -247,7 +247,7 @@ class MET_ACTOR_PG_Zipline(ActorProperty, PropertyGroup):
         self.id_data.display_type = 'WIRE'
         self.id_data.name = 'Zipline'
         b3d_utils.set_active(self.id_data)
-        self.update_bounds()
+        self.update_bounds(True)
 
     
     def draw(self, layout: UILayout):
@@ -256,6 +256,7 @@ class MET_ACTOR_PG_Zipline(ActorProperty, PropertyGroup):
         layout.separator()
 
         if self.auto_bb:
+            layout.prop(self, 'align_bb')
             layout.prop(self, 'bb_resolution')
             layout.separator()
             layout.prop(self, 'bb_scale')
@@ -284,6 +285,8 @@ class MET_ACTOR_PG_Zipline(ActorProperty, PropertyGroup):
 
         def local_bounds(center, p1, p2):
             forward = (p2 - p1).normalized()
+            if self.align_bb:
+                forward.z = 0
             right = Vector((forward.y, -forward.x, 0)).normalized() * self.bb_scale
             up = forward.cross(right).normalized() * self.bb_scale
 
@@ -352,7 +355,9 @@ class MET_ACTOR_PG_Zipline(ActorProperty, PropertyGroup):
 
     curve: PointerProperty(type=Object, name='Curve')
     auto_bb: BoolProperty(name='Automatic Bounding Box', default=True)
-    bb_resolution: IntProperty(name='Resolution', default=1, min=1, update=__force_update_bb_bounds)
+    align_bb: BoolProperty(name='Align', default=True, update=__force_update_bb_bounds)
+
+    bb_resolution: IntProperty(name='Resolution', default=4, min=1, update=__force_update_bb_bounds)
     bb_scale: FloatVectorProperty(name='Scale', subtype='TRANSLATION', default=(1, 1, 1), update=__force_update_bb_bounds)
     bb_offset: FloatVectorProperty(name='Offset', subtype='TRANSLATION', update=__force_update_bb_bounds)
 
@@ -400,12 +405,14 @@ class MET_ACTOR_PG_Checkpoint(ActorProperty, PropertyGroup):
 class MET_OBJECT_PG_Actor(PropertyGroup):
     def draw(self, layout: UILayout):
         col = layout.column(align=True)
+        if not self.user_editable:
+            col.label(text=str(self.type))
+            return
+
         col.prop(self, 'type')
 
         col = layout.column(align=True)
         match(self.type):
-            case ActorType.NONE:
-                b3d_utils.link_to_scene(self.id_data)
             case ActorType.PLAYER_START:
                 self.player_start.draw(col)
             case ActorType.BRUSH:
@@ -447,6 +454,7 @@ class MET_OBJECT_PG_Actor(PropertyGroup):
 
     
     type: ActorTypeProperty(__on_type_update)
+    user_editable: BoolProperty(default=True)
 
     player_start: PointerProperty(type=MET_ACTOR_PG_PlayerStart)
     static_mesh: PointerProperty(type=MET_ACTOR_PG_StaticMesh)
