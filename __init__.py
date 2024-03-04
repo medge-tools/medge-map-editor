@@ -19,7 +19,7 @@ from .io.ase.exporter import MET_OT_ASE_Export
 from .map_editor.props import *
 from .map_editor.gui import *
 from . import auto_load
-from .map_editor import b3d_utils
+from . import b3d_utils
 from .map_editor import scene_utils
 
 

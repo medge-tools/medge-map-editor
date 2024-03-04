@@ -4,7 +4,7 @@ import bmesh
 from mathutils import Vector
 
 from .scene import *
-from ...map_editor import b3d_utils
+from ... import b3d_utils
 from ...map_editor import scene_utils as scene
 
 
@@ -63,7 +63,7 @@ class Builder:
 class PlayerStartBuilder(Builder):
     def build(self, obj: Object, options: T3DBuilderOptions) -> Actor | None:
         super().build(obj, options)
-        player_start = scene.get_medge_actor(obj).player_start
+        player_start = scene.get_actor(obj).player_start
         return PlayerStart(*self.get_location_rotation(obj), player_start.is_time_trial, player_start.track_index)
 
 
@@ -72,7 +72,7 @@ class CheckpointBuilder(Builder):
     def build(self, obj: Object, options: T3DBuilderOptions) -> Actor | None:
         super().build(obj, options)
         location, _ = self.get_location_rotation(obj)
-        checkpoint = scene.get_medge_actor(obj).checkpoint
+        checkpoint = scene.get_actor(obj).checkpoint
         return Checkpoint(location, 
                             checkpoint.track_index,
                             checkpoint.order_index,
@@ -88,7 +88,7 @@ class CheckpointBuilder(Builder):
 class StaticMeshBuilder(Builder):
     def build(self, obj: Object, options: T3DBuilderOptions) -> Actor | None:
         super().build(obj, options)
-        static_mesh = scene.get_medge_actor(obj).static_mesh
+        static_mesh = scene.get_actor(obj).static_mesh
         location, rotation = self.get_location_rotation(obj)
         if static_mesh.use_prefab:
             return StaticMesh(location, rotation, obj.scale, static_mesh.get_prefab_path())
@@ -111,7 +111,7 @@ class BrushBuilder(VolumeBuilder):
         super().build(obj, options)
         polylist, location, rotation = self.get_arguments(obj)
         for poly in polylist:
-            poly.Texture = scene.get_medge_actor(obj).brush.get_material_path()
+            poly.Texture = scene.get_actor(obj).brush.get_material_path()
 
         return Brush(polylist, location, rotation)
 
@@ -121,7 +121,7 @@ class LadderBuilder(VolumeBuilder):
     def build(self, obj: Object, options: T3DBuilderOptions) -> Actor | None:
         super().build(obj, options)
         arguments = self.get_arguments(obj)
-        ladder = scene.get_medge_actor(obj).ladder
+        ladder = scene.get_actor(obj).ladder
         return Ladder(*arguments, ladder.is_pipe)
 
 
@@ -137,7 +137,7 @@ class SwingBuilder(VolumeBuilder):
 class ZiplineBuilder(Builder):
     def build(self, obj: Object, options: T3DBuilderOptions) -> Actor | None:
         super().build(obj, options)
-        curve = scene.get_medge_actor(obj).zipline.curve
+        curve = scene.get_actor(obj).zipline.curve
         t = Vector((*(self.scale * self.mirror), 1.0)) 
         mworld = curve.matrix_world
         points = curve.data.splines[0].points
@@ -181,7 +181,7 @@ class T3DBuilder():
                     return DirectionalLightBuilder().build(obj, options)
 
 
-        me_actor = scene.get_medge_actor(obj)
+        me_actor = scene.get_actor(obj)
         if me_actor.type == ActorType.NONE: return None
 
         match(me_actor.type):
@@ -206,7 +206,7 @@ class T3DBuilder():
 
 
     def build(self, context : bpy.types.Context, options : T3DBuilderOptions) -> list[Actor]:
-        scene : list[Actor] = []
+        scene = []
         objs = context.scene.objects
         if options.selected_objects:
             objs = context.selected_objects

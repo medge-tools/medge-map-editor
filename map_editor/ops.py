@@ -1,7 +1,7 @@
-import bpy
-from bpy.types import Operator
-from . import props
-from . import scene_utils as scene
+import  bpy
+from    bpy.types   import Operator, Context
+from    .props      import *
+from    .           import scene_utils as scene
 
 # -----------------------------------------------------------------------------
 # ACTOR
@@ -12,9 +12,9 @@ class MET_OT_AddActor(Operator):
     bl_label    = 'Add Actor'
     bl_options  = {'UNDO'}
 
-    type: props.ActorTypeProperty()
+    type: ActorTypeProperty()
 
-    def execute(self, context : bpy.types.Context):
+    def execute(self, context : Context):
         scene.new_actor(self.type)
         return {'FINISHED'}
 
@@ -25,9 +25,10 @@ class MET_OT_AddSkydome(Operator):
     bl_label    = 'Add Skydome'
     bl_options  = {'UNDO'}
 
-    def execute(self, context : bpy.types.Context):
+    def execute(self, context : Context):
         scene.create_skydome()
         return {'FINISHED'}
+
 
 # -----------------------------------------------------------------------------
 # HELPERS
@@ -38,6 +39,6 @@ class MET_OT_CleanupWidgets(Operator):
     bl_label    = 'Cleanup Gizmos'
     bl_options  = {'UNDO'}
 
-    def execute(self, context: bpy.types.Context):
+    def execute(self, context: Context):
         scene.cleanup_widgets()
         return {'FINISHED'}

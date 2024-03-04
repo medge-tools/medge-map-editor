@@ -1,12 +1,12 @@
 import  bpy
 import  bmesh
-from    bpy.types   import Object, Mesh
+from    bpy.types   import Object, Mesh, Operator, Context, UIList, UILayout
+from    bpy.props   import *
 from    bmesh.types import BMesh
 from    mathutils   import Vector, Matrix, Euler
 
 import math
 import numpy as np
-
 
 # -----------------------------------------------------------------------------
 # HELPERS
@@ -20,7 +20,7 @@ def set_active(obj: Object):
 
 
 # -----------------------------------------------------------------------------
-def set_object_mode(obj: Object, m = 'OBJECT'):
+def set_object_mode(obj: Object, m):
     bpy.context.view_layer.objects.active = obj
     bpy.ops.object.mode_set(mode=m)
 
@@ -50,15 +50,17 @@ def deselect_all_objects():
 
 # -----------------------------------------------------------------------------
 def select_all_vertices(bm: BMesh):
-    for vert in bm.verts:
-        vert.select = True
+    for v in bm.verts:
+        v.select = True
+    bm.select_flush_mode()   
 
 
 # -----------------------------------------------------------------------------
 def deselect_all_vertices(bm: BMesh):
-    for vert in bm.verts:
-        vert.select = False
-
+    for v in bm.verts:
+        v.select = False
+    bm.select_flush_mode()   
+    
 
 # -----------------------------------------------------------------------------
 def link_to_scene(obj: Object, collection: str = None):
@@ -117,11 +119,16 @@ def remove_object(obj: Object):
 
 
 # -----------------------------------------------------------------------------
-def copy_object(obj: Object) -> Object:
-    copy = obj.copy()
-    copy.data = obj.data.copy()
-    link_to_scene(copy)
-    return copy
+def duplicate_object(obj: Object, instance = False) -> Object:
+    if instance:
+        mesh = obj.data
+        inst = new_object(obj.name + '_INSTANCE', mesh, obj.name + '_GENERATED')
+        return inst
+    else:
+        copy = obj.copy()
+        copy.data = obj.data.copy()
+        link_to_scene(copy)
+        return copy
 
 
 # -----------------------------------------------------------------------------
@@ -233,7 +240,27 @@ def transform(mesh: Mesh, transforms: list[Matrix]):
         bm.to_mesh(mesh)
     elif mode == 'EDIT_MESH':
         bmesh.update_edit_mesh(mesh)  
-    bm.free()
+
+
+# -----------------------------------------------------------------------------
+def snap_to_grid(mesh: Mesh,  spacing: int):
+    mode = bpy.context.mode
+    bm = bmesh.new()
+
+    if mode == 'OBJECT':
+        bm.from_mesh(mesh)
+    elif mode == 'EDIT_MESH':
+        bm = bmesh.from_edit_mesh(mesh) 
+
+    for v in bm.verts:
+        v.co.x = round(v.co.x / spacing) * spacing
+        v.co.y = round(v.co.y / spacing) * spacing
+        v.co.z = round(v.co.z / spacing) * spacing
+
+    if mode == 'OBJECT':
+        bm.to_mesh(mesh)
+    elif mode == 'EDIT_MESH':
+        bmesh.update_edit_mesh(mesh)  
 
 
 # -----------------------------------------------------------------------------
@@ -347,10 +374,10 @@ def circle(radius,
 
 
 # -----------------------------------------------------------------------------
-def create_cylinder(radius = 1, 
+def create_cylinder(radius = 2, 
                     height = 2, 
-                    row_height = 2, 
-                    angle_step = 20, 
+                    row_height = 1, 
+                    angle_step = 10, 
                     make_faces = True) -> Mesh:
     height += 1
     verts = []
@@ -392,3 +419,132 @@ def create_curve(num_points = 3,
 
     path.use_endpoint_u = True
     return curve
+
+
+# -----------------------------------------------------------------------------
+# MATH
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+def map_range(value, in_min, in_max, out_min, out_max):
+    return out_min + (value - in_min) / (in_max - in_min) * (out_max - out_min)
+
+
+# -----------------------------------------------------------------------------
+# LIST COLLECTIONS
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+class B3D_UL_GenericList(UIList):
+    def draw_item(self, context, layout, data, item, icon, active_data, active_property, index, flt_flag):
+        if self.layout_type == 'GRID':
+            layout.alignment = 'CENTER'
+        layout.label(text=item.name)
+
+
+# -----------------------------------------------------------------------------
+class GenericList:
+
+    def add(self):
+        self.items.add()
+        self.selected_item_idx = len(self.items) - 1
+
+
+    def remove_selected(self):
+        self.items.remove(self.selected_item_idx)
+        self.selected_item_idx = min(max(0, self.selected_item_idx - 1), len(self.items) - 1)
+
+    
+    def clear(self):
+        self.items.clear()
+        self.selected_item_idx = 0
+
+
+    def move(self, direction):
+        new_idx = self.selected_item_idx
+        new_idx += direction
+        self.items.move(new_idx, self.selected_item_idx)
+        self.selected_item_idx = max(0, min(new_idx, len(self.items) - 1))
+
+
+    def get_selected(self):
+        if self.items:
+            return self.items[self.selected_item_idx]
+        return None
+
+
+    selected_item_idx: IntProperty()
+
+
+# -----------------------------------------------------------------------------
+active_generic_list: GenericList
+
+def begin_generic_list_ops(list: GenericList):
+    global active_generic_list
+    active_generic_list = list
+
+
+# -----------------------------------------------------------------------------
+class B3D_OT_GenericList_Add(Operator):
+    bl_idname = 'b3d_utils.generic_list_add'
+    bl_label = 'Add'
+    
+    list: GenericList
+
+    def execute(self, context: Context):
+        global active_generic_list
+        active_generic_list.add()
+        return {'FINISHED'}
+
+
+# -----------------------------------------------------------------------------
+class B3D_OT_GenericList_Remove(Operator):
+    bl_idname = 'b3d_utils.generic_list_remove'
+    bl_label = 'Remove'
+    bl_options = {'UNDO'}
+    
+
+    def execute(self, context: Context):
+        global active_generic_list
+        active_generic_list.remove_selected()
+        return {'FINISHED'}
+
+
+# -----------------------------------------------------------------------------
+class B3D_OT_GenericList_Clear(Operator):
+    bl_idname = 'b3d_utils.generic_list_clear'
+    bl_label = 'Clear'
+    bl_options = {'UNDO'}
+
+
+    def execute(self, context: Context):
+        global active_generic_list
+        active_generic_list.clear()
+        return {'FINISHED'}
+
+
+# -----------------------------------------------------------------------------
+class B3D_OT_GenericList_Move(Operator):
+    bl_idname = 'b3d_utils.generic_list_move'
+    bl_label = 'Move Shape'
+    
+    direction : EnumProperty(items=(
+        ('UP', 'Up', ''),
+        ('DOWN', 'Down', ''),
+    ))
+
+
+    def execute(self, context: Context):
+        dir = (-1 if self.direction == 'UP' else 1)
+        global active_generic_list
+        active_generic_list.move(dir)
+        return {'FINISHED'}
+
+
+# -----------------------------------------------------------------------------
+def draw_generic_list_ops(layout: UILayout, list: GenericList):
+    begin_generic_list_ops(list)
+
+    layout.operator(B3D_OT_GenericList_Add.bl_idname   , icon='ADD'        , text='')
+    layout.operator(B3D_OT_GenericList_Remove.bl_idname, icon='REMOVE'     , text='')
+    layout.operator(B3D_OT_GenericList_Move.bl_idname  , icon='TRIA_UP'    , text='').direction = 'UP'
+    layout.operator(B3D_OT_GenericList_Move.bl_idname  , icon='TRIA_DOWN'  , text='').direction = 'DOWN'
+    layout.operator(B3D_OT_GenericList_Clear.bl_idname , icon='TRASH'      , text='')

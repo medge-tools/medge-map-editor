@@ -5,7 +5,7 @@ from bpy_extras.io_utils import ExportHelper
 from mathutils import Matrix
 
 from ...map_editor import scene_utils as scene
-from ...map_editor import b3d_utils
+from ... import b3d_utils
 from ..t3d.scene import ActorType
 
 # =============================================================================
@@ -56,16 +56,16 @@ class MET_OT_ASE_Export(Operator, ExportHelper):
         orig_obj_names = []
         for obj in context.scene.objects:
 
-            me_actor = scene.get_medge_actor(obj)
+            me_actor = scene.get_actor(obj)
             if me_actor.type != ActorType.STATIC_MESH: continue
             if me_actor.static_mesh.use_prefab: continue
 
             # Convert to mesh
             if obj.type == 'CURVE':
-                new_obj = b3d_utils.copy_object(obj)
+                new_obj = b3d_utils.duplicate_object(obj)
                 b3d_utils.convert_to_mesh_in_place(new_obj)
             else:
-                new_obj = b3d_utils.copy_object(obj)
+                new_obj = b3d_utils.duplicate_object(obj)
             
             b3d_utils.apply_all_transforms(new_obj)
             # Mirror x, y because the ASE exporter rotates the models 180 degrees around z

@@ -4,8 +4,7 @@ from enum import Enum
 
 EULER_TO_URU = 65536 / math.tau
 
-def map_range(value, in_min, in_max, out_min, out_max):
-    return out_min + (value - in_min) / (in_max - in_min) * (out_max - out_min)
+from ... import b3d_utils
 
 
 # -----------------------------------------------------------------------------
@@ -53,7 +52,7 @@ class TrackIndex(str, Enum):
 
 # -----------------------------------------------------------------------------
 class Point3D(Vector):
-    def __init__(self, point : tuple[float, float, float] = (0, 0, 0)) -> None:
+    def __init__(self, point : tuple[float, float, float] = (0, 0, 0)):
         super().__init__() 
         self.x = point[0]
         self.y = point[1]
@@ -80,14 +79,14 @@ class Point3D(Vector):
 
 # -----------------------------------------------------------------------------
 class Location(Point3D):
-    def __init__(self, point : tuple[float, float, float] = (0, 0, 0)) -> None:
+    def __init__(self, point : tuple[float, float, float] = (0, 0, 0)):
         super().__init__(point) 
         self.set_prefix('X', 'Y', 'Z')
 
 
 # -----------------------------------------------------------------------------
 class Rotation(Point3D):
-    def __init__(self, point : tuple[float, float, float] = (0, 0, 0)) -> None:
+    def __init__(self, point : tuple[float, float, float] = (0, 0, 0)):
         rotation = Vector(point) * EULER_TO_URU
         super().__init__(rotation)
         self.set_prefix('Roll', 'Pitch', 'Yaw')
@@ -96,11 +95,11 @@ class Rotation(Point3D):
 
 # -----------------------------------------------------------------------------
 class Color(Point3D):
-    def __init__(self, point: tuple[float, float, float] = (0, 0, 0)) -> None:
+    def __init__(self, point: tuple[float, float, float] = (0, 0, 0)):
         super().__init__(point)
-        self.x = map_range(self.x, 0, 1, 0, 255)
-        self.y = map_range(self.y, 0, 1, 0, 255)
-        self.z = map_range(self.z, 0, 1, 0, 255)
+        self.x = b3d_utils.map_range(self.x, 0, 1, 0, 255)
+        self.y = b3d_utils.map_range(self.y, 0, 1, 0, 255)
+        self.z = b3d_utils.map_range(self.z, 0, 1, 0, 255)
         self.set_prefix('R', 'G', 'B')
         self.set_format('{:.0f}')
 
@@ -115,7 +114,7 @@ class Polygon:
             v : tuple[float, float, float],
             verts : list[tuple[float, float, float]],
             texture : str = None,
-            flags : int = 3585) -> None:
+            flags : int = 3585):
         self.Flags = flags
         self.Texture = texture
         self.Link : int = None
@@ -149,7 +148,7 @@ class Actor:
     def __init__(self, 
                  location: tuple[float, float, float] = (0, 0, 0),
                  rotation: tuple[float, float, float] = (0, 0, 0),
-                 scale: tuple[float, float, float] = (1, 1, 1)) -> None:
+                 scale: tuple[float, float, float] = (1, 1, 1)):
         self.Location = Location(location)
         self.Rotation = Rotation(rotation)
         self.DrawScale3D = Location(scale)
@@ -164,7 +163,7 @@ class PlayerStart(Actor):
                  location: tuple[float, float, float] = (0, 0, 0), 
                  rotation: tuple[float, float, float] = (0, 0, 0),
                  is_time_trial: bool = False,
-                 track_index: TrackIndex = TrackIndex.ETTS_TUTORIAL_A01) -> None:
+                 track_index: TrackIndex = TrackIndex.ETTS_TUTORIAL_A01):
         super().__init__(location, rotation)
         self.is_time_trial = is_time_trial
         self.TrackIndex = track_index
@@ -198,7 +197,7 @@ class Checkpoint(Actor):
                  custom_width_scale: float = 0.0,
                  no_respawn: bool = False,
                  enabled: bool = True,
-                 should_be_based: bool = True) -> None:
+                 should_be_based: bool = True):
         super().__init__(location, (0, 0, 0))
         self.TrackIndex = track_index
         self.OrderIndex = order_index
@@ -229,7 +228,7 @@ class StaticMesh(Actor):
                  rotation: tuple[float, float, float],
                  scale: tuple[float, float, float],
                  static_mesh: str,
-                 material: str = '') -> None:
+                 material: str = ''):
         super().__init__(location, rotation, scale)
         self.StaticMesh: str = static_mesh
         self.Material: str = material
@@ -255,7 +254,7 @@ class Brush(Actor):
                  rotation: tuple[float, float, float],
                  class_name: str = 'Brush',
                  package_name: str = 'Engine.Default__Brush',
-                 csg_oper: str = 'CSG_Add') -> None:
+                 csg_oper: str = 'CSG_Add'):
         super().__init__(location, rotation)
         self.Package = package_name
         self.Class = class_name
@@ -302,7 +301,7 @@ class Ladder(Brush):
                  location: tuple[float, float, float], 
                  rotation: tuple[float, float, float],
                  is_pipe: bool = False
-                 ) -> None:
+                 ):
         super().__init__(polylist, location, rotation,
                          'TdLadderVolume',
                          'TdGame.Default__TdLadderVolume',
@@ -316,7 +315,7 @@ class Swing(Brush):
     def __init__(self, 
                  polylist: list[Polygon],
                  location: tuple[float, float, float], 
-                 rotation: tuple[float, float, float]) -> None:
+                 rotation: tuple[float, float, float]):
         super().__init__(polylist, location, rotation,
                          'TdSwingVolume',
                          'TdGame.Default__TdSwingVolume',
@@ -330,7 +329,7 @@ class Zipline(Brush):
                  rotation: tuple[float, float, float],
                  start: tuple[float, float, float],
                  middle: tuple[float, float, float],
-                 end: tuple[float, float, float]) -> None:
+                 end: tuple[float, float, float]):
         super().__init__(polylist, start, rotation,
                          'TdZiplineVolume',
                          'TdGame.Default__TdZiplineVolume',
@@ -364,7 +363,7 @@ class DirectionalLight(Actor):
     def __init__(self,
                  location: tuple[float, float, float], 
                  rotation: tuple[float, float, float],
-                 color: tuple[int, int, int] ) -> None:
+                 color: tuple[int, int, int] ):
         super().__init__(location, rotation)
         self.Color = Color(color)
 

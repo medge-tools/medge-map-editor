@@ -1,10 +1,10 @@
 import bpy
 import bmesh
-from bpy.types import Scene, Depsgraph
+from bpy.types import Object, Scene, Depsgraph
 from mathutils import Vector, Matrix
 
 from ..io.t3d.scene import ActorType
-from . import b3d_utils
+from .. import b3d_utils
 from .props import *
 
 COLLECTION_WIDGETS = 'WIDGET'
@@ -15,7 +15,7 @@ DEFAULT_PACKAGE = 'MyPackage'
 # HELPERS
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-def get_medge_actor(obj: bpy.types.Object) -> MET_OBJECT_PG_Actor | MET_ACTOR_PG_StaticMesh:
+def get_actor(obj: Object) -> MET_OBJECT_PG_Actor:
     return obj.medge_actor
     
 
@@ -31,14 +31,14 @@ def cleanup_widgets():
 # CREATORS
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-def new_actor(actor_type: ActorType, object_type = 'MESH', data = None) -> bpy.types.Object:
+def new_actor(actor_type: ActorType, object_type = 'MESH', data = None):
     match(object_type):
         case 'MESH':
             obj = b3d_utils.new_object('ACTOR', b3d_utils.create_cube())
         case 'CURVE':
             obj = b3d_utils.new_object('ACTOR', b3d_utils.create_curve())
     obj.location = bpy.context.scene.cursor.location
-    me_actor = get_medge_actor(obj)
+    me_actor = get_actor(obj)
     me_actor.type = actor_type
     if data is not None:
         b3d_utils.set_mesh(obj, data)
@@ -46,7 +46,7 @@ def new_actor(actor_type: ActorType, object_type = 'MESH', data = None) -> bpy.t
 
 
 # -----------------------------------------------------------------------------
-def create_player_start(scale: tuple[float, float, float] = (1, 1, 1)) -> bpy.types.Mesh:
+def create_player_start(scale: tuple[float, float, float] = (1, 1, 1)):
     verts = [
         Vector((-0.5        * scale[0], -1 * scale[1], 0)),
         Vector((-0.5        * scale[0],  1 * scale[1], 0)),
@@ -63,7 +63,7 @@ def create_player_start(scale: tuple[float, float, float] = (1, 1, 1)) -> bpy.ty
 
 
 # -----------------------------------------------------------------------------
-def create_springboard(scale: tuple[float, float, float] = (1, 1, 1)) -> bpy.types.Mesh:
+def create_springboard(scale: tuple[float, float, float] = (1, 1, 1)):
     small_step = b3d_utils.create_cube((.24, .48, .32))
     b3d_utils.transform(small_step, [Matrix.Translation((0.24, .72, .32))])
     big_step = b3d_utils.create_cube((.51, .8, .72))
@@ -72,29 +72,29 @@ def create_springboard(scale: tuple[float, float, float] = (1, 1, 1)) -> bpy.typ
 
 
 # -----------------------------------------------------------------------------
-def create_zipline() -> bpy.types.Object:
+def create_zipline():
     zipline = new_actor(ActorType.STATIC_MESH, 'CURVE')
     b3d_utils.set_mesh(zipline, b3d_utils.create_curve(step=8, dir=(1, 0, 0)))
     zipline.name= 'Zipline'
     zipline.data.bevel_depth = 0.04
     zipline.data.use_fill_caps = True
-    sm = get_medge_actor(zipline).static_mesh
+    sm = get_actor(zipline).static_mesh
     sm.ase_export = True
     return zipline
 
 
 # -----------------------------------------------------------------------------
-def create_checkpoint() -> bpy.types.Object:
+def create_checkpoint():
     return b3d_utils.create_cylinder(make_faces=False)
 
 
 # -----------------------------------------------------------------------------
-def create_skydome() -> bpy.types.Object:
+def create_skydome():
     bpy.ops.mesh.primitive_uv_sphere_add()
     obj = bpy.context.object
     obj.name = 'Skydome'
 
-    actor = get_medge_actor(obj)
+    actor = get_actor(obj)
     actor.type = ActorType.STATIC_MESH
     
     sm = actor.static_mesh
@@ -117,7 +117,7 @@ def create_skydome() -> bpy.types.Object:
 def on_depsgraph_update_post(scene: Scene, depsgraph: Depsgraph):
     for obj in scene.objects:
 
-        actor = get_medge_actor(obj)
+        actor = get_actor(obj)
         
         match(obj.type):
             case 'LIGHT' | 'CURVE': 

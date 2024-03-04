@@ -7,7 +7,7 @@ from mathutils import Matrix, Vector, geometry
 import math
 
 from ..io.t3d.scene import ActorType, TrackIndex
-from . import b3d_utils
+from .. import b3d_utils
 from . import scene_utils as scene
 
 # ACTOR_DEFAULT_STATIC_MESH = {

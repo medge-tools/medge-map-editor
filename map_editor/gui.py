@@ -15,7 +15,7 @@ class MET_PT_Actor(bpy.types.Panel):
         obj = context.active_object
         if not obj: return
         
-        me_actor = scene.get_medge_actor(obj)
+        me_actor = scene.get_actor(obj)
 
         layout = self.layout
         layout.use_property_decorate = False
@@ -31,7 +31,7 @@ class MET_PT_Volume(bpy.types.Panel):
     bl_region_type = 'UI'
     bl_category = 'MEdge Tools'
 
-    def create_row(self, layout: bpy.types.UILayout) -> bpy.types.UILayout:
+    def create_row(self, layout: bpy.types.UILayout):
         row = layout.row(align=True)
         row.scale_y = 2
         return row
