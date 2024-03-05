@@ -1,12 +1,12 @@
 import bpy
-from bpy.props import *
-from bpy.types import Operator
-from bpy_extras.io_utils import ExportHelper
-from mathutils import Matrix
+from bpy.props              import *
+from bpy.types              import Operator
+from bpy_extras.io_utils    import ExportHelper
+from mathutils              import Matrix
 
-from ...map_editor import scene_utils as scene
-from ... import b3d_utils
-from ..t3d.scene import ActorType
+from ...map_editor.props    import get_actor
+from ...                    import b3d_utils
+from ..t3d.scene            import ActorType
 
 # =============================================================================
 class ASEExportError(Exception):
@@ -56,7 +56,7 @@ class MET_OT_ASE_Export(Operator, ExportHelper):
         orig_obj_names = []
         for obj in context.scene.objects:
 
-            me_actor = scene.get_actor(obj)
+            me_actor = get_actor(obj)
             if me_actor.type != ActorType.STATIC_MESH: continue
             if me_actor.static_mesh.use_prefab: continue
 
@@ -126,3 +126,21 @@ class MET_OT_ASE_Export(Operator, ExportHelper):
     def __format_names(self, objects : list[bpy.types.Object]):
         for obj in objects:
             obj.name = obj.name.replace('.', '_')
+
+
+# -----------------------------------------------------------------------------
+# REGISTRATION
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+def menu_func_export(self, context):
+    self.layout.operator(MET_OT_ASE_Export.bl_idname, text='MEdge ASE (.ase)')
+
+
+# -----------------------------------------------------------------------------
+def register():
+    bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
+
+
+# -----------------------------------------------------------------------------
+def unregister():
+    bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)

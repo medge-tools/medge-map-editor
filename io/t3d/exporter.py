@@ -84,3 +84,21 @@ class MET_OT_T3D_Export(Operator, ExportHelper):
 
 
         return {'FINISHED'}
+    
+
+# -----------------------------------------------------------------------------
+# REGISTRATION
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+def menu_func_export(self, context):
+    self.layout.operator(MET_OT_T3D_Export.bl_idname, text='MEdge T3D (.t3d)')
+
+
+# -----------------------------------------------------------------------------
+def register():
+    bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
+
+
+# -----------------------------------------------------------------------------
+def unregister():
+    bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)

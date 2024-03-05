@@ -24,36 +24,12 @@ from .map_editor import scene_utils
 
 
 # -----------------------------------------------------------------------------
-def menu_func_export_t3d(self, context):
-    self.layout.operator(MET_OT_T3D_Export.bl_idname, text='MEdge T3D (.t3d)')
-
-
-# -----------------------------------------------------------------------------
-def menu_func_export_ase(self, context):
-    self.layout.operator(MET_OT_ASE_Export.bl_idname, text='MEdge ASE (.ase)')
-
-
-# -----------------------------------------------------------------------------
 def register():
     auto_load.init()
     auto_load.register()
 
-    bpy.types.Object.medge_actor = bpy.props.PointerProperty(type=MET_OBJECT_PG_Actor)
-
-    bpy.types.TOPBAR_MT_file_export.append(menu_func_export_t3d)
-    bpy.types.TOPBAR_MT_file_export.append(menu_func_export_ase)
-
-    b3d_utils.add_callback(depsgraph_update_post, scene_utils.on_depsgraph_update_post)
-
 
 # -----------------------------------------------------------------------------
 def unregister():
-    b3d_utils.remove_callback(depsgraph_update_post, scene_utils.on_depsgraph_update_post)
-
-    bpy.types.TOPBAR_MT_file_export.remove(menu_func_export_ase)
-    bpy.types.TOPBAR_MT_file_export.remove(menu_func_export_t3d)
-
-    del bpy.types.Object.medge_actor
-    
     auto_load.unregister()
     

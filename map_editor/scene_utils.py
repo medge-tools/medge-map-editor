@@ -1,6 +1,7 @@
 import bpy
 import bmesh
 from bpy.types import Object, Scene, Depsgraph
+from bpy.app.handlers import depsgraph_update_post
 from mathutils import Vector, Matrix
 
 from ..io.t3d.scene import ActorType
@@ -14,11 +15,6 @@ DEFAULT_PACKAGE = 'MyPackage'
 # -----------------------------------------------------------------------------
 # HELPERS
 # -----------------------------------------------------------------------------
-# -----------------------------------------------------------------------------
-def get_actor(obj: Object) -> MET_OBJECT_PG_Actor:
-    return obj.medge_actor
-    
-
 # -----------------------------------------------------------------------------
 def cleanup_widgets():
     collection = bpy.context.blend_data.collections.get(COLLECTION_WIDGETS)
@@ -110,6 +106,7 @@ def create_skydome():
     bm.to_mesh(obj.data)
     bm.free()
 
+
 # -----------------------------------------------------------------------------
 # CALLBACKS
 # -----------------------------------------------------------------------------
@@ -126,3 +123,16 @@ def on_depsgraph_update_post(scene: Scene, depsgraph: Depsgraph):
         match(actor.type):
             case ActorType.ZIPLINE:
                 actor.zipline.update_bounds()
+
+
+# -----------------------------------------------------------------------------
+# REGISTRATION
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+def register():    
+    b3d_utils.add_callback(depsgraph_update_post, on_depsgraph_update_post)
+
+
+# -----------------------------------------------------------------------------
+def unregister():
+    b3d_utils.remove_callback(depsgraph_update_post, on_depsgraph_update_post)
