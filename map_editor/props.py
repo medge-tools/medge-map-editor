@@ -24,7 +24,7 @@ from ..             import b3d_utils
 # }
 
 COLLECTION_WIDGETS = 'Widgets'
-DEFAULT_PACKAGE = 'MyPackage'
+MY_PACKAGE = 'MyPackage'
 
 
 # -----------------------------------------------------------------------------
@@ -179,7 +179,7 @@ def TrackIndexProperty(_callback:Callable=None):
 
 
 # -----------------------------------------------------------------------------
-class MaterialProperty():
+class MaterialProperty:
 
     def __filter_on_package(self, _obj:Object):
         is_material = _obj.name.startswith('M_')
@@ -191,12 +191,40 @@ class MaterialProperty():
         return self.material_package.name + '.' + self.material.name
     
 
+    def draw_material_prop(self, _layout:UILayout):
+        _layout.prop(self, 'material_package')
+        _layout.prop(self, 'material')
+
+
     material_package: PointerProperty(type=bpy.types.Collection, name='Package')
     material:         PointerProperty(type=Object, name='Material', poll=__filter_on_package)
 
 
 # -----------------------------------------------------------------------------
+class PhysMaterialProperty:
+
+    def __filter_on_package(self, _obj:Object):
+        is_material = _obj.name.startswith('PM_')
+        return self.phys_material_package in _obj.users_collection and is_material
+    
+
+    def get_phys_material_path(self):
+        self.phys_material_package.name.rstrip('.')
+        return self.phys_material_package.name + '.' + self.phys_material.name
+    
+
+    def draw_phys_material_prop(self, _layout:UILayout):
+        _layout.prop(self, 'phys_material_package')
+        _layout.prop(self, 'phys_material')
+
+
+    phys_material_package: PointerProperty(type=bpy.types.Collection, name='Package')
+    phys_material:         PointerProperty(type=Object, name='PhysMaterial', poll=__filter_on_package)
+
+
+# -----------------------------------------------------------------------------
 class MET_PG_Widget(PropertyGroup):
+
     obj: PointerProperty(type=Object)
 
 
@@ -249,6 +277,33 @@ class MET_ACTOR_PG_PlayerStart(Actor, PropertyGroup):
 
 
 # -----------------------------------------------------------------------------
+# Checkpoint
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+class MET_ACTOR_PG_Checkpoint(Actor, PropertyGroup):
+    
+    def init(self):
+        super().init()
+        b3d_utils.set_data(self.id_data, create_checkpoint())
+        self.id_data.display_type = 'WIRE'
+        self.id_data.name = 'TimeTrialCheckpoint'
+
+
+    def draw(self, _layout:UILayout):
+        b3d_utils.auto_gui_props(self, _layout)
+
+
+    track_index:          TrackIndexProperty()
+    order_index:          IntProperty(name='Order Index')
+    custom_height:        FloatProperty(name='CustomHeight')
+    custom_width_scale:   FloatProperty(name='Custom Width Scale')
+    should_be_based:      BoolProperty(name='Should Be Based')
+    no_intermediate_time: BoolProperty(name='No Intermediate Time')
+    no_respawn:           BoolProperty(name='No Respawn')
+    enabled:              BoolProperty(name='Enabled')
+
+
+# -----------------------------------------------------------------------------
 # StaticMesh
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -257,9 +312,10 @@ class MET_ACTOR_PG_StaticMesh(Actor, MaterialProperty, PropertyGroup):
     def init(self):
         super().init()
 
-        if self.id_data.type == 'MESH':
-            b3d_utils.link_object_to_scene(self.id_data, DEFAULT_PACKAGE)
-            if self.id_data.data: return
+        if not self.prefab:
+            b3d_utils.link_object_to_scene(self.id_data, MY_PACKAGE)
+
+        if not self.id_data.data: 
             b3d_utils.set_data(self.id_data, b3d_utils.create_cube())
 
         self.id_data.name = 'StaticMesh'
@@ -273,11 +329,7 @@ class MET_ACTOR_PG_StaticMesh(Actor, MaterialProperty, PropertyGroup):
         else:
             _layout.prop(self, 'use_material')
             if self.use_material:
-                col = _layout.column(align=True)
-                col.label(text='Material')
-                col.prop(self, 'material_package')
-                col.prop(self, 'material')
-
+                self.draw_material_prop()
     
     def get_path(self) -> str:
         package = self.id_data.users_collection[0].name
@@ -292,20 +344,30 @@ class MET_ACTOR_PG_StaticMesh(Actor, MaterialProperty, PropertyGroup):
 
         return package + '.' + self.prefab.name
 
+
+    def __on_use_prefab_update(self, _context:Context):
+        if self.use_prefab:
+            self.id_data.name = 'PREFAB_'
+            if self.prefab:
+                self.id_data.name += self.prefab.name
+            b3d_utils.link_object_to_scene(self.id_data, None)
+        else:
+            self.id_data.name = 'StaticMesh'
+            b3d_utils.link_object_to_scene(self.id_data, MY_PACKAGE)
+
         
     def __on_prefab_update(self, _context:Context):
-        prefab = self.prefab
+        if self.prefab: 
+            b3d_utils.set_data(self.id_data, self.prefab.data)
+            self.id_data.name = 'PREFAB_' + self.prefab.name
 
-        if not prefab: 
-            self.set_mesh(self.id_data)
-            return
-        
-        b3d_utils.set_data(self.id_data, prefab.data)
-        self.id_data.name = 'PREFAB_' + prefab.name
+        else:
+            b3d_utils.set_data(self.id_data, None)
+            self.id_data.name = 'StaticMesh'
 
     
     use_material: BoolProperty(name='Use Material', default=False)
-    use_prefab:   BoolProperty(name='Use Prefab', default=False)
+    use_prefab:   BoolProperty(name='Use Prefab', default=False, update=__on_use_prefab_update)
     prefab:       PointerProperty(type=Object, name='Prefab', update=__on_prefab_update)
 
 
@@ -322,8 +384,7 @@ class MET_ACTOR_PG_Brush(Actor, MaterialProperty, PropertyGroup):
 
 
     def draw(self, _layout:UILayout):
-        _layout.prop(self, 'material_package')
-        _layout.prop(self, 'material')
+        self.draw_material_prop(_layout)
 
 
 # -----------------------------------------------------------------------------
@@ -415,8 +476,8 @@ class MET_ACTOR_PG_Zipline(Actor, PropertyGroup):
         self.curve = create_zipline()
         self.curve.location = (0, 0, 0)
 
-        b3d_utils.set_parent(self.curve, self.id_data)
-        b3d_utils.link_object_to_scene(self.curve, DEFAULT_PACKAGE)
+        b3d_utils.set_parent(self.curve, self.id_data, False)
+        b3d_utils.link_object_to_scene(self.curve, MY_PACKAGE)
 
         self.id_data.display_type = 'WIRE'
         self.id_data.name = 'Zipline_BoundingBox'
@@ -478,10 +539,10 @@ class MET_ACTOR_PG_Zipline(Actor, PropertyGroup):
             verts.append(center + -up + right)
 
             e3 = len(verts)
-            verts.append(center + -up + -right)
+            verts.append(center + -up - right)
 
             e4 = len(verts)
-            verts.append(center + up + -right)
+            verts.append(center + up - right)
 
             edges.append((e1, e2))
             edges.append((e2, e3))
@@ -546,6 +607,21 @@ class MET_ACTOR_PG_Zipline(Actor, PropertyGroup):
 
 
 # -----------------------------------------------------------------------------
+# BlockingVolume
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+class MET_ACTOR_PG_BlockingVolume(Actor, PhysMaterialProperty, PropertyGroup):
+    def init(self):
+        super().init()
+        b3d_utils.set_data(self.id_data, b3d_utils.create_cube())  
+        self.id_data.display_type = 'WIRE'
+    
+
+    def draw(self, _layout: UILayout):
+        self.draw_phys_material_prop(_layout)
+
+
+# -----------------------------------------------------------------------------
 # SpringBoard
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -569,33 +645,6 @@ class MET_ACTOR_PG_SpringBoard(Actor, PropertyGroup):
 
 
     is_hidden_game: BoolProperty(name='Is Hidden In Game', update=__on_is_hidden_game_update)
-
-
-# -----------------------------------------------------------------------------
-# Checkpoint
-# -----------------------------------------------------------------------------
-# -----------------------------------------------------------------------------
-class MET_ACTOR_PG_Checkpoint(Actor, PropertyGroup):
-    
-    def init(self):
-        super().init()
-        b3d_utils.set_data(self.id_data, create_checkpoint())
-        self.id_data.display_type = 'WIRE'
-        self.id_data.name = 'TimeTrialCheckpoint'
-
-
-    def draw(self, _layout:UILayout):
-        b3d_utils.auto_gui_props(self, _layout)
-
-
-    track_index:          TrackIndexProperty()
-    order_index:          IntProperty(name='Order Index')
-    custom_height:        FloatProperty(name='CustomHeight')
-    custom_width_scale:   FloatProperty(name='Custom Width Scale')
-    should_be_based:      BoolProperty(name='Should Be Based')
-    no_intermediate_time: BoolProperty(name='No Intermediate Time')
-    no_respawn:           BoolProperty(name='No Respawn')
-    enabled:              BoolProperty(name='Enabled')
 
 
 # -----------------------------------------------------------------------------
@@ -629,6 +678,8 @@ class MET_OBJECT_PG_Actor(PropertyGroup):
                 self.springboard.draw(col)
             case ActorType.STATIC_MESH:
                 self.static_mesh.draw(col)
+            case ActorType.BLOCKING_VOLUME:
+                self.blocking_volume.draw(col)
             case ActorType.CHECKPOINT:
                 self.checkpoint.draw(col)
 
@@ -639,6 +690,8 @@ class MET_OBJECT_PG_Actor(PropertyGroup):
         match(self.type):
             case ActorType.PLAYER_START:
                 self.player_start.init()
+            case ActorType.CHECKPOINT:
+                self.checkpoint.init()
             case ActorType.STATIC_MESH:
                 self.static_mesh.init()
             case ActorType.BRUSH:
@@ -651,21 +704,22 @@ class MET_OBJECT_PG_Actor(PropertyGroup):
                 self.zipline.init()
             case ActorType.SPRINGBOARD:
                 self.springboard.init()
-            case ActorType.CHECKPOINT:
-                self.checkpoint.init()
+            case ActorType.BLOCKING_VOLUME:
+                self.blocking_volume.init()
 
     
-    type:          ActorTypeProperty(__on_type_update)
-    user_editable: BoolProperty(name='PRIVATE', default=True)
+    type:            ActorTypeProperty(__on_type_update)
+    user_editable:   BoolProperty(name='PRIVATE', default=True)
 
-    player_start:  PointerProperty(type=MET_ACTOR_PG_PlayerStart)
-    static_mesh:   PointerProperty(type=MET_ACTOR_PG_StaticMesh)
-    brush:         PointerProperty(type=MET_ACTOR_PG_Brush)
-    ladder:        PointerProperty(type=MET_ACTOR_PG_Ladder)
-    swing:         PointerProperty(type=MET_ACTOR_PG_Swing)
-    zipline:       PointerProperty(type=MET_ACTOR_PG_Zipline)
-    springboard:   PointerProperty(type=MET_ACTOR_PG_SpringBoard)
-    checkpoint:    PointerProperty(type=MET_ACTOR_PG_Checkpoint)
+    player_start:    PointerProperty(type=MET_ACTOR_PG_PlayerStart)
+    checkpoint:      PointerProperty(type=MET_ACTOR_PG_Checkpoint)
+    static_mesh:     PointerProperty(type=MET_ACTOR_PG_StaticMesh)
+    brush:           PointerProperty(type=MET_ACTOR_PG_Brush)
+    ladder:          PointerProperty(type=MET_ACTOR_PG_Ladder)
+    swing:           PointerProperty(type=MET_ACTOR_PG_Swing)
+    zipline:         PointerProperty(type=MET_ACTOR_PG_Zipline)
+    springboard:     PointerProperty(type=MET_ACTOR_PG_SpringBoard)
+    blocking_volume: PointerProperty(type=MET_ACTOR_PG_BlockingVolume)
 
 
 # -----------------------------------------------------------------------------

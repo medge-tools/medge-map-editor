@@ -2,7 +2,19 @@ from bpy.types import Object, Context
 import bmesh
 from mathutils import Vector
 
-from .scene import Polygon, Checkpoint, PlayerStart, StaticMesh, Brush, Ladder, DirectionalLight, ActorType, Actor, Zipline, Swing
+from .scene import (
+    ActorType, 
+    Actor, 
+    Polygon, 
+    Checkpoint, 
+    PlayerStart, 
+    StaticMesh, 
+    Brush, 
+    Ladder, 
+    BlockingVolume,
+    DirectionalLight,
+    Zipline, 
+    Swing)
 
 from ... import b3d_utils
 from ...map_editor.props import get_actor_prop
@@ -97,43 +109,6 @@ class StaticMeshBuilder(Builder):
 
 
 # -----------------------------------------------------------------------------
-class VolumeBuilder(Builder):
-    def get_arguments(self, _obj:Object) -> tuple[list[Polygon], tuple[float, float, float], tuple[float, float, float]]:
-        polylist = self.create_polygons(_obj)
-        location, rotation = self.get_location_rotation(_obj)
-
-        return polylist, location, rotation
-
-
-# -----------------------------------------------------------------------------
-class BrushBuilder(VolumeBuilder):
-    def build(self, _obj:Object) -> Actor | None:
-        polylist, location, rotation = self.get_arguments(_obj)
-
-        for poly in polylist:
-            poly.Texture = get_actor_prop(_obj).brush.get_material_path()
-
-        return Brush(polylist, location, rotation)
-
-
-# -----------------------------------------------------------------------------
-class LadderBuilder(VolumeBuilder):
-    def build(self, _obj:Object) -> Actor | None:
-        arguments = self.get_arguments(_obj)
-        ladder = get_actor_prop(_obj).ladder
-
-        return Ladder(*arguments, ladder.is_pipe)
-
-
-# -----------------------------------------------------------------------------
-class SwingBuilder(VolumeBuilder):
-    def build(self, _obj:Object) -> Actor | None:
-        arguments = self.get_arguments(_obj)
-
-        return Swing(*arguments)
-
-
-# -----------------------------------------------------------------------------
 class ZiplineBuilder(Builder):
     def build(self, _obj:Object) -> Actor | None:
         curve = get_actor_prop(_obj).zipline.curve
@@ -166,6 +141,57 @@ class SpringBoardBuilder(Builder):
    
 
 # -----------------------------------------------------------------------------
+class VolumeBuilder(Builder):
+    def get_arguments(self, _obj:Object) -> tuple[list[Polygon], tuple[float, float, float], tuple[float, float, float]]:
+        """returns polylist, location, rotation"""
+        polylist = self.create_polygons(_obj)
+        location, rotation = self.get_location_rotation(_obj)
+
+        return polylist, location, rotation
+
+
+# -----------------------------------------------------------------------------
+class BrushBuilder(VolumeBuilder):
+    def build(self, _obj:Object) -> Actor | None:
+        polylist, location, rotation = self.get_arguments(_obj)
+
+        material = get_actor_prop(_obj).brush.get_material_path()
+
+        for poly in polylist:
+            poly.Texture = material
+
+        return Brush(polylist, location, rotation)
+
+
+# -----------------------------------------------------------------------------
+class LadderBuilder(VolumeBuilder):
+    def build(self, _obj:Object) -> Actor | None:
+        arguments = self.get_arguments(_obj)
+        ladder = get_actor_prop(_obj).ladder
+
+        return Ladder(*arguments, ladder.is_pipe)
+
+
+# -----------------------------------------------------------------------------
+class SwingBuilder(VolumeBuilder):
+    def build(self, _obj:Object) -> Actor | None:
+        arguments = self.get_arguments(_obj)
+
+        return Swing(*arguments)
+
+
+# -----------------------------------------------------------------------------
+class BlockingVolumeBuilder(VolumeBuilder):
+    def build(self, _obj:Object) -> Actor | None:
+        arguments = self.get_arguments(_obj)
+        blocking_volume = get_actor_prop(_obj).blocking_volume
+
+        phys_material = blocking_volume.get_phys_material_path()
+
+        return BlockingVolume(*arguments, phys_material)
+    
+
+# -----------------------------------------------------------------------------
 class DirectionalLightBuilder(Builder):
     def build(self, _obj:Object) -> Actor | None:
         location, rot = self.get_location_rotation(_obj)
@@ -196,20 +222,22 @@ class T3DBuilder():
         match(me_actor.type):
             case ActorType.PLAYER_START:
                 return PlayerStartBuilder(_options).build(_obj)
+            case ActorType.CHECKPOINT:
+                return CheckpointBuilder(_options).build(_obj)
             case ActorType.STATIC_MESH:
                 return StaticMeshBuilder(_options).build(_obj)
+            case ActorType.ZIPLINE:
+                return ZiplineBuilder(_options).build(_obj)
+            case ActorType.SPRINGBOARD:
+                return SpringBoardBuilder(_options).build(_obj)
             case ActorType.BRUSH:
                 return BrushBuilder(_options).build(_obj)
             case ActorType.LADDER:
                 return LadderBuilder(_options).build(_obj)
             case ActorType.SWING:
                 return SwingBuilder(_options).build(_obj)
-            case ActorType.ZIPLINE:
-                return ZiplineBuilder(_options).build(_obj)
-            case ActorType.SPRINGBOARD:
-                return SpringBoardBuilder(_options).build(_obj)
-            case ActorType.CHECKPOINT:
-                return CheckpointBuilder(_options).build(_obj)
+            case ActorType.BLOCKING_VOLUME:
+                return BlockingVolumeBuilder(_options).build(_obj)
         
         return None
 

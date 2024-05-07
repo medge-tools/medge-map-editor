@@ -12,15 +12,16 @@ EULER_TO_URU = 65536 / math.tau
 # -----------------------------------------------------------------------------
 # RHS needs to be exactly the same as LHS it to work in Blender
 class ActorType(str, Enum):
-    NONE         = 'NONE'
-    PLAYER_START = 'PLAYER_START'
-    STATIC_MESH  = 'STATIC_MESH'
-    BRUSH        = 'BRUSH'
-    LADDER       = 'LADDER'
-    SWING        = 'SWING'
-    ZIPLINE      = 'ZIPLINE'
-    SPRINGBOARD  = 'SPRINGBOARD'
-    CHECKPOINT   = 'CHECKPOINT'
+    NONE            = 'NONE'
+    PLAYER_START    = 'PLAYER_START'
+    CHECKPOINT      = 'CHECKPOINT'
+    BRUSH           = 'BRUSH'
+    LADDER          = 'LADDER'
+    SWING           = 'SWING'
+    STATIC_MESH     = 'STATIC_MESH'
+    ZIPLINE         = 'ZIPLINE'
+    SPRINGBOARD     = 'SPRINGBOARD'
+    BLOCKING_VOLUME = 'BLOCKING_VOLUME'
 
 
 # -----------------------------------------------------------------------------
@@ -54,7 +55,7 @@ class TrackIndex(str, Enum):
 
 # -----------------------------------------------------------------------------
 class Point3D(Vector):
-    def __init__(self, _point: tuple[float, float, float] = (0, 0, 0)):
+    def __init__(self, _point: tuple[float, float, float]=(0, 0, 0)):
         super().__init__() 
         self.x = _point[0]
         self.y = _point[1]
@@ -120,6 +121,7 @@ class Polygon:
             _verts:      list[tuple[float, float, float]],
             _texture:str=None,
             _flags=      3585):
+        
         self.Flags = _flags
         self.Texture = _texture
         self.Link : int = None
@@ -131,10 +133,12 @@ class Polygon:
 
     def __str__(self) -> str:
         texture = f'Texture={self.Texture} ' if self.Texture else ''
-        link = f'Link={self.Link} ' if self.Link or self.Link == 0 else ''
+        link =    f'Link={self.Link} '       if self.Link or self.Link == 0 else ''
         verts = ''
+
         for v in self.__Vertices:
             verts += f'\tVertex   {v}\n'
+
         return \
 f'Begin Polygon {texture}Flags=3584 {link}\n\
 \tOrigin   {self.__Origin}\n\
@@ -146,7 +150,7 @@ End Polygon\n'
 
 
 # -----------------------------------------------------------------------------
-# ACTOR
+# Actor
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 class Actor:
@@ -229,11 +233,11 @@ End Actor\n'
 # -----------------------------------------------------------------------------
 class StaticMesh(Actor):
     def __init__(self, 
-                 _location:   tuple[float, float, float], 
-                 _rotation:   tuple[float, float, float],
-                 _scale:      tuple[float, float, float],
-                 _static_mesh:str,
-                 _material=   '',
+                 _location: tuple[float, float, float], 
+                 _rotation: tuple[float, float, float],
+                 _scale:    tuple[float, float, float],
+                 _static_mesh: str,
+                 _material='',
                  _hidden_game=False):
         super().__init__(_location, _rotation, _scale)
         self.StaticMesh = _static_mesh
@@ -257,37 +261,42 @@ End Actor\n'
 # -----------------------------------------------------------------------------
 class Brush(Actor):
     def __init__(self, 
-                 _polylist:    list[Polygon],
-                 _location:    tuple[float, float, float], 
-                 _rotation:    tuple[float, float, float],
+                 _polylist: list[Polygon],
+                 _location: tuple[float, float, float], 
+                 _rotation: tuple[float, float, float],
                  _class_name=  'Brush',
                  _package_name='Engine.Default__Brush',
                  _csg_oper=    'CSG_Add'):
         super().__init__(_location, _rotation)
-        self.Package = _package_name
-        self.Class = _class_name
+        self.Package =   _package_name
+        self.Class =     _class_name
         self.Archetype = _class_name + '\'' + _package_name + '\''
-        self.CsgOper = _csg_oper
-        self.Settings : list[str] = []
-        self.PolyList : list[Polygon] = _polylist
+        self.CsgOper =   _csg_oper
+        self.Settings: list[str] = []
+        self.PolyList: list[Polygon] = _polylist
+
 
     def __str__(self) -> str:
         polylist = ''
         link = 0
+
         for poly in self.PolyList:
             if not poly.Texture:
                 poly.Link = link
                 link += 1
             polylist += str(poly)
-        props = ''
-        for prop in self.Settings:
-            props += prop + '\n'
+
+        settings = ''
+
+        for s in self.Settings:
+            settings += s + '\n'
+
         return \
 f'Begin Actor Class={self.Class} Name={self.Class}_0 Archetype={self.Archetype}\n\
 \tBegin Object Class=BrushComponent Name=BrushComponent0 Archetype=BrushComponent\'{self.Package}:BrushComponent0\'\n\
 \tEnd Object\n\
 \tCsgOper={self.CsgOper}\n\
-{props}\
+{settings}\
 \tBegin Brush Name=Model_0\n\
 \t\tBegin PolyList\n\
 \t\t\t{polylist}\
@@ -300,20 +309,21 @@ End Actor\n'
 
 
 # -----------------------------------------------------------------------------
-# VOLUMES
+# Volumes
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 class Ladder(Brush):
     def __init__(self, 
-                 _polylist:list[Polygon],
-                 _location:tuple[float, float, float], 
-                 _rotation:tuple[float, float, float],
-                 _is_pipe= False
+                 _polylist: list[Polygon],
+                 _location: tuple[float, float, float], 
+                 _rotation: tuple[float, float, float],
+                 _is_pipe=False
                  ):
         super().__init__(_polylist, _location, _rotation,
                          'TdLadderVolume',
                          'TdGame.Default__TdLadderVolume',
                          'CSG_Active')
+        
         if _is_pipe:
             self.Settings.append('LadderType=LT_Pipe')
 
@@ -321,9 +331,9 @@ class Ladder(Brush):
 # -----------------------------------------------------------------------------
 class Swing(Brush):
     def __init__(self, 
-                 _polylist:list[Polygon],
-                 _location:tuple[float, float, float], 
-                 _rotation:tuple[float, float, float]):
+                 _polylist: list[Polygon],
+                 _location: tuple[float, float, float], 
+                 _rotation: tuple[float, float, float]):
         super().__init__(_polylist, _location, _rotation,
                          'TdSwingVolume',
                          'TdGame.Default__TdSwingVolume',
@@ -333,11 +343,11 @@ class Swing(Brush):
 # -----------------------------------------------------------------------------
 class Zipline(Brush):
     def __init__(self, 
-                 _polylist:list[Polygon],
-                 _rotation:tuple[float, float, float],
-                 _start:   tuple[float, float, float],
-                 _middle:  tuple[float, float, float],
-                 _end:     tuple[float, float, float]):
+                 _polylist: list[Polygon],
+                 _rotation: tuple[float, float, float],
+                 _start:    tuple[float, float, float],
+                 _middle:   tuple[float, float, float],
+                 _end:      tuple[float, float, float]):
         super().__init__(_polylist, _start, _rotation,
                          'TdZiplineVolume',
                          'TdGame.Default__TdZiplineVolume',
@@ -353,7 +363,24 @@ class Zipline(Brush):
 
 
 # -----------------------------------------------------------------------------
-# LIGHTS
+class BlockingVolume(Brush):
+    def __init__(self, 
+                 _polylist: list[Polygon], 
+                 _location: tuple[float, float, float], 
+                 _rotation: tuple[float, float, float],
+                 _phys_material:str=None):
+        super().__init__(_polylist, _location, _rotation, 
+                         'BlockingVolume', 
+                         'Engine.Default__BlockingVolume',
+                         'CSG_Active')
+        
+        if _phys_material:
+            self.Settings.append(f'PhysMaterialOverride=PhysicalMaterial\'{_phys_material}\'')
+        
+
+
+# -----------------------------------------------------------------------------
+# Lights
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 class SkyLight(Actor):
@@ -370,9 +397,9 @@ End Actor\n'
 # -----------------------------------------------------------------------------
 class DirectionalLight(Actor):
     def __init__(self,
-                 _location:tuple[float, float, float], 
-                 _rotation:tuple[float, float, float],
-                 _color:   tuple[int, int, int]):
+                 _location: tuple[float, float, float], 
+                 _rotation: tuple[float, float, float],
+                 _color:    tuple[int, int, int]):
         super().__init__(_location, _rotation)
         self.Color = Color(_color)
 

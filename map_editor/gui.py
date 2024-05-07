@@ -64,6 +64,8 @@ class MET_PT_Volume(MapEditorMainPanel, Panel):
 
             op = row.operator(MET_OT_AddActor.bl_idname, text=_names[k])
             op.type = type
+        
+        return row
 
 
     def draw(self, _context:Context):
@@ -77,9 +79,8 @@ class MET_PT_Volume(MapEditorMainPanel, Panel):
         self.row_actor(col, (ActorType.LADDER, ActorType.SWING), ('Ladder', 'Swing'))
         self.row_actor(col, (ActorType.SPRINGBOARD, ActorType.STATIC_MESH), ('SpringBoard', 'StaticMesh'))
         self.row_actor(col, (ActorType.ZIPLINE, ActorType.CHECKPOINT), ('Zipline', 'Checkpoint'))
-        row = self.create_row(col)
+        row = self.row_actor(col, (ActorType.BLOCKING_VOLUME,), ('BlockingVolume',))
         row.operator(MET_OT_AddSkydome.bl_idname, text='Skydome')
-        row.label(text='')
         
         col.separator()
         row = col.row(align=True)
