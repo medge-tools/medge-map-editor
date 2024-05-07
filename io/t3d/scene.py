@@ -1,77 +1,82 @@
 import math
 from mathutils import Vector
+
 from enum import Enum
 
-EULER_TO_URU = 65536 / math.tau
-
 from ... import b3d_utils
+
+
+EULER_TO_URU = 65536 / math.tau
 
 
 # -----------------------------------------------------------------------------
 # RHS needs to be exactly the same as LHS it to work in Blender
 class ActorType(str, Enum):
-    NONE            = 'NONE'
-    PLAYER_START    = 'PLAYER_START'
-    STATIC_MESH     = 'STATIC_MESH'
-    BRUSH           = 'BRUSH'
-    LADDER          = 'LADDER'
-    SWING           = 'SWING'
-    ZIPLINE         = 'ZIPLINE'
-    SPRINGBOARD     = 'SPRINGBOARD'
-    CHECKPOINT      = 'CHECKPOINT'
+    NONE         = 'NONE'
+    PLAYER_START = 'PLAYER_START'
+    STATIC_MESH  = 'STATIC_MESH'
+    BRUSH        = 'BRUSH'
+    LADDER       = 'LADDER'
+    SWING        = 'SWING'
+    ZIPLINE      = 'ZIPLINE'
+    SPRINGBOARD  = 'SPRINGBOARD'
+    CHECKPOINT   = 'CHECKPOINT'
 
 
 # -----------------------------------------------------------------------------
 class TrackIndex(str, Enum):
-    ETTS_NONE               = 'ETTS_NONE'
-    ETTS_CRANES_A01         = 'ETTS_CRANES_A01'
-    ETTS_CRANES_B01         = 'ETTS_CRANES_B01'
-    ETTS_CRANES_B02         = 'ETTS_CRANES_B02'
-    ETTS_CRANES_C01         = 'ETTS_CRANES_C01'   
-    ETTS_CRANES_D01         = 'ETTS_CRANES_D01'
-    ETTS_EDGE_A01           = 'ETTS_EDGE_A01'
-    ETTS_STORMDRAIN_A01     = 'ETTS_STORMDRAIN_A01'
-    ETTS_STORMDRAIN_A02     = 'ETTS_STORMDRAIN_A02'
-    ETTS_STORMDRAIN_B01     = 'ETTS_STORMDRAIN_B01'
-    ETTS_STORMDRAIN_B02     = 'ETTS_STORMDRAIN_B02'
-    ETTS_STORMDRAIN_B03     = 'ETTS_STORMDRAIN_B03'
-    ETTS_CONVOY_A01         = 'ETTS_CONVOY_A01'
-    ETTS_CONVOY_A02         = 'ETTS_CONVOY_A02'
-    ETTS_CONVOY_B01         = 'ETTS_CONVOY_B01'
-    ETTS_CONVOY_B02         = 'ETTS_CONVOY_B02'
-    ETTS_MALL_A01           = 'ETTS_MALL_A01'
-    ETTS_TUTORIAL_A01       = 'ETTS_TUTORIAL_A01'
-    ETTS_TUTORIAL_A02       = 'ETTS_TUTORIAL_A02'
-    ETTS_TUTORIAL_A03       = 'ETTS_TUTORIAL_A03'
-    ETTS_FACTORY_A01        = 'ETTS_FACTORY_A01'
-    ETTS_SKYSCRAPER_A01     = 'ETTS_SKYSCRAPER_A01'
-    ETTS_SKYSCRAPER_B01     = 'ETTS_SKYSCRAPER_B01'
-    ETTS_ESCAPE_A01         = 'ETTS_ESCAPE_A01'
-    ETTS_ESCAPE_B01         = 'ETTS_ESCAPE_B01'
+    ETTS_NONE           = 'ETTS_NONE'
+    ETTS_CRANES_A01     = 'ETTS_CRANES_A01'
+    ETTS_CRANES_B01     = 'ETTS_CRANES_B01'
+    ETTS_CRANES_B02     = 'ETTS_CRANES_B02'
+    ETTS_CRANES_C01     = 'ETTS_CRANES_C01'   
+    ETTS_CRANES_D01     = 'ETTS_CRANES_D01'
+    ETTS_EDGE_A01       = 'ETTS_EDGE_A01'
+    ETTS_STORMDRAIN_A01 = 'ETTS_STORMDRAIN_A01'
+    ETTS_STORMDRAIN_A02 = 'ETTS_STORMDRAIN_A02'
+    ETTS_STORMDRAIN_B01 = 'ETTS_STORMDRAIN_B01'
+    ETTS_STORMDRAIN_B02 = 'ETTS_STORMDRAIN_B02'
+    ETTS_STORMDRAIN_B03 = 'ETTS_STORMDRAIN_B03'
+    ETTS_CONVOY_A01     = 'ETTS_CONVOY_A01'
+    ETTS_CONVOY_A02     = 'ETTS_CONVOY_A02'
+    ETTS_CONVOY_B01     = 'ETTS_CONVOY_B01'
+    ETTS_CONVOY_B02     = 'ETTS_CONVOY_B02'
+    ETTS_MALL_A01       = 'ETTS_MALL_A01'
+    ETTS_TUTORIAL_A01   = 'ETTS_TUTORIAL_A01'
+    ETTS_TUTORIAL_A02   = 'ETTS_TUTORIAL_A02'
+    ETTS_TUTORIAL_A03   = 'ETTS_TUTORIAL_A03'
+    ETTS_FACTORY_A01    = 'ETTS_FACTORY_A01'
+    ETTS_SKYSCRAPER_A01 = 'ETTS_SKYSCRAPER_A01'
+    ETTS_SKYSCRAPER_B01 = 'ETTS_SKYSCRAPER_B01'
+    ETTS_ESCAPE_A01     = 'ETTS_ESCAPE_A01'
+    ETTS_ESCAPE_B01     = 'ETTS_ESCAPE_B01'
 
 
 # -----------------------------------------------------------------------------
 class Point3D(Vector):
-    def __init__(self, point : tuple[float, float, float] = (0, 0, 0)):
+    def __init__(self, _point: tuple[float, float, float] = (0, 0, 0)):
         super().__init__() 
-        self.x = point[0]
-        self.y = point[1]
-        self.z = point[2]
-        self.__prefix_x : str = ''
-        self.__prefix_y : str = ''
-        self.__prefix_z : str = ''
+        self.x = _point[0]
+        self.y = _point[1]
+        self.z = _point[2]
+
+        self.__prefix_x = ''
+        self.__prefix_y = ''
+        self.__prefix_z = ''
+
         self.format = '{:.6f}'
 
     def __str__(self) -> str:
         x = self.format.format(self.x)
         y = self.format.format(self.y)
         z = self.format.format(self.z)
+
         return f'{self.__prefix_x}{x},{self.__prefix_y}{y},{self.__prefix_z}{z}'
     
-    def set_prefix(self, x : str, y : str, z : str):
-        self.__prefix_x = x + '='
-        self.__prefix_y = y + '='
-        self.__prefix_z = z + '='
+    def set_prefix(self, _x: str, _y: str, _z: str):
+        self.__prefix_x = _x + '='
+        self.__prefix_y = _y + '='
+        self.__prefix_z = _z + '='
 
     def set_format(self, f : str):
         self.format = f
@@ -79,15 +84,15 @@ class Point3D(Vector):
 
 # -----------------------------------------------------------------------------
 class Location(Point3D):
-    def __init__(self, point : tuple[float, float, float] = (0, 0, 0)):
-        super().__init__(point) 
+    def __init__(self, _point=(0, 0, 0)):
+        super().__init__(_point) 
         self.set_prefix('X', 'Y', 'Z')
 
 
 # -----------------------------------------------------------------------------
 class Rotation(Point3D):
-    def __init__(self, point : tuple[float, float, float] = (0, 0, 0)):
-        rotation = Vector(point) * EULER_TO_URU
+    def __init__(self, _point=(0, 0, 0)):
+        rotation = Vector(_point) * EULER_TO_URU
         super().__init__(rotation)
         self.set_prefix('Roll', 'Pitch', 'Yaw')
         self.set_format('{:.0f}')
@@ -95,7 +100,7 @@ class Rotation(Point3D):
 
 # -----------------------------------------------------------------------------
 class Color(Point3D):
-    def __init__(self, point: tuple[float, float, float] = (0, 0, 0)):
+    def __init__(self, point=(0, 0, 0)):
         super().__init__(point)
         self.x = b3d_utils.map_range(self.x, 0, 1, 0, 255)
         self.y = b3d_utils.map_range(self.y, 0, 1, 0, 255)
@@ -108,21 +113,21 @@ class Color(Point3D):
 class Polygon:
     def __init__(
             self, 
-            origin : tuple[float, float, float], 
-            normal : tuple[float, float, float],
-            u : tuple[float, float, float],
-            v : tuple[float, float, float],
-            verts : list[tuple[float, float, float]],
-            texture : str = None,
-            flags : int = 3585):
-        self.Flags = flags
-        self.Texture = texture
+            _origin:     tuple[float, float, float], 
+            _normal:     tuple[float, float, float],
+            _u:          tuple[float, float, float],
+            _v:          tuple[float, float, float],
+            _verts:      list[tuple[float, float, float]],
+            _texture:str=None,
+            _flags=      3585):
+        self.Flags = _flags
+        self.Texture = _texture
         self.Link : int = None
-        self.__Origin = Point3D(origin)
-        self.__Normal = Point3D(normal)
-        self.__TextureU = Point3D(u)
-        self.__TextureV = Point3D(v)
-        self.__Vertices = [Point3D(x) for x in verts]
+        self.__Origin = Point3D(_origin)
+        self.__Normal = Point3D(_normal)
+        self.__TextureU = Point3D(_u)
+        self.__TextureV = Point3D(_v)
+        self.__Vertices = [Point3D(x) for x in _verts]
 
     def __str__(self) -> str:
         texture = f'Texture={self.Texture} ' if self.Texture else ''
@@ -146,12 +151,12 @@ End Polygon\n'
 # -----------------------------------------------------------------------------
 class Actor:
     def __init__(self, 
-                 location: tuple[float, float, float] = (0, 0, 0),
-                 rotation: tuple[float, float, float] = (0, 0, 0),
-                 scale: tuple[float, float, float] = (1, 1, 1)):
-        self.Location = Location(location)
-        self.Rotation = Rotation(rotation)
-        self.DrawScale3D = Location(scale)
+                 _location=(0, 0, 0),
+                 _rotation=(0, 0, 0),
+                 _scale   =(1, 1, 1)):
+        self.Location = Location(_location)
+        self.Rotation = Rotation(_rotation)
+        self.DrawScale3D = Location(_scale)
 
     def __str__(self) -> str:
         pass
@@ -160,13 +165,13 @@ class Actor:
 # -----------------------------------------------------------------------------
 class PlayerStart(Actor):
     def __init__(self, 
-                 location: tuple[float, float, float] = (0, 0, 0), 
-                 rotation: tuple[float, float, float] = (0, 0, 0),
-                 is_time_trial: bool = False,
-                 track_index: TrackIndex = TrackIndex.ETTS_TUTORIAL_A01):
-        super().__init__(location, rotation)
-        self.is_time_trial = is_time_trial
-        self.TrackIndex = track_index
+                 _location     =(0, 0, 0), 
+                 _rotation     =(0, 0, 0),
+                 _is_time_trial=False,
+                 _track_index  =TrackIndex.ETTS_TUTORIAL_A01):
+        super().__init__(_location, _rotation)
+        self.is_time_trial = _is_time_trial
+        self.TrackIndex = _track_index
 
     def __str__(self) -> str:
         if self.is_time_trial: 
@@ -189,24 +194,24 @@ End Actor\n'
 # -----------------------------------------------------------------------------
 class Checkpoint(Actor):
     def __init__(self, 
-                 location: tuple[float, float, float] = (0, 0, 0), 
-                 track_index: TrackIndex = TrackIndex.ETTS_TUTORIAL_A01,
-                 order_index: int = 0,
-                 no_intermediate_time: bool = False,
-                 custom_height: float = 0.0,
-                 custom_width_scale: float = 0.0,
-                 no_respawn: bool = False,
-                 enabled: bool = True,
-                 should_be_based: bool = True):
-        super().__init__(location, (0, 0, 0))
-        self.TrackIndex = track_index
-        self.OrderIndex = order_index
-        self.NoIntermediateTime = no_intermediate_time
-        self.CustomHeight = custom_height
-        self.CustomWidthScale = custom_width_scale
-        self.NoRespawn = no_respawn
-        self.Enabled = enabled
-        self.ShouldBeBased = should_be_based
+                 _location            =(0, 0, 0), 
+                 _track_index         =TrackIndex.ETTS_TUTORIAL_A01,
+                 _order_index         =0,
+                 _no_intermediate_time=False,
+                 _custom_height       =0.0,
+                 _custom_width_scale  =0.0,
+                 _no_respawn          =False,
+                 _enabled             =True,
+                 _should_be_based     =True):
+        super().__init__(_location, (0, 0, 0))
+        self.TrackIndex = _track_index
+        self.OrderIndex = _order_index
+        self.NoIntermediateTime = _no_intermediate_time
+        self.CustomHeight = _custom_height
+        self.CustomWidthScale = _custom_width_scale
+        self.NoRespawn = _no_respawn
+        self.Enabled = _enabled
+        self.ShouldBeBased = _should_be_based
     
     def __str__(self) -> str:
         return \
@@ -224,20 +229,23 @@ End Actor\n'
 # -----------------------------------------------------------------------------
 class StaticMesh(Actor):
     def __init__(self, 
-                 location: tuple[float, float, float], 
-                 rotation: tuple[float, float, float],
-                 scale: tuple[float, float, float],
-                 static_mesh: str,
-                 material: str = ''):
-        super().__init__(location, rotation, scale)
-        self.StaticMesh: str = static_mesh
-        self.Material: str = material
+                 _location:   tuple[float, float, float], 
+                 _rotation:   tuple[float, float, float],
+                 _scale:      tuple[float, float, float],
+                 _static_mesh:str,
+                 _material=   '',
+                 _hidden_game=False):
+        super().__init__(_location, _rotation, _scale)
+        self.StaticMesh = _static_mesh
+        self.Material = _material
+        self.HiddenGame = _hidden_game
     
     def __str__(self) -> str:
         return \
 f'Begin Actor Class=StaticMeshActor Name=StaticMeshActor_0 Archetype=StaticMeshActor\'Engine.Default__StaticMeshActor\'\n\
 \tBegin Object Class=StaticMeshComponent Name=StaticMeshComponent0 Archetype=StaticMeshComponent\'Engine.Default__StaticMeshActor:StaticMeshComponent0\'\n\
 \t\tStaticMesh=StaticMesh\'{self.StaticMesh}\'\n\
+\t\tHiddenGame={self.HiddenGame}\n\
 \t\tMaterials(0)=Material\'{self.Material}\'\n\
 \tEnd Object\n\
 \tLocation=({self.Location})\n\
@@ -249,19 +257,19 @@ End Actor\n'
 # -----------------------------------------------------------------------------
 class Brush(Actor):
     def __init__(self, 
-                 polylist : list[Polygon],
-                 location: tuple[float, float, float], 
-                 rotation: tuple[float, float, float],
-                 class_name: str = 'Brush',
-                 package_name: str = 'Engine.Default__Brush',
-                 csg_oper: str = 'CSG_Add'):
-        super().__init__(location, rotation)
-        self.Package = package_name
-        self.Class = class_name
-        self.Archetype = class_name + '\'' + package_name + '\''
-        self.CsgOper = csg_oper
+                 _polylist:    list[Polygon],
+                 _location:    tuple[float, float, float], 
+                 _rotation:    tuple[float, float, float],
+                 _class_name=  'Brush',
+                 _package_name='Engine.Default__Brush',
+                 _csg_oper=    'CSG_Add'):
+        super().__init__(_location, _rotation)
+        self.Package = _package_name
+        self.Class = _class_name
+        self.Archetype = _class_name + '\'' + _package_name + '\''
+        self.CsgOper = _csg_oper
         self.Settings : list[str] = []
-        self.PolyList : list[Polygon] = polylist
+        self.PolyList : list[Polygon] = _polylist
 
     def __str__(self) -> str:
         polylist = ''
@@ -297,26 +305,26 @@ End Actor\n'
 # -----------------------------------------------------------------------------
 class Ladder(Brush):
     def __init__(self, 
-                 polylist : list[Polygon],
-                 location: tuple[float, float, float], 
-                 rotation: tuple[float, float, float],
-                 is_pipe: bool = False
+                 _polylist:list[Polygon],
+                 _location:tuple[float, float, float], 
+                 _rotation:tuple[float, float, float],
+                 _is_pipe= False
                  ):
-        super().__init__(polylist, location, rotation,
+        super().__init__(_polylist, _location, _rotation,
                          'TdLadderVolume',
                          'TdGame.Default__TdLadderVolume',
                          'CSG_Active')
-        if is_pipe:
+        if _is_pipe:
             self.Settings.append('LadderType=LT_Pipe')
 
 
 # -----------------------------------------------------------------------------
 class Swing(Brush):
     def __init__(self, 
-                 polylist: list[Polygon],
-                 location: tuple[float, float, float], 
-                 rotation: tuple[float, float, float]):
-        super().__init__(polylist, location, rotation,
+                 _polylist:list[Polygon],
+                 _location:tuple[float, float, float], 
+                 _rotation:tuple[float, float, float]):
+        super().__init__(_polylist, _location, _rotation,
                          'TdSwingVolume',
                          'TdGame.Default__TdSwingVolume',
                          'CSG_Active')
@@ -325,22 +333,23 @@ class Swing(Brush):
 # -----------------------------------------------------------------------------
 class Zipline(Brush):
     def __init__(self, 
-                 polylist: list[Polygon],
-                 rotation: tuple[float, float, float],
-                 start: tuple[float, float, float],
-                 middle: tuple[float, float, float],
-                 end: tuple[float, float, float]):
-        super().__init__(polylist, start, rotation,
+                 _polylist:list[Polygon],
+                 _rotation:tuple[float, float, float],
+                 _start:   tuple[float, float, float],
+                 _middle:  tuple[float, float, float],
+                 _end:     tuple[float, float, float]):
+        super().__init__(_polylist, _start, _rotation,
                          'TdZiplineVolume',
                          'TdGame.Default__TdZiplineVolume',
                          'CSG_Active')
-        self.Settings.append(f'Start=({Location(start)})')
-        self.Settings.append(f'End=({Location(end)})')
-        self.Settings.append(f'Middle=({Location(middle)})')
+        
+        self.Settings.append(f'Start=({Location(_start)})')
+        self.Settings.append(f'End=({Location(_end)})')
+        self.Settings.append(f'Middle=({Location(_middle)})')
         self.Settings.append('bHideSplineMarkers=False')
         self.Settings.append('bAllowSplineControl=True')
         self.Settings.append('OldScale=(X=1.000000,Y=1.000000,Z=1.000000)')
-        self.Settings.append(f'OldLocation=({Location(start)})')
+        self.Settings.append(f'OldLocation=({Location(_start)})')
 
 
 # -----------------------------------------------------------------------------
@@ -361,11 +370,11 @@ End Actor\n'
 # -----------------------------------------------------------------------------
 class DirectionalLight(Actor):
     def __init__(self,
-                 location: tuple[float, float, float], 
-                 rotation: tuple[float, float, float],
-                 color: tuple[int, int, int] ):
-        super().__init__(location, rotation)
-        self.Color = Color(color)
+                 _location:tuple[float, float, float], 
+                 _rotation:tuple[float, float, float],
+                 _color:   tuple[int, int, int]):
+        super().__init__(_location, _rotation)
+        self.Color = Color(_color)
 
     def __str__(self) -> str:
         return \

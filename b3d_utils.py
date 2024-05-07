@@ -1,39 +1,97 @@
+"""
+Place this file in the root folder
+"""
+
 import  bpy
 import  bmesh
-from    bpy.types   import Object, Mesh, Operator, Context, UIList, UILayout
+import  gpu
+from    gpu_extras.batch import batch_for_shader
+from    bpy.types   import Object, Mesh, Operator, Context, UIList, UILayout, PropertyGroup, ID
 from    bpy.props   import *
 from    bmesh.types import BMesh
 from    mathutils   import Vector, Matrix, Euler
 
 import math
 import numpy as np
-
-# -----------------------------------------------------------------------------
-# HELPERS
-# -----------------------------------------------------------------------------
-# -----------------------------------------------------------------------------
-def set_active(obj: Object):
-    active = bpy.context.active_object
-    if active: active.select_set(False)
-    bpy.context.view_layer.objects.active = obj
-    obj.select_set(True)
+from typing import Callable
 
 
 # -----------------------------------------------------------------------------
-def set_object_mode(obj: Object, m):
-    bpy.context.view_layer.objects.active = obj
-    bpy.ops.object.mode_set(mode=m)
+# Object
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+def new_object(_name:str, _data:ID, _collection:str=None, _parent:Object=None):
+    obj = bpy.data.objects.new(_name, _data)
+    link_object_to_scene(obj, _collection)
+    if(_parent): obj.parent = _parent
+    set_active_object(obj)
+    return obj
 
 
 # -----------------------------------------------------------------------------
-def set_object_selectable(obj: Object, select: bool):
-    obj.hide_select = not select
+def link_object_to_scene(_obj:Object, _collection:str=None):
+    if _obj == None: return
+    """If the collection == None, then the object will be linked to the root collection"""
+    for uc in _obj.users_collection:
+        uc.objects.unlink(_obj)
+
+    if _collection is not None:
+        c = bpy.context.blend_data.collections.get(_collection)
+        if c == None:
+            c = bpy.data.collections.new(_collection)
+            bpy.context.scene.collection.children.link(c)
+        c.objects.link(_obj)
+    else:
+        bpy.context.scene.collection.objects.link(_obj)
 
 
 # -----------------------------------------------------------------------------
-def select_object(obj: Object):
-    obj.select_set(True)
-    bpy.context.view_layer.objects.active = obj
+def remove_object(_obj:Object):
+    bpy.data.objects.remove(_obj)
+
+
+# -----------------------------------------------------------------------------
+def duplicate_object(_obj:Object, _instance=False, _collection=None) -> Object:
+    if _instance:
+        instance = new_object(_obj.name + '_INST', _obj.data, _collection)
+        set_active_object(instance)
+        return instance
+    else:
+        copy = _obj.copy()
+        copy.data = _obj.data.copy()
+        copy.name = _obj.name + '_COPY'
+        link_object_to_scene(copy, _collection)
+        set_active_object(copy)
+        return copy
+
+
+# -----------------------------------------------------------------------------
+def join_objects(_objects:list[Object]) -> Object:
+    deselect_all_objects()
+
+    for obj in _objects:
+        select_object(obj)
+
+    bpy.ops.object.join()
+    bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='MEDIAN')
+
+    return bpy.context.object
+
+# -----------------------------------------------------------------------------
+def set_object_mode(_obj:Object, _mode:str):
+    bpy.context.view_layer.objects.active = _obj
+    bpy.ops.object.mode_set(mode=_mode)
+
+
+# -----------------------------------------------------------------------------
+def set_object_selectable(_obj:Object, _select:bool):
+    _obj.hide_select = not _select
+
+
+# -----------------------------------------------------------------------------
+def select_object(_obj:Object):
+    _obj.select_set(True)
+    bpy.context.view_layer.objects.active = _obj
 
 
 # -----------------------------------------------------------------------------
@@ -48,112 +106,73 @@ def deselect_all_objects():
         obj.select_set(False)
 
 
-# -----------------------------------------------------------------------------
-def select_all_vertices(bm: BMesh):
-    for v in bm.verts:
-        v.select = True
-    bm.select_flush_mode()   
-
 
 # -----------------------------------------------------------------------------
-def deselect_all_vertices(bm: BMesh):
-    for v in bm.verts:
-        v.select = False
-    bm.select_flush_mode()   
-    
-
-# -----------------------------------------------------------------------------
-def link_to_scene(obj: Object, collection: str = None):
-    """If the collection == None, then the object will be linked to the root collection"""
-    for uc in obj.users_collection:
-        uc.objects.unlink(obj)
-
-    if collection is not None:
-        c = bpy.context.blend_data.collections.get(collection)
-        if c == None:
-            c = bpy.data.collections.new(collection)
-            bpy.context.scene.collection.children.link(c)
-        c.objects.link(obj)
-    else:
-        bpy.context.scene.collection.objects.link(obj)
+def set_active_object(_obj:Object):
+    active = bpy.context.active_object
+    if active: active.select_set(False)
+    select_object(_obj)
 
 
 # -----------------------------------------------------------------------------
-def auto_gui_properties(data, layout: bpy.types.UILayout):
-    for key in data.__annotations__.keys():
-        layout.prop(data, key)
+# Rotation mode: 
+#   https://gist.github.com/behreajj/2dbb6fb7cee78c167cd85085e67bcdf6
+# Mirror rotation: 
+#   https://www.gamedev.net/forums/topic/#599824-mirroring-a-quaternion-against-the-yz-plane/
+def get_rotation_mirrored_x_axis(_obj:Object) -> Euler:
+    prev_rot_mode = _obj.rotation_mode
+    _obj.rotation_mode = 'QUATERNION'
+    q = _obj.rotation_quaternion.copy()
+    q.x *= -1
+    q.w *= -1
+    _obj.rotation_mode = prev_rot_mode
+    return q.to_euler()
 
 
 # -----------------------------------------------------------------------------
-# HANDLER CALLBACK
-# -----------------------------------------------------------------------------
-# -----------------------------------------------------------------------------
-def add_callback(handler, function):
-    for fn in handler:
-        if fn.__name__ == function.__name__: return
-    handler.append(function)
+# https://blender.stackexchange.com/questions/159538/how-to-apply-all-transformations-to-an-object-at-low-level
+def apply_all_transforms(_obj:Object):
+    mb = _obj.matrix_basis
+    if hasattr(_obj.data, 'transform'):
+        _obj.data.transform(mb)
+    for c in _obj.children:
+        c.matrix_local = mb @ c.matrix_local
+        
+    _obj.matrix_basis.identity()
 
 
 # -----------------------------------------------------------------------------
-def remove_callback(handler, function):
-    for fn in handler:
-        if fn.__name__ == function.__name__:
-            handler.remove(fn)
+# https://blender.stackexchange.com/questions/9200/how-to-make-object-a-a-parent-of-object-b-via-blenders-python-api
+def set_parent(_child:Object, _parent:Object, _keep_world_location=True):
+    _child.parent = _parent
+    if _keep_world_location:
+        _child.matrix_parent_inverse = _parent.matrix_world.inverted()
 
 
 # -----------------------------------------------------------------------------
-# SCENE
-# -----------------------------------------------------------------------------
-# -----------------------------------------------------------------------------
-def new_object(name: str, data: bpy.types.ID, collection: str = None, parent: bpy.types.Object = None):
-    obj = bpy.data.objects.new(name, data)
-    link_to_scene(obj, collection)
-    if(parent): obj.parent = parent
-    set_active(obj)
-    return obj
+# https://blender.stackexchange.com/questions/9200/how-to-make-object-a-a-parent-of-object-b-via-blenders-python-api
+def unparent(_obj:Object, _keep_world_location=True):
+    parented_wm = _obj.matrix_world.copy()
+    _obj.parent = None
+    if _keep_world_location:
+        _obj.matrix_world = parented_wm
 
 
 # -----------------------------------------------------------------------------
-def remove_object(obj: Object):
-    bpy.data.objects.remove(obj)
-
-
+# Data
 # -----------------------------------------------------------------------------
-def duplicate_object(obj: Object, instance = False) -> Object:
-    if instance:
-        mesh = obj.data
-        inst = new_object(obj.name + '_INSTANCE', mesh, obj.name + '_GENERATED')
-        return inst
-    else:
-        copy = obj.copy()
-        copy.data = obj.data.copy()
-        link_to_scene(copy)
-        return copy
-
-
 # -----------------------------------------------------------------------------
-def create_mesh(
-        verts: list[tuple[float, float, float]], 
-        edges: list[tuple[int, int]], 
-        faces: list[tuple[int, ...]], 
-        name: str) -> Mesh:
-    mesh = bpy.data.meshes.new(name)
-    mesh.from_pydata(verts, edges, faces)
-    return mesh
-
-
-# -----------------------------------------------------------------------------
-def remove_mesh(mesh: Mesh):
+def remove_data(_mesh:Mesh):
     # Extra test because this can crash Blender if not done correctly.
     result = False
-    if mesh and mesh.users == 0: 
+    if _mesh and _mesh.users == 0: 
         try:
-            mesh.user_clear()
+            _mesh.user_clear()
             can_continue = True
         except: can_continue = False
         if can_continue == True:
             try:
-                bpy.data.meshes.remove(mesh)
+                bpy.data.meshes.remove(_mesh)
                 result = True
             except: result = False
     else: result = True
@@ -162,21 +181,35 @@ def remove_mesh(mesh: Mesh):
 
 # -----------------------------------------------------------------------------
 # https://blenderartists.org/t/how-to-replace-a-mesh/596225/4
-def set_mesh(obj: Object, mesh: Mesh):
-    old_mesh = obj.data
-    obj.data = mesh
-    remove_mesh(old_mesh)
+def set_data(_obj:Object, _data:ID):
+    old_data = _obj.data
+    _obj.data = _data
+    remove_data(old_data)
+
+
+# -----------------------------------------------------------------------------
+# Mesh
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+def new_mesh(
+        _verts:list[tuple[float, float, float]], 
+        _edges:list[tuple[int, int]], 
+        _faces:list[tuple[int, ...]], 
+        _name: str) -> Mesh:
+    mesh = bpy.data.meshes.new(_name)
+    mesh.from_pydata(_verts, _edges, _faces)
+    return mesh
 
 
 # -----------------------------------------------------------------------------
 # https://blender.stackexchange.com/questions/50160/scripting-low-level-join-meshes-elements-hopefully-with-bmesh
-def join_meshes(meshes: list[Mesh]):
+def join_meshes(_meshes:list[Mesh]):
     bm = bmesh.new()
     bm_verts = bm.verts.new
     bm_faces = bm.faces.new
     bm_edges = bm.edges.new
 
-    for mesh in meshes:
+    for mesh in _meshes:
         bm_to_add = bmesh.new()
         bm_to_add.from_mesh(mesh)
         offset = len(bm.verts)
@@ -202,125 +235,136 @@ def join_meshes(meshes: list[Mesh]):
         bm_to_add.free()
 
     bm.normal_update()
-    bm.to_mesh(meshes[0])
+    bm.to_mesh(_meshes[0])
     bm.free()
-    return meshes[0]
+    return _meshes[0]
 
 
 # -----------------------------------------------------------------------------
-def convert_to_mesh_in_place(obj: Object):
-    set_active(obj)
+def convert_to_mesh_in_place(_obj:Object):
+    set_active_object(_obj)
     bpy.ops.object.convert(target='MESH') 
 
 
 # -----------------------------------------------------------------------------
-def convert_to_new_mesh(obj: Object) -> bpy.types.Object:
-    mesh = bpy.data.meshes.new_from_object(obj)
-    new_obj = new_object(obj.name, mesh)
-    new_obj.matrix_world = obj.matrix_world 
+def convert_to_new_mesh(_obj:Object) -> Object:
+    mesh = bpy.data.meshes.new_from_object(_obj)
+    new_obj = new_object(_obj.name, mesh)
+    new_obj.matrix_world = _obj.matrix_world 
     return new_obj
 
 
 # -----------------------------------------------------------------------------
-def transform(mesh: Mesh, transforms: list[Matrix]):
+def get_bmesh(_obj:Object):
+    if _obj.mode == 'OBJECT':
+        bm = bmesh.new()
+        bm.from_mesh(_obj.data)
+        return bm
+    
+    if _obj.mode == 'EDIT':
+        return bmesh.from_edit_mesh(_obj.data)
+
+
+# -----------------------------------------------------------------------------
+def select_all_vertices(_bm:BMesh):
+    for v in _bm.verts:
+        v.select = True
+    _bm.select_flush_mode()   
+
+
+# -----------------------------------------------------------------------------
+def deselect_all_vertices(_bm:BMesh):
+    for v in _bm.verts:
+        v.select = False
+    _bm.select_flush_mode()   
+    
+
+# -----------------------------------------------------------------------------
+def transform(_mesh:Mesh, _transforms:list[Matrix]):
     mode = bpy.context.mode
     bm = bmesh.new()
 
     if mode == 'OBJECT':
-        bm.from_mesh(mesh)
+        bm.from_mesh(_mesh)
     elif mode == 'EDIT_MESH':
-        bm = bmesh.from_edit_mesh(mesh)
+        bm = bmesh.from_edit_mesh(_mesh)
 
-    for m in transforms:
+    for m in _transforms:
         bmesh.ops.transform(bm, matrix=m, verts=bm.verts)
 
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
 
     if mode == 'OBJECT':
-        bm.to_mesh(mesh)
+        bm.to_mesh(_mesh)
     elif mode == 'EDIT_MESH':
-        bmesh.update_edit_mesh(mesh)  
+        bmesh.update_edit_mesh(_mesh)  
+
 
 
 # -----------------------------------------------------------------------------
-def snap_to_grid(mesh: Mesh,  spacing: int):
+def snap_to_grid(_mesh:Mesh, _spacing:float):
     mode = bpy.context.mode
     bm = bmesh.new()
 
     if mode == 'OBJECT':
-        bm.from_mesh(mesh)
+        bm.from_mesh(_mesh)
     elif mode == 'EDIT_MESH':
-        bm = bmesh.from_edit_mesh(mesh) 
+        bm = bmesh.from_edit_mesh(_mesh) 
 
     for v in bm.verts:
-        v.co.x = round(v.co.x / spacing) * spacing
-        v.co.y = round(v.co.y / spacing) * spacing
-        v.co.z = round(v.co.z / spacing) * spacing
+        v.co.x = round(v.co.x / _spacing) * _spacing
+        v.co.y = round(v.co.y / _spacing) * _spacing
+        v.co.z = round(v.co.z / _spacing) * _spacing
 
     if mode == 'OBJECT':
-        bm.to_mesh(mesh)
+        bm.to_mesh(_mesh)
     elif mode == 'EDIT_MESH':
-        bmesh.update_edit_mesh(mesh)  
+        bmesh.update_edit_mesh(_mesh)  
 
 
 # -----------------------------------------------------------------------------
-# Rotation mode: 
-#   https://gist.github.com/behreajj/2dbb6fb7cee78c167cd85085e67bcdf6
-# Mirror rotation: 
-#   https://www.gamedev.net/forums/topic/# 599824-mirroring-a-quaternion-against-the-yz-plane/
-def get_rotation_mirrored_x_axis(obj: Object) -> Euler:
-    prev_rot_mode = obj.rotation_mode
-    obj.rotation_mode = 'QUATERNION'
-    q = obj.rotation_quaternion.copy()
-    q.x *= -1
-    q.w *= -1
-    obj.rotation_mode = prev_rot_mode
-    return q.to_euler()
+def mesh_bounds(_obj:Object) -> tuple[Vector, Vector]:
+    bbmin = Vector((float('inf'), float('inf'), float('inf')))
+    bbmax = Vector((float('-inf'), float('-inf'), float('-inf')))
+
+    for vertex in _obj.data.vertices:
+        world_co = _obj.matrix_world @ vertex.co
+        bbmin.x = min(bbmin[0], world_co[0])
+        bbmin.y = min(bbmin[1], world_co[1])
+        bbmin.z = min(bbmin[2], world_co[2])
+
+        bbmax.x = max(bbmax[0], world_co[0])
+        bbmax.y = max(bbmax[1], world_co[1])
+        bbmax.z = max(bbmax[2], world_co[2])
+
+    return bbmin, bbmax
 
 
 # -----------------------------------------------------------------------------
-# https://blender.stackexchange.com/questions/159538/how-to-apply-all-transformations-to-an-object-at-low-level
-def apply_all_transforms(obj: Object):
-    mb = obj.matrix_basis
-    if hasattr(obj.data, 'transform'):
-        obj.data.transform(mb)
-    for c in obj.children:
-        c.matrix_local = mb @ c.matrix_local
-        
-    obj.matrix_basis.identity()
+# Collection
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+def get_active_collection():
+    return bpy.context.view_layer.active_layer_collection.collection
 
 
 # -----------------------------------------------------------------------------
-# https://blender.stackexchange.com/questions/9200/how-to-make-object-a-a-parent-of-object-b-via-blenders-python-api
-def set_parent(child: Object, parent: Object, keep_world_location = True):
-    child.parent = parent
-    if keep_world_location:
-        child.matrix_parent_inverse = parent.matrix_world.inverted()
-
-
-# -----------------------------------------------------------------------------
-# https://blender.stackexchange.com/questions/9200/how-to-make-object-a-a-parent-of-object-b-via-blenders-python-api
-def unparent(obj: Object, keep_world_location = True):
-    parented_wm = obj.matrix_world.copy()
-    obj.parent = None
-    if keep_world_location:
-        obj.matrix_world = parented_wm
-
-
-# -----------------------------------------------------------------------------
-# CREATE
+# Create
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-def create_cube(scale: tuple[float, float, float] = (1, 1, 1)) -> Mesh:
+def create_cube(_size:tuple[float, float, float]=(1, 1, 1)) -> Mesh:
+    s = Vector(_size)
+    s *= .5
+
     verts = [
-        Vector((-1 * scale[0], -1 * scale[1], -1 * scale[2])),
-        Vector((-1 * scale[0],  1 * scale[1], -1 * scale[2])),
-        Vector(( 1 * scale[0],  1 * scale[1], -1 * scale[2])),
-        Vector(( 1 * scale[0], -1 * scale[1], -1 * scale[2])),
-        Vector((-1 * scale[0], -1 * scale[1],  1 * scale[2])),
-        Vector((-1 * scale[0],  1 * scale[1],  1 * scale[2])),
-        Vector(( 1 * scale[0],  1 * scale[1],  1 * scale[2])),
-        Vector(( 1 * scale[0], -1 * scale[1],  1 * scale[2])),
+        Vector((-1 * s[0], -1 * s[1], -1 * s[2])),
+        Vector((-1 * s[0],  1 * s[1], -1 * s[2])),
+        Vector(( 1 * s[0],  1 * s[1], -1 * s[2])),
+        Vector(( 1 * s[0], -1 * s[1], -1 * s[2])),
+        Vector((-1 * s[0], -1 * s[1],  1 * s[2])),
+        Vector((-1 * s[0],  1 * s[1],  1 * s[2])),
+        Vector(( 1 * s[0],  1 * s[1],  1 * s[2])),
+        Vector(( 1 * s[0], -1 * s[1],  1 * s[2])),
     ]
     faces = [
         (0, 1, 2, 3),
@@ -330,19 +374,22 @@ def create_cube(scale: tuple[float, float, float] = (1, 1, 1)) -> Mesh:
         (6, 7, 3, 2),
         (5, 6, 2, 1),
     ]
-    return create_mesh(verts, [], faces, 'CUBE')
+    return new_mesh(verts, [], faces, 'CUBE')
 
 
 # -----------------------------------------------------------------------------
-def create_arrow(scale: tuple[float, float] = (1, 1)) -> Mesh:
+def create_arrow(_size:tuple[float, float]=(1, 1)) -> Mesh:
+    s = Vector(_size)
+    s *= .5
+
     verts = [
-        Vector((-1 * scale[0],  0.4 * scale[1], 0)),
-        Vector(( 0 * scale[0],  0.4 * scale[1], 0)),
-        Vector(( 0 * scale[0],  1   * scale[1], 0)), 
-        Vector(( 1 * scale[0],  0   * scale[1], 0)), 
-        Vector(( 0 * scale[0], -1   * scale[1], 0)), 
-        Vector(( 0 * scale[0], -0.4 * scale[1], 0)),
-        Vector((-1 * scale[0], -0.4 * scale[1], 0)),
+        Vector((-1 * s[0],  0.4 * s[1], 0)),
+        Vector(( 0 * s[0],  0.4 * s[1], 0)),
+        Vector(( 0 * s[0],  1   * s[1], 0)), 
+        Vector(( 1 * s[0],  0   * s[1], 0)), 
+        Vector(( 0 * s[0], -1   * s[1], 0)), 
+        Vector(( 0 * s[0], -0.4 * s[1], 0)),
+        Vector((-1 * s[0], -0.4 * s[1], 0)),
     ]
     edges = [
         (0, 1),
@@ -353,45 +400,60 @@ def create_arrow(scale: tuple[float, float] = (1, 1)) -> Mesh:
         (5, 6),
         (6, 0),
     ]
-    return create_mesh(verts, edges, [], 'ARROW')
+    return new_mesh(verts, edges, [], 'ARROW')
 
 
 # -----------------------------------------------------------------------------
-def circle(radius, 
-           location, 
-           angle_step = 10) -> list[tuple[float, float, float]]:
-    (a, b, c) = location
+def create_bounding_box(_obj:Object) -> Object:
+    """_obj: Object of type Mesh"""
+    bbox_min, bbox_max = mesh_bounds(_obj)
+
+    # Calculate box dimensions based on bounding box
+    center = (bbox_max + bbox_min) * 0.5
+    size = (bbox_max - bbox_min) * 0.5
+
+    # Create the box object
+    bpy.ops.mesh.primitive_cube_add(location=center, scale=size)
+    return bpy.context.object
+
+
+# -----------------------------------------------------------------------------
+def circle(_radius:float, 
+           _location:tuple[float, float,float], 
+           _angle_step=10) -> list[tuple[float, float, float]]:
+    (a, b, c) = _location
 
     verts = []
-    for angle in range(0, 360, angle_step):
+    for angle in range(0, 360, _angle_step):
         angle_radius = math.radians(angle)
-        x = a + radius * math.cos(angle_radius)
-        y = b + radius * math.sin(angle_radius)
+        x = a + _radius * math.cos(angle_radius)
+        y = b + _radius * math.sin(angle_radius)
         verts.append((x, y, c))
+        
     # Adding the first vertex as last vertex to close the loop
     verts.append(verts[0])
     return verts
 
 
 # -----------------------------------------------------------------------------
-def create_cylinder(radius = 2, 
-                    height = 2, 
-                    row_height = 1, 
-                    angle_step = 10, 
-                    make_faces = True) -> Mesh:
-    height += 1
+def create_cylinder(_radius=2, 
+                    _height=2, 
+                    _row_height=1, 
+                    _angle_step=10, 
+                    _make_faces=True) -> Mesh:
+    _height += 1
     verts = []
     per_circle_verts = 0
 
-    for z in np.arange(0, height, row_height):
-        c = circle(radius, (0, 0, z), angle_step)
+    for z in np.arange(0, _height, _row_height):
+        c = circle(_radius, (0, 0, z), _angle_step)
         per_circle_verts = len(c)
         verts += c
 
-    rows = int(height / row_height)
+    rows = int(_height / _row_height)
     faces = []
 
-    if make_faces:
+    if _make_faces:
         for row in range(0, rows - 1):
             for index in range(0, per_circle_verts - 1):
                 v1 = index + (row * per_circle_verts)
@@ -400,37 +462,164 @@ def create_cylinder(radius = 2,
                 v4 = v2 + per_circle_verts
                 faces.append((v1, v3, v4, v2))
 
-    return create_mesh(verts, [], faces, 'CYLINDER')
+    return new_mesh(verts, [], faces, 'CYLINDER')
 
 
 # -----------------------------------------------------------------------------
 #https://blender.stackexchange.com/questions/127603/how-to-specify-nurbs-path-vertices-in-python
-def create_curve(num_points = 3, 
-                 step = 1, 
-                 dir: tuple[float, float, float] = (1, 0, 0)) -> bpy.types.Curve:
+def create_curve(_num_points=3, 
+                 _step=1, 
+                 _dir:tuple[float, float, float]=(1, 0, 0)) -> bpy.types.Curve:
     curve = bpy.data.curves.new('CURVE', 'CURVE')
     path = curve.splines.new('NURBS')
     curve.dimensions = '3D'
-    path.points.add(num_points - 1)
+    path.points.add(_num_points - 1)
 
-    for k in range(num_points):
-        p = Vector(dir) * step * k
+    for k in range(_num_points):
+        p = Vector(_dir) * _step * k
         path.points[k].co = (*p, 1)
 
     path.use_endpoint_u = True
     return curve
 
+# -----------------------------------------------------------------------------
+# Handler Callback
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+def add_callback(_handler, _callback:Callable):
+    for fn in _handler:
+        if fn.__name__ == _callback.__name__: return
+    _handler.append(_callback)
+
 
 # -----------------------------------------------------------------------------
-# MATH
-# -----------------------------------------------------------------------------
-# -----------------------------------------------------------------------------
-def map_range(value, in_min, in_max, out_min, out_max):
-    return out_min + (value - in_min) / (in_max - in_min) * (out_max - out_min)
+def remove_callback(_handler, _callback:Callable):
+    for fn in _handler:
+        if fn.__name__ == _callback.__name__:
+            _handler.remove(fn)
 
 
 # -----------------------------------------------------------------------------
-# LIST COLLECTIONS
+# Math
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+def map_range(_value:float, _in_min:float, _in_max:float, _out_min:float, _out_max:float):
+    return _out_min + (_value - _in_min) / (_in_max - _in_min) * (_out_max - _out_min)
+
+
+# -----------------------------------------------------------------------------
+# https://stackoverflow.com/questions/45142959/calculate-rotation-matrix-to-align-two-vectors-in-3d-space 
+def rotation_matrix(_v1:Vector, _v2:Vector):
+    """ 
+    Find the rotation matrix that aligns vec1 to vec2
+    :param vec1: A 3d 'source' vector
+    :param vec2: A 3d 'destination' vector
+    :return A transform matrix (3x3) which when applied to vec1, aligns it with vec2.
+    """
+    _v1 = [_v1[0], _v1[1], _v1[2]]
+    _v2 = [_v2[0], _v2[1], _v2[2]]
+
+    a, b = (_v1 / np.linalg.norm(_v1)).reshape(3), (_v2 / np.linalg.norm(_v2)).reshape(3)
+    v = np.cross(a, b)
+    
+    if not any(v):
+        return Matrix.Identity(3)
+
+    d = np.dot(a, b)
+    s = np.linalg.norm(v)
+    kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
+    r = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - d) / (s ** 2))
+    R = Matrix(((r[0][0], r[0][1], r[0][2]),
+                (r[1][0], r[1][1], r[1][2]), 
+                (r[2][0], r[2][1], r[2][2])))
+
+    return R
+
+
+# -----------------------------------------------------------------------------
+# Graphics
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# https://blender.stackexchange.com/questions/61699/how-to-draw-geometry-in-3d-view-window-with-bgl
+
+shader_coords = []
+shader_indices = []
+
+def begin_batch():
+    global shader_coords
+    global shader_indices
+    shader_coords = []
+    shader_indices = []
+
+
+# -----------------------------------------------------------------------------
+def batch_add_coords(_coords:list[Vector]):
+    global shader_coords
+    shader_coords.extend(_coords)
+
+
+# -----------------------------------------------------------------------------
+def batch_add_indices(_inds:list[int]):
+    global shader_indices
+    shader_indices.extend(_inds)
+
+
+# -----------------------------------------------------------------------------
+def draw_batch_3d(_color:tuple, _width=1.0, _type='LINES'):
+    global shader_coords
+    global shader_indices
+    shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
+    gpu.state.line_width_set(_width)
+    batch = batch_for_shader(shader, _type, {'pos': shader_coords}, indices=shader_indices)
+    shader.bind()
+    shader.uniform_float('color', _color)
+    batch.draw(shader)
+
+
+# -----------------------------------------------------------------------------
+def draw_aabb_lines_3d(_bmin:Vector, _bmax:Vector, _color:tuple, _width=1):
+    v0 = _bmin
+    v1 = (_bmax.x, _bmin.y, _bmin.z)
+    v2 = (_bmin.x, _bmax.y, _bmin.z)
+    v3 = (_bmin.x, _bmin.y, _bmax.z)
+
+    v4 = _bmax
+    v5 = (_bmin.x, _bmax.y, _bmax.z)
+    v6 = (_bmax.x, _bmin.y, _bmax.z)
+    v7 = (_bmax.x, _bmax.y, _bmin.z)
+
+    begin_batch()
+    batch_add_coords([v0, v1, v2, v3, v4, v5, v6, v7])
+    batch_add_indices([
+        (0, 1), (0, 2), (0, 3),
+        (4, 5), (4, 6), (4, 7),
+        (1, 7), (1, 6), 
+        (2, 7), (2, 5),
+        (3, 5), (3, 6)
+    ])
+
+    draw_batch_3d(_color, _width, 'LINES')
+
+
+# -----------------------------------------------------------------------------
+# Layout
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+def auto_gui_props(_data:PropertyGroup, _layout:UILayout):
+    for key in _data.__annotations__.keys():
+        _layout.prop(_data, key)
+
+
+# -----------------------------------------------------------------------------
+def draw_box(_layout:UILayout, _text:str, _alignment='CENTER'):
+    box = _layout.box()
+    row = box.row()
+    row.alignment = _alignment
+    row.label(text=_text)
+
+
+# -----------------------------------------------------------------------------
+# Classes
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 class B3D_UL_GenericList(UIList):
@@ -442,10 +631,13 @@ class B3D_UL_GenericList(UIList):
 
 # -----------------------------------------------------------------------------
 class GenericList:
-
+    """
+    This class can't be used as is. Inherit from this class and add an CollectionProperty named 'items'
+    """
     def add(self):
-        self.items.add()
+        item = self.items.add()
         self.selected_item_idx = len(self.items) - 1
+        return item
 
 
     def remove_selected(self):
@@ -458,9 +650,9 @@ class GenericList:
         self.selected_item_idx = 0
 
 
-    def move(self, direction):
+    def move(self, _direction:int):
         new_idx = self.selected_item_idx
-        new_idx += direction
+        new_idx += _direction
         self.items.move(new_idx, self.selected_item_idx)
         self.selected_item_idx = max(0, min(new_idx, len(self.items) - 1))
 
@@ -471,15 +663,15 @@ class GenericList:
         return None
 
 
-    selected_item_idx: IntProperty()
+    selected_item_idx: IntProperty(name='PRIVATE')
 
 
 # -----------------------------------------------------------------------------
 active_generic_list: GenericList
 
-def begin_generic_list_ops(list: GenericList):
+def begin_generic_list_ops(_list:GenericList):
     global active_generic_list
-    active_generic_list = list
+    active_generic_list = _list
 
 
 # -----------------------------------------------------------------------------
@@ -489,7 +681,7 @@ class B3D_OT_GenericList_Add(Operator):
     
     list: GenericList
 
-    def execute(self, context: Context):
+    def execute(self, _context:Context):
         global active_generic_list
         active_generic_list.add()
         return {'FINISHED'}
@@ -502,7 +694,7 @@ class B3D_OT_GenericList_Remove(Operator):
     bl_options = {'UNDO'}
     
 
-    def execute(self, context: Context):
+    def execute(self, _context:Context):
         global active_generic_list
         active_generic_list.remove_selected()
         return {'FINISHED'}
@@ -515,7 +707,7 @@ class B3D_OT_GenericList_Clear(Operator):
     bl_options = {'UNDO'}
 
 
-    def execute(self, context: Context):
+    def execute(self, _context:Context):
         global active_generic_list
         active_generic_list.clear()
         return {'FINISHED'}
@@ -524,7 +716,7 @@ class B3D_OT_GenericList_Clear(Operator):
 # -----------------------------------------------------------------------------
 class B3D_OT_GenericList_Move(Operator):
     bl_idname = 'b3d_utils.generic_list_move'
-    bl_label = 'Move Shape'
+    bl_label = 'Move'
     
     direction : EnumProperty(items=(
         ('UP', 'Up', ''),
@@ -532,7 +724,7 @@ class B3D_OT_GenericList_Move(Operator):
     ))
 
 
-    def execute(self, context: Context):
+    def execute(self, _context:Context):
         dir = (-1 if self.direction == 'UP' else 1)
         global active_generic_list
         active_generic_list.move(dir)
@@ -540,11 +732,93 @@ class B3D_OT_GenericList_Move(Operator):
 
 
 # -----------------------------------------------------------------------------
-def draw_generic_list_ops(layout: UILayout, list: GenericList):
-    begin_generic_list_ops(list)
+def draw_generic_list_ops(_layout:UILayout, _list:GenericList):
+    begin_generic_list_ops(_list)
 
-    layout.operator(B3D_OT_GenericList_Add.bl_idname   , icon='ADD'        , text='')
-    layout.operator(B3D_OT_GenericList_Remove.bl_idname, icon='REMOVE'     , text='')
-    layout.operator(B3D_OT_GenericList_Move.bl_idname  , icon='TRIA_UP'    , text='').direction = 'UP'
-    layout.operator(B3D_OT_GenericList_Move.bl_idname  , icon='TRIA_DOWN'  , text='').direction = 'DOWN'
-    layout.operator(B3D_OT_GenericList_Clear.bl_idname , icon='TRASH'      , text='')
+    _layout.operator(B3D_OT_GenericList_Add.bl_idname   , icon='ADD'      , text='')
+    _layout.operator(B3D_OT_GenericList_Remove.bl_idname, icon='REMOVE'   , text='')
+    _layout.operator(B3D_OT_GenericList_Move.bl_idname  , icon='TRIA_UP'  , text='').direction = 'UP'
+    _layout.operator(B3D_OT_GenericList_Move.bl_idname  , icon='TRIA_DOWN', text='').direction = 'DOWN'
+    _layout.operator(B3D_OT_GenericList_Clear.bl_idname , icon='TRASH'    , text='')
+
+
+# -----------------------------------------------------------------------------
+def draw_generic_list(_layout:UILayout, _list:GenericList, _name:str, _rows=4, _with_generic_ops=True):
+    row = _layout.row(align=True)
+    row.template_list('B3D_UL_GenericList', _name, _list, 'items', _list, 'selected_item_idx', rows=_rows)
+    if not _with_generic_ops: return
+    col = row.column(align=True)
+    draw_generic_list_ops(col, _list)
+
+
+# -----------------------------------------------------------------------------
+# Registration
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+""" 
+Registration depends on auto_load.py:
+https://gist.github.com/JacquesLucke/11fecc6ea86ef36ea72f76ca547e795b 
+
+Use these functions when the order of registration is important
+"""
+import importlib
+from . import auto_load
+
+
+# -----------------------------------------------------------------------------
+registered_modules = []
+registered_classes = []
+
+# -----------------------------------------------------------------------------
+def register_subpackage(_subpackage=''):
+    """
+    Use empty string ('') to register root 
+    """
+    def get_all_submodules(directory, package_name):
+        return list(iter_submodules(directory, package_name))
+
+    def iter_submodules(path, package_name):
+        for name in sorted(iter_submodule_names(path)):
+            name = '.' + name
+            if _subpackage:
+                name = '.' + _subpackage + name
+            yield importlib.import_module(name, package_name)
+
+    def iter_submodule_names(path):
+        import pkgutil
+        for _, module_name, is_package in pkgutil.iter_modules([str(path)]):
+            if not is_package:
+                yield module_name
+
+
+    from pathlib import Path
+    
+    package = Path(__file__).parent
+    path = package 
+    if _subpackage:
+        path /= _subpackage
+
+    modules = get_all_submodules(path, package.name)
+    classes = auto_load.get_ordered_classes_to_register(modules)
+
+    auto_load.modules = modules
+    auto_load.ordered_classes = classes
+
+    auto_load.register()
+
+    global registered_modules
+    global registered_classes
+
+    registered_modules.extend(modules)
+    registered_classes.extend(classes)
+
+
+# -----------------------------------------------------------------------------
+def unregister_subpackages():
+    global registered_modules
+    global registered_classes
+
+    auto_load.modules = registered_modules
+    auto_load.ordered_classes = registered_classes
+
+    auto_load.unregister()
