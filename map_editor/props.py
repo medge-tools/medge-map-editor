@@ -266,6 +266,8 @@ class MET_ACTOR_PG_PlayerStart(Actor, PropertyGroup):
 
 
     def draw(self, _layout:UILayout):
+        b3d_utils.draw_box('Do not apply any transforms, these values are needed for export', _layout) 
+
         _layout.prop(self, 'is_time_trial')
 
         if self.is_time_trial:
@@ -322,6 +324,8 @@ class MET_ACTOR_PG_StaticMesh(Actor, MaterialProperty, PropertyGroup):
     
     
     def draw(self, _layout:UILayout):
+        b3d_utils.draw_box('Do not apply any transforms, these values are needed for export', _layout)   
+
         _layout.prop(self, 'use_prefab')
 
         if self.use_prefab:
@@ -330,6 +334,7 @@ class MET_ACTOR_PG_StaticMesh(Actor, MaterialProperty, PropertyGroup):
             _layout.prop(self, 'use_material')
             if self.use_material:
                 self.draw_material_prop()
+    
     
     def get_path(self) -> str:
         package = self.id_data.users_collection[0].name
@@ -351,6 +356,7 @@ class MET_ACTOR_PG_StaticMesh(Actor, MaterialProperty, PropertyGroup):
             if self.prefab:
                 self.id_data.name += self.prefab.name
             b3d_utils.link_object_to_scene(self.id_data, None)
+
         else:
             self.id_data.name = 'StaticMesh'
             b3d_utils.link_object_to_scene(self.id_data, MY_PACKAGE)
@@ -408,6 +414,7 @@ class MET_ACTOR_PG_Ladder(Actor, PropertyGroup):
 
 
     def draw(self, _layout:UILayout):
+        b3d_utils.draw_box('Do not apply any transforms, these values are needed for export', _layout) 
         _layout.prop(self, 'is_pipe')
 
 
@@ -454,7 +461,9 @@ class MET_ACTOR_PG_Swing(Actor, PropertyGroup):
         b3d_utils.transform(arrow2.obj.data, [m_t07_x , m_r90_x, m_mir_x]) 
 
         self.id_data.name = 'Swing'
-    
+
+    def draw(self, _layout: UILayout):
+        b3d_utils.draw_box('Do not apply any transforms, these values are needed for export', _layout)     
 
 # -----------------------------------------------------------------------------
 # Zipline
@@ -504,8 +513,10 @@ class MET_ACTOR_PG_Zipline(Actor, PropertyGroup):
         if not self.auto_bb: 
             return
 
-        spline = self.curve.data.splines[0]
-        points = spline.points
+        curve_data = self.curve.data
+
+        nurbs = curve_data.splines[0]
+        points = nurbs.points
         
         p1 = points[0].co.xyz
         p2 = points[1].co.xyz
@@ -525,8 +536,10 @@ class MET_ACTOR_PG_Zipline(Actor, PropertyGroup):
 
         def local_bounds(center:Vector, p1:Vector, p2:Vector):
             forward = (p2 - p1).normalized()
-            if self.align_bb:
+
+            if self.align_z:
                 forward.z = 0
+
             right = Vector((forward.y, -forward.x, 0)).normalized() * self.bb_scale
             up = forward.cross(right).normalized() * self.bb_scale
 
@@ -536,10 +549,10 @@ class MET_ACTOR_PG_Zipline(Actor, PropertyGroup):
             verts.append(center + up + right)
 
             e2 = len(verts)
-            verts.append(center + -up + right)
+            verts.append(center - up + right)
 
             e3 = len(verts)
-            verts.append(center + -up - right)
+            verts.append(center - up - right)
 
             e4 = len(verts)
             verts.append(center + up - right)
@@ -548,31 +561,28 @@ class MET_ACTOR_PG_Zipline(Actor, PropertyGroup):
             edges.append((e2, e3))
             edges.append((e3, e4))
             edges.append((e4, e1))
+            
             segments.append((e1, e2, e3, e4))
 
-        length = spline.calc_length()
+        # Interpolate points
+        stride = 3
+        ipoints = b3d_utils.interpolate_nurbs(nurbs, curve_data.resolution_u, stride)
 
-        v1 = (p2 - p1)
-        v2 = (p2 - p3)
-
-        handle1 = p1 + v1 * v1.length / length
-        handle2 = p3 + v2 * v2.length / length
-
-        ipoints = geometry.interpolate_bezier(p1, handle1, handle2, p3, self.bb_resolution + 1)
-
-        for k in range(len(ipoints) - 1):
-            ip1 = ipoints[k]
-            ip2 = ipoints[k + 1]
+        for k in range(0, len(ipoints) - stride, stride + self.bb_resolution * 3):
+            ip1 = Vector((ipoints[k + 0], ipoints[k + 1], ipoints[k + 2]))
+            ip2 = Vector((ipoints[k + 3], ipoints[k + 4], ipoints[k + 5]))
             local_bounds(ip1, ip1, ip2)
 
         local_bounds(p3, p2, p3)
         
+        # Create mesh bounds
         faces = []
         faces.append((0, 1, 2, 3))
 
         for k in range(len(segments) - 1):
             s1 = segments[k]
             s2 = segments[k + 1]
+
             edges.append((s1[0], s2[0]))
             edges.append((s1[1], s2[1]))
             edges.append((s1[2], s2[2]))
@@ -595,15 +605,15 @@ class MET_ACTOR_PG_Zipline(Actor, PropertyGroup):
 
     curve:    PointerProperty(type=Object, name='Curve')
     auto_bb:  BoolProperty(name='Automatic Bounding Box', default=True)
-    align_bb: BoolProperty(name='Align', default=True, update=__force_update_bb_bounds)
+    align_z: BoolProperty(name='Align Z', update=__force_update_bb_bounds)
 
-    bb_resolution: IntProperty(name='Resolution', default=4, min=1, update=__force_update_bb_bounds)
+    bb_resolution: IntProperty(name='Resolution', min=0, update=__force_update_bb_bounds)
     bb_scale:      FloatVectorProperty(name='Scale', subtype='TRANSLATION', default=(1, 1, 1), update=__force_update_bb_bounds)
     bb_offset:     FloatVectorProperty(name='Offset', subtype='TRANSLATION', update=__force_update_bb_bounds)
 
-    c1: FloatVectorProperty(subtype='TRANSLATION')
-    c2: FloatVectorProperty(subtype='TRANSLATION')
-    c3: FloatVectorProperty(subtype='TRANSLATION')
+    c1: FloatVectorProperty(name='PRIVATE', subtype='TRANSLATION')
+    c2: FloatVectorProperty(name='PRIVATE', subtype='TRANSLATION')
+    c3: FloatVectorProperty(name='PRIVATE', subtype='TRANSLATION')
 
 
 # -----------------------------------------------------------------------------
@@ -634,6 +644,7 @@ class MET_ACTOR_PG_SpringBoard(Actor, PropertyGroup):
 
 
     def draw(self, _layout: UILayout):
+        b3d_utils.draw_box('Do not apply any transforms, these values are needed for export', _layout) 
         _layout.prop(self, 'is_hidden_game')
 
 
