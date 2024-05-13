@@ -16,12 +16,14 @@ class ActorType(str, Enum):
     PLAYER_START    = 'PLAYER_START'
     CHECKPOINT      = 'CHECKPOINT'
     BRUSH           = 'BRUSH'
-    LADDER          = 'LADDER'
-    SWING           = 'SWING'
+    LADDER_VOLUME   = 'LADDER_VOLUME'
+    SWING_VOLUME    = 'SWING_VOLUME'
     STATIC_MESH     = 'STATIC_MESH'
     ZIPLINE         = 'ZIPLINE'
     SPRINGBOARD     = 'SPRINGBOARD'
     BLOCKING_VOLUME = 'BLOCKING_VOLUME'
+    TRIGGER_VOLUME  = 'TRIGGER_VOLUME'
+    KILL_VOLUME     = 'KILL_VOLUME'
 
 
 # -----------------------------------------------------------------------------
@@ -266,13 +268,14 @@ class Brush(Actor):
                  _rotation: tuple[float, float, float],
                  _class_name=  'Brush',
                  _package_name='Engine.Default__Brush',
-                 _csg_oper=    'CSG_Add'):
+                 _csg_oper=    'CSG_Active'):
         super().__init__(_location, _rotation)
         self.Package =   _package_name
         self.Class =     _class_name
         self.Archetype = _class_name + '\'' + _package_name + '\''
         self.CsgOper =   _csg_oper
-        self.Settings: list[str] = []
+        self.ObjectSettings: list[str] = []
+        self.ActorSettings: list[str] = []
         self.PolyList: list[Polygon] = _polylist
 
 
@@ -286,23 +289,30 @@ class Brush(Actor):
                 link += 1
             polylist += str(poly)
 
-        settings = ''
+        object_settings = ''
 
-        for s in self.Settings:
-            settings += s + '\n'
+        for s in self.ObjectSettings:
+            object_settings += s + '\n'
+
+
+        actor_settings = ''
+
+        for s in self.ActorSettings:
+            actor_settings += s + '\n'
 
         return \
 f'Begin Actor Class={self.Class} Name={self.Class}_0 Archetype={self.Archetype}\n\
 \tBegin Object Class=BrushComponent Name=BrushComponent0 Archetype=BrushComponent\'{self.Package}:BrushComponent0\'\n\
+{object_settings}\
 \tEnd Object\n\
-\tCsgOper={self.CsgOper}\n\
-{settings}\
 \tBegin Brush Name=Model_0\n\
 \t\tBegin PolyList\n\
 \t\t\t{polylist}\
 \t\tEnd PolyList\n\
 \tEnd Brush\n\
 \tBrush=Model\'Model_0\'\n\
+\tCsgOper={self.CsgOper}\n\
+{actor_settings}\
 \tLocation=({self.Location})\n\
 \tRotation=({self.Rotation})\n\
 End Actor\n'
@@ -312,7 +322,7 @@ End Actor\n'
 # Volumes
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-class Ladder(Brush):
+class LadderVolume(Brush):
     def __init__(self, 
                  _polylist: list[Polygon],
                  _location: tuple[float, float, float], 
@@ -321,23 +331,10 @@ class Ladder(Brush):
                  ):
         super().__init__(_polylist, _location, _rotation,
                          'TdLadderVolume',
-                         'TdGame.Default__TdLadderVolume',
-                         'CSG_Active')
+                         'TdGame.Default__TdLadderVolume')
         
         if _is_pipe:
-            self.Settings.append('LadderType=LT_Pipe')
-
-
-# -----------------------------------------------------------------------------
-class Swing(Brush):
-    def __init__(self, 
-                 _polylist: list[Polygon],
-                 _location: tuple[float, float, float], 
-                 _rotation: tuple[float, float, float]):
-        super().__init__(_polylist, _location, _rotation,
-                         'TdSwingVolume',
-                         'TdGame.Default__TdSwingVolume',
-                         'CSG_Active')
+            self.ActorSettings.append('LadderType=LT_Pipe')
 
 
 # -----------------------------------------------------------------------------
@@ -350,16 +347,15 @@ class Zipline(Brush):
                  _end:      tuple[float, float, float]):
         super().__init__(_polylist, _start, _rotation,
                          'TdZiplineVolume',
-                         'TdGame.Default__TdZiplineVolume',
-                         'CSG_Active')
+                         'TdGame.Default__TdZiplineVolume')
         
-        self.Settings.append(f'Start=({Location(_start)})')
-        self.Settings.append(f'End=({Location(_end)})')
-        self.Settings.append(f'Middle=({Location(_middle)})')
-        self.Settings.append('bHideSplineMarkers=False')
-        self.Settings.append('bAllowSplineControl=True')
-        self.Settings.append('OldScale=(X=1.000000,Y=1.000000,Z=1.000000)')
-        self.Settings.append(f'OldLocation=({Location(_start)})')
+        self.ActorSettings.append(f'Start=({Location(_start)})')
+        self.ActorSettings.append(f'End=({Location(_end)})')
+        self.ActorSettings.append(f'Middle=({Location(_middle)})')
+        self.ActorSettings.append('bHideSplineMarkers=False')
+        self.ActorSettings.append('bAllowSplineControl=True')
+        self.ActorSettings.append('OldScale=(X=1.000000,Y=1.000000,Z=1.000000)')
+        self.ActorSettings.append(f'OldLocation=({Location(_start)})')
 
 
 # -----------------------------------------------------------------------------
@@ -371,13 +367,11 @@ class BlockingVolume(Brush):
                  _phys_material:str=None):
         super().__init__(_polylist, _location, _rotation, 
                          'BlockingVolume', 
-                         'Engine.Default__BlockingVolume',
-                         'CSG_Active')
+                         'Engine.Default__BlockingVolume')
         
         if _phys_material:
-            self.Settings.append(f'PhysMaterialOverride=PhysicalMaterial\'{_phys_material}\'')
+            self.ObjectSettings.append(f'PhysMaterialOverride=PhysicalMaterial\'{_phys_material}\'')
         
-
 
 # -----------------------------------------------------------------------------
 # Lights

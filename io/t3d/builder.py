@@ -1,6 +1,7 @@
-from bpy.types import Object, Context
+import bpy
 import bmesh
-from mathutils import Vector
+from   bpy.types import Object, Context, Collection
+from   mathutils import Vector
 
 from .scene import (
     ActorType, 
@@ -10,20 +11,40 @@ from .scene import (
     PlayerStart, 
     StaticMesh, 
     Brush, 
-    Ladder, 
+    LadderVolume, 
     BlockingVolume,
     DirectionalLight,
-    Zipline, 
-    Swing)
+    Zipline)
 
-from ... import b3d_utils
+from ...                 import b3d_utils
 from ...map_editor.props import get_actor_prop
 
 
 # -----------------------------------------------------------------------------
 class T3DBuilderOptions:
+
     selected_objects : bool
     scale : int
+
+
+# -----------------------------------------------------------------------------
+class CollectionPaths:
+
+    def __init__(self, _root:Collection):
+        self.paths = {} # Dictionary of (object name, collection path)
+        self.build_hierarchy(_root)
+
+
+    def __getitem__(self, key:str):
+        return self.paths[key]
+
+
+    def build_hierarchy(self, _collection:Collection, _path=''):
+        for obj in _collection.objects:
+            self.paths[obj.name] = _path
+
+        for child in _collection.children:
+            self.build_hierarchy(child, _path + child.name + '.')
 
 
 # -----------------------------------------------------------------------------
@@ -31,27 +52,38 @@ class T3DBuilderOptions:
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 class Builder:
-    def __init__(self, _options:T3DBuilderOptions) -> None:
+
+    def __init__(self, _options:T3DBuilderOptions, _collection_paths:CollectionPaths):
         self.mirror = Vector((1, -1, 1))
         self.scale = _options.scale
+        self.collection_paths = _collection_paths
+
 
     # Transform to left-handed coordinate system
     def get_location_rotation(self, _obj:Object) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
         rot = b3d_utils.get_rotation_mirrored_x_axis(_obj)
         location = _obj.matrix_world.translation * self.scale * self.mirror
         rotation = (rot.x, rot.y, rot.z)
+
         return location, rotation
 
 
-    def create_polygons(self, _obj:Object) -> list[Polygon]:
+    def create_polygons(self, _obj:Object, _apply_transforms=False) -> list[Polygon]:
         bm = bmesh.new()
         bm.from_mesh(_obj.data)
 
         polylist : list[Polygon] = []
+
         for f in bm.faces:
             verts = []
+
             for v in reversed(f.verts):
-                verts.append(v.co * _obj.scale * self.scale * self.mirror)
+                if _apply_transforms:
+                    world_co = _obj.matrix_world @ v.co
+                    verts.append(world_co * self.scale * self.mirror)
+                else:
+                    verts.append(v.co * _obj.scale * self.scale * self.mirror)
+
             v0 = f.verts[0].co
             v1 = f.verts[1].co
             
@@ -62,7 +94,9 @@ class Builder:
 
             p = Polygon(verts[0], n, u, v, verts)
             polylist.append(p)
+
         bm.free()
+
         return polylist
 
 
@@ -72,6 +106,7 @@ class Builder:
 
 # -----------------------------------------------------------------------------
 class PlayerStartBuilder(Builder):
+
     def build(self, _obj:Object) -> Actor | None:
         player_start = get_actor_prop(_obj).player_start
 
@@ -80,9 +115,10 @@ class PlayerStartBuilder(Builder):
 
 # -----------------------------------------------------------------------------
 class CheckpointBuilder(Builder):
+
     def build(self, _obj:Object) -> Actor | None:
         location, _ = self.get_location_rotation(_obj)
-        checkpoint = get_actor_prop(_obj).checkpoint
+        checkpoint = get_actor_prop(_obj).get_checkpoint()
 
         return Checkpoint(location, 
                           checkpoint.track_index,
@@ -97,21 +133,27 @@ class CheckpointBuilder(Builder):
 
 # -----------------------------------------------------------------------------
 class StaticMeshBuilder(Builder):
+
     def build(self, _obj:Object) -> Actor | None:
-        static_mesh = get_actor_prop(_obj).static_mesh
+        static_mesh = get_actor_prop(_obj).get_static_mesh()
         location, rotation = self.get_location_rotation(_obj)
 
         if static_mesh.use_prefab:
-            return StaticMesh(location, rotation, _obj.scale, static_mesh.get_prefab_path())
+            name = static_mesh.prefab.name
+            path = self.collection_paths[name]
+            return StaticMesh(location, rotation, _obj.scale, path + name)
         
         else:
-            return StaticMesh(location, rotation, _obj.scale, static_mesh.get_path())
+            name = _obj.name
+            path = self.collection_paths[name]
+            return StaticMesh(location, rotation, _obj.scale, path + name)
 
 
 # -----------------------------------------------------------------------------
 class ZiplineBuilder(Builder):
+
     def build(self, _obj:Object) -> Actor | None:
-        curve = get_actor_prop(_obj).zipline.curve
+        curve = get_actor_prop(_obj).get_zipline().curve
         
         t = Vector((*(self.scale * self.mirror), 1.0)) 
         
@@ -132,70 +174,105 @@ class ZiplineBuilder(Builder):
 
 # -----------------------------------------------------------------------------
 class SpringBoardBuilder(Builder):
+
     def build(self, _obj:Object) -> Actor | None:
-        springboard = get_actor_prop(_obj).springboard
+        springboard = get_actor_prop(_obj).get_springboard()
 
         location, rotation = self.get_location_rotation(_obj)
 
-        return StaticMesh(location, rotation, (1, 1, 1), 'P_Gameplay.SpringBoard.SpringBoardHigh_ColMesh', None, springboard.is_hidden_game)
-   
+        return StaticMesh(location, rotation, (1, 1, 1), 
+                          'P_Gameplay.SpringBoard.SpringBoardHigh_ColMesh', 
+                          None, 
+                          springboard.is_hidden_game)
+
 
 # -----------------------------------------------------------------------------
-class VolumeBuilder(Builder):
-    def get_arguments(self, _obj:Object) -> tuple[list[Polygon], tuple[float, float, float], tuple[float, float, float]]:
-        """returns polylist, location, rotation"""
+class BrushBuilder(Builder):
+
+    def build(self, _obj:Object) -> Actor | None:
+        polylist = self.create_polygons(_obj, True)
+
+        material = get_actor_prop(_obj).get_brush().material
+
+        for poly in polylist:
+            name = material.name
+            poly.Texture = self.collection_paths[name] + name
+
+        return Brush(polylist, (0, 0, 0), (0, 0, 0), _csg_oper='CSG_Add')
+
+
+# -----------------------------------------------------------------------------
+class LadderVolumeBuilder(Builder):
+
+    def build(self, _obj:Object) -> Actor | None:
         polylist = self.create_polygons(_obj)
         location, rotation = self.get_location_rotation(_obj)
 
-        return polylist, location, rotation
+        ladder = get_actor_prop(_obj).get_ladder()
+
+        return LadderVolume(polylist, location, rotation, ladder.is_pipe)
 
 
 # -----------------------------------------------------------------------------
-class BrushBuilder(VolumeBuilder):
+class SwingVolumeBuilder(Builder):
+
     def build(self, _obj:Object) -> Actor | None:
-        polylist, location, rotation = self.get_arguments(_obj)
+        polylist = self.create_polygons(_obj)
+        location, rotation = self.get_location_rotation(_obj)
 
-        material = get_actor_prop(_obj).brush.get_material_path()
-
-        for poly in polylist:
-            poly.Texture = material
-
-        return Brush(polylist, location, rotation)
+        return Brush(polylist, location, rotation, 
+                     'TdSwingVolume',
+                     'TdGame.Default__TdSwingVolume')
 
 
 # -----------------------------------------------------------------------------
-class LadderBuilder(VolumeBuilder):
+class BlockingVolumeBuilder(Builder):
+
     def build(self, _obj:Object) -> Actor | None:
-        arguments = self.get_arguments(_obj)
-        ladder = get_actor_prop(_obj).ladder
+        polylist = self.create_polygons(_obj)
+        location, rotation = self.get_location_rotation(_obj)
 
-        return Ladder(*arguments, ladder.is_pipe)
+        blocking_volume = get_actor_prop(_obj).get_blocking_volume()
 
+        name = blocking_volume.phys_material.name
+        path = self.collection_paths[name] + name
 
-# -----------------------------------------------------------------------------
-class SwingBuilder(VolumeBuilder):
-    def build(self, _obj:Object) -> Actor | None:
-        arguments = self.get_arguments(_obj)
-
-        return Swing(*arguments)
-
-
-# -----------------------------------------------------------------------------
-class BlockingVolumeBuilder(VolumeBuilder):
-    def build(self, _obj:Object) -> Actor | None:
-        arguments = self.get_arguments(_obj)
-        blocking_volume = get_actor_prop(_obj).blocking_volume
-
-        phys_material = blocking_volume.get_phys_material_path()
-
-        return BlockingVolume(*arguments, phys_material)
+        return BlockingVolume(polylist, location, rotation, path)
     
 
 # -----------------------------------------------------------------------------
+class TriggerVolumeBuilder(Builder):
+    
+    def build(self, _obj:Object) -> Actor | None:
+        polylist = self.create_polygons(_obj)
+        location, rotation = self.get_location_rotation(_obj)
+
+        return Brush(polylist, location, rotation, 
+                     'TdTriggerVolume',
+                     'TdGame.Default__TdTriggerVolume')
+    
+
+# -----------------------------------------------------------------------------
+class KillVolumeBuilder(Builder):
+    
+    def build(self, _obj:Object) -> Actor | None:
+        polylist = self.create_polygons(_obj)
+        location, rotation = self.get_location_rotation(_obj)
+
+        return Brush(polylist, location, rotation, 
+                     'TdKillVolume',
+                     'TdGame.Default__TdKillVolume')
+    
+
+
+
+# -----------------------------------------------------------------------------
 class DirectionalLightBuilder(Builder):
+
     def build(self, _obj:Object) -> Actor | None:
         location, rot = self.get_location_rotation(_obj)
-        # TODO: Fix export rotation
+        # TODO: The conversion method for rotation doesn't work for lights
+        # Lights probably use quaternions instead of Euler's
         rotation = (rot[0], rot[1] - 90, rot[2])
         light = _obj.data
 
@@ -207,13 +284,29 @@ class DirectionalLightBuilder(Builder):
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 class T3DBuilder():
-    def build_actor(self, _obj:Object, _options:T3DBuilderOptions) -> Actor | None:
+
+    def build(self, _context:Context, _options:T3DBuilderOptions) -> list[Actor]:
+        scene = []
+        objects = _context.scene.objects
+        collection_paths = CollectionPaths(bpy.data.collections['GenericBrowser'])
+
+        if _options.selected_objects:
+            objects = _context.selected_objects
+
+        for obj in objects:
+            if(actor := self.build_actor(obj, _options, collection_paths)):
+                scene.append(actor)
+
+        return scene
+    
+
+    def build_actor(self, _obj:Object, _options:T3DBuilderOptions, _collection_paths:CollectionPaths) -> Actor | None:
         b3d_utils.set_object_mode(_obj, 'OBJECT')
         
         if _obj.type == 'LIGHT':
             match _obj.data.type:
                 case 'SUN':
-                    return DirectionalLightBuilder(_options).build(_obj)
+                    return DirectionalLightBuilder(_options, _collection_paths).build(_obj)
 
         me_actor = get_actor_prop(_obj)
 
@@ -221,36 +314,27 @@ class T3DBuilder():
 
         match(me_actor.type):
             case ActorType.PLAYER_START:
-                return PlayerStartBuilder(_options).build(_obj)
+                return PlayerStartBuilder(_options, _collection_paths).build(_obj)
             case ActorType.CHECKPOINT:
-                return CheckpointBuilder(_options).build(_obj)
+                return CheckpointBuilder(_options, _collection_paths).build(_obj)
             case ActorType.STATIC_MESH:
-                return StaticMeshBuilder(_options).build(_obj)
+                return StaticMeshBuilder(_options, _collection_paths).build(_obj)
             case ActorType.ZIPLINE:
-                return ZiplineBuilder(_options).build(_obj)
+                return ZiplineBuilder(_options, _collection_paths).build(_obj)
             case ActorType.SPRINGBOARD:
-                return SpringBoardBuilder(_options).build(_obj)
+                return SpringBoardBuilder(_options, _collection_paths).build(_obj)
             case ActorType.BRUSH:
-                return BrushBuilder(_options).build(_obj)
-            case ActorType.LADDER:
-                return LadderBuilder(_options).build(_obj)
-            case ActorType.SWING:
-                return SwingBuilder(_options).build(_obj)
+                return BrushBuilder(_options, _collection_paths).build(_obj)
+            case ActorType.LADDER_VOLUME:
+                return LadderVolumeBuilder(_options, _collection_paths).build(_obj)
+            case ActorType.SWING_VOLUME:
+                return SwingVolumeBuilder(_options, _collection_paths).build(_obj)
             case ActorType.BLOCKING_VOLUME:
-                return BlockingVolumeBuilder(_options).build(_obj)
+                return BlockingVolumeBuilder(_options, _collection_paths).build(_obj)
+            case ActorType.TRIGGER_VOLUME:
+                return TriggerVolumeBuilder(_options, _collection_paths).build(_obj)
+            case ActorType.KILL_VOLUME:
+                return KillVolumeBuilder(_options, _collection_paths).build(_obj)
         
         return None
-
-
-    def build(self, _context:Context, _options:T3DBuilderOptions) -> list[Actor]:
-        scene = []
-        objects = _context.scene.objects
-
-        if _options.selected_objects:
-            objects = _context.selected_objects
-
-        for obj in objects:
-            if(actor := self.build_actor(obj, _options)):
-                scene.append(actor)
-
-        return scene
+    

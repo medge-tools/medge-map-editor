@@ -17,14 +17,16 @@ class MET_PT_MapEditorMainPanel(MapEditorMainPanel, Panel):
     bl_idname = 'MET_PT_MapEditorMainPanel'
     bl_label = 'Map Editor'
     
+
     def draw(self, _context:Context):
         pass
 
 
 # -----------------------------------------------------------------------------
-class MET_PT_Actor(MapEditorMainPanel, Panel):
+class MET_PT_ActiveActor(MapEditorMainPanel, Panel):
     bl_parent_id = MET_PT_MapEditorMainPanel.bl_idname
-    bl_label = 'Active Actor'
+    bl_label = 'Selected'
+
 
     def draw(self, _context:Context):
         obj = _context.active_object
@@ -40,9 +42,9 @@ class MET_PT_Actor(MapEditorMainPanel, Panel):
         me_actor.draw(layout)
 
 # -----------------------------------------------------------------------------
-class MET_PT_Volume(MapEditorMainPanel, Panel):
+class MET_PT_Actors(MapEditorMainPanel, Panel):
     bl_parent_id = MET_PT_MapEditorMainPanel.bl_idname
-    bl_label = 'Scene'
+    bl_label = 'Actors'
 
 
     def create_row(self, _layout:UILayout):
@@ -75,11 +77,13 @@ class MET_PT_Volume(MapEditorMainPanel, Panel):
         
         col = layout.column(align=True)
 
-        self.row_actor(col, (ActorType.BRUSH, ActorType.PLAYER_START), ('Brush', 'PlayerStart'))
-        self.row_actor(col, (ActorType.LADDER, ActorType.SWING), ('Ladder', 'Swing'))
-        self.row_actor(col, (ActorType.SPRINGBOARD, ActorType.STATIC_MESH), ('SpringBoard', 'StaticMesh'))
-        self.row_actor(col, (ActorType.ZIPLINE, ActorType.CHECKPOINT), ('Zipline', 'Checkpoint'))
-        row = self.row_actor(col, (ActorType.BLOCKING_VOLUME,), ('BlockingVolume',))
+        self.row_actor(col, (ActorType.BRUSH, ActorType.PLAYER_START),         ('Brush', 'PlayerStart'))
+        self.row_actor(col, (ActorType.LADDER_VOLUME, ActorType.SWING_VOLUME), ('Ladder', 'Swing'))
+        self.row_actor(col, (ActorType.SPRINGBOARD, ActorType.STATIC_MESH),    ('SpringBoard', 'StaticMesh'))
+        self.row_actor(col, (ActorType.ZIPLINE, ActorType.BLOCKING_VOLUME),    ('Zipline', 'BlockingVolume'))
+        self.row_actor(col, (ActorType.TRIGGER_VOLUME, ActorType.KILL_VOLUME), ('TriggerVolume', 'KillVolume'))
+
+        row = self.row_actor(col, (ActorType.CHECKPOINT, ), ('Checkpoint', ))
         row.operator(MET_OT_AddSkydome.bl_idname, text='Skydome')
         
         col.separator()

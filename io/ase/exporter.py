@@ -79,11 +79,11 @@ class MET_OT_ASE_Export(Operator, ExportHelper):
 
             # Convert to mesh
             if obj.type == 'CURVE':
-                new_obj = b3d_utils.duplicate_object(obj, False, 'ASE Export')
+                new_obj = b3d_utils.duplicate_object(obj, False)
                 b3d_utils.convert_to_mesh_in_place(new_obj)
 
             else:
-                new_obj = b3d_utils.duplicate_object(obj, False, 'ASE Export')
+                new_obj = b3d_utils.duplicate_object(obj, False)
             
             # This will translate the object origin to the world origin
             new_obj.parent = None
