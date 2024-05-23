@@ -2,14 +2,14 @@
 Place this file in the root folder
 """
 
-import  bpy
-import  bmesh
-import  gpu
-from    gpu_extras.batch import batch_for_shader
-from    bpy.types   import Object, Mesh, Operator, Context, UIList, UILayout, PropertyGroup, ID, Collection, Curve, Spline
-from    bpy.props   import *
-from    bmesh.types import BMesh
-from    mathutils   import Vector, Matrix, Euler
+import bpy
+import bmesh
+import gpu
+from   gpu_extras.batch import batch_for_shader
+from   bpy.types        import Object, Mesh, Operator, Context, UIList, UILayout, PropertyGroup, ID, Collection, Curve, Spline
+from   bpy.props        import *
+from   bmesh.types      import BMesh
+from   mathutils        import Vector, Matrix, Euler
 
 import math
 import numpy as np
@@ -26,7 +26,7 @@ def new_collection(_name:str, _parent:str|Collection=None):
     If the _collection == None, then the object will be linked to the root collection
     """
     coll = bpy.context.blend_data.collections.get(_name)
-    
+
     if coll: return coll
     
     coll = bpy.data.collections.new(_name)
@@ -65,15 +65,16 @@ def new_object(_name:str, _data:ID, _collection:str|Collection=None, _parent:Obj
 
 
 # -----------------------------------------------------------------------------
-def link_object_to_scene(_obj:Object, _collection:str|Collection=None):
+def link_object_to_scene(_obj:Object, _collection:str|Collection=None, _clear_users_collection=True):
     """
     Collection will be automatically created if it doesn't exists
     If the _collection == None, then the object will be linked to the root collection
     """
     if not _obj: return
 
-    for uc in _obj.users_collection:
-        uc.objects.unlink(_obj)
+    if _clear_users_collection:
+        for uc in _obj.users_collection:
+            uc.objects.unlink(_obj)
 
     if _collection:
         coll = _collection
@@ -1003,6 +1004,7 @@ from . import auto_load
 registered_modules = []
 registered_classes = []
 
+
 # -----------------------------------------------------------------------------
 def register_subpackage(_subpackage=''):
     """
@@ -1029,7 +1031,7 @@ def register_subpackage(_subpackage=''):
     
     package = Path(__file__).parent
     path = package 
-    
+
     if _subpackage:
         path /= _subpackage
 
