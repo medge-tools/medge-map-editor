@@ -1,12 +1,12 @@
 bl_info = {
-    "name" : "MEdge Tools: Map Editor",
-    "author" : "Tariq Bakhtali (didibib)",
-    "description" : "",
-    "blender" : (3, 4, 0),
-    "version" : (1, 0, 0),
-    "location" : "",
-    "warning" : "",
-    "category" : "MEdge Tools"
+    'name' : 'Map Editor',
+    'author' : 'Tariq Bakhtali (didibib)',
+    'description' : '',
+    'blender' : (3, 4, 0),
+    'version' : (1, 0, 0),
+    'location' : '',
+    'warning' : '',
+    'category' : 'MEdge Tools'
 }
 
 

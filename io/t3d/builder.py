@@ -30,13 +30,19 @@ class T3DBuilderOptions:
 # -----------------------------------------------------------------------------
 class CollectionPaths:
 
-    def __init__(self, _root:Collection):
+    def __init__(self, _collection_root:str):
         self.paths = {} # Dictionary of (object name, collection path)
-        self.build_hierarchy(_root)
+        root = bpy.data.collections.get(_collection_root)
+        
+        if root:
+            self.build_hierarchy(root)
+        else:
+            print(f'Collection does not exists: {_collection_root}')
 
 
     def __getitem__(self, key:str):
-        return self.paths[key]
+        if key in self.paths: return self.paths[key]
+        return ''
 
 
     def build_hierarchy(self, _collection:Collection, _path=''):
@@ -69,8 +75,11 @@ class Builder:
 
 
     def create_polygons(self, _obj:Object, _apply_transforms=False) -> list[Polygon]:
+        depsgraph = bpy.context.evaluated_depsgraph_get()
+        obj_eval = _obj.evaluated_get(depsgraph)
+
         bm = bmesh.new()
-        bm.from_mesh(_obj.data)
+        bm.from_mesh(obj_eval.data)
 
         polylist : list[Polygon] = []
 
@@ -79,10 +88,10 @@ class Builder:
 
             for v in reversed(f.verts):
                 if _apply_transforms:
-                    world_co = _obj.matrix_world @ v.co
+                    world_co = obj_eval.matrix_world @ v.co
                     verts.append(world_co * self.scale * self.mirror)
                 else:
-                    verts.append(v.co * _obj.scale * self.scale * self.mirror)
+                    verts.append(v.co * obj_eval.scale * self.scale * self.mirror)
 
             v0 = f.verts[0].co
             v1 = f.verts[1].co
@@ -139,9 +148,12 @@ class StaticMeshBuilder(Builder):
         location, rotation = self.get_location_rotation(_obj)
 
         if static_mesh.use_prefab:
-            name = static_mesh.prefab.name
-            path = self.collection_paths[name]
-            return StaticMesh(location, rotation, _obj.scale, path + name)
+            if (prefab := static_mesh.prefab):
+                name = prefab.name
+                path = self.collection_paths[name]
+                return StaticMesh(location, rotation, _obj.scale, path + name)
+            else:
+                print(f'Object {_obj.name} uses prefab, but has not prefab selected')
         
         else:
             name = _obj.name
@@ -194,9 +206,10 @@ class BrushBuilder(Builder):
 
         material = get_actor_prop(_obj).get_brush().material
 
-        for poly in polylist:
-            name = material.name
-            poly.Texture = self.collection_paths[name] + name
+        if material:
+            for poly in polylist:
+                name = material.name
+                poly.Texture = self.collection_paths[name] + name
 
         return Brush(polylist, (0, 0, 0), (0, 0, 0), _csg_oper='CSG_Add')
 
@@ -288,7 +301,7 @@ class T3DBuilder():
     def build(self, _context:Context, _options:T3DBuilderOptions) -> list[Actor]:
         scene = []
         objects = _context.scene.objects
-        collection_paths = CollectionPaths(bpy.data.collections['GenericBrowser'])
+        collection_paths = CollectionPaths('GenericBrowser')
 
         if _options.selected_objects:
             objects = _context.selected_objects

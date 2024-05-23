@@ -20,8 +20,11 @@ from typing import Callable
 # Collection
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-def new_collection(_name:str, _parent:str=None):
-    """If the _parent == None, then the object will be linked to the root collection"""
+def new_collection(_name:str, _parent:str|Collection=None):
+    """
+    Collection will be automatically created if it doesn't exists
+    If the _collection == None, then the object will be linked to the root collection
+    """
     coll = bpy.context.blend_data.collections.get(_name)
     
     if coll: return coll
@@ -29,11 +32,14 @@ def new_collection(_name:str, _parent:str=None):
     coll = bpy.data.collections.new(_name)
 
     if _parent:
-        p_coll:Collection = bpy.context.blend_data.collections.get(_parent)
+        p_coll = _parent
 
-        if not p_coll:
-            p_coll = bpy.data.collections.new(_parent)
-            bpy.context.scene.collection.children.link(p_coll)
+        if isinstance(_parent, str):
+            p_coll:Collection = bpy.context.blend_data.collections.get(_parent)
+
+            if not p_coll:
+                p_coll = bpy.data.collections.new(_parent)
+                bpy.context.scene.collection.children.link(p_coll)
 
         p_coll.children.link(coll)
 
@@ -47,7 +53,7 @@ def new_collection(_name:str, _parent:str=None):
 # Object
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-def new_object(_name:str, _data:ID, _collection:str=None, _parent:Object=None):
+def new_object(_name:str, _data:ID, _collection:str|Collection=None, _parent:Object=None):
     obj = bpy.data.objects.new(_name, _data)
     link_object_to_scene(obj, _collection)
 
@@ -59,15 +65,22 @@ def new_object(_name:str, _data:ID, _collection:str=None, _parent:Object=None):
 
 
 # -----------------------------------------------------------------------------
-def link_object_to_scene(_obj:Object, _collection:str=None):
-    """If the _collection == None, then the object will be linked to the root collection"""
+def link_object_to_scene(_obj:Object, _collection:str|Collection=None):
+    """
+    Collection will be automatically created if it doesn't exists
+    If the _collection == None, then the object will be linked to the root collection
+    """
     if not _obj: return
 
     for uc in _obj.users_collection:
         uc.objects.unlink(_obj)
 
     if _collection:
-        coll = new_collection(_collection)
+        coll = _collection
+
+        if isinstance(_collection, str):
+            coll = new_collection(_collection)
+
         coll.objects.link(_obj)
 
     else:
@@ -1016,14 +1029,15 @@ def register_subpackage(_subpackage=''):
     
     package = Path(__file__).parent
     path = package 
+    
     if _subpackage:
         path /= _subpackage
 
     modules = get_all_submodules(path, package.name)
     classes = auto_load.get_ordered_classes_to_register(modules)
 
-    auto_load.modules = modules
-    auto_load.ordered_classes = classes
+    auto_load.modules = modules.copy()
+    auto_load.ordered_classes = classes.copy()
 
     auto_load.register()
 
@@ -1033,16 +1047,13 @@ def register_subpackage(_subpackage=''):
     registered_modules.extend(modules)
     registered_classes.extend(classes)
 
-    auto_load.modules = registered_modules.copy()
-    auto_load.ordered_classes = registered_classes.copy()
-
 
 # -----------------------------------------------------------------------------
 def unregister_subpackages():
     global registered_modules
     global registered_classes
 
-    auto_load.modules = registered_modules
-    auto_load.ordered_classes = registered_classes
+    auto_load.modules = registered_modules.copy()
+    auto_load.ordered_classes = registered_classes.copy()
 
     auto_load.unregister()
