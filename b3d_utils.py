@@ -6,7 +6,7 @@ import  bpy
 import  bmesh
 import  gpu
 from    gpu_extras.batch import batch_for_shader
-from    bpy.types   import Object, Mesh, Operator, Context, UIList, UILayout, PropertyGroup, ID
+from    bpy.types   import Object, Mesh, Operator, Context, UIList, UILayout, PropertyGroup, ID, Collection, Curve, Spline
 from    bpy.props   import *
 from    bmesh.types import BMesh
 from    mathutils   import Vector, Matrix, Euler
@@ -17,30 +17,59 @@ from typing import Callable
 
 
 # -----------------------------------------------------------------------------
+# Collection
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+def new_collection(_name:str, _parent:str=None):
+    """If the _parent == None, then the object will be linked to the root collection"""
+    coll = bpy.context.blend_data.collections.get(_name)
+    
+    if coll: return coll
+    
+    coll = bpy.data.collections.new(_name)
+
+    if _parent:
+        p_coll:Collection = bpy.context.blend_data.collections.get(_parent)
+
+        if not p_coll:
+            p_coll = bpy.data.collections.new(_parent)
+            bpy.context.scene.collection.children.link(p_coll)
+
+        p_coll.children.link(coll)
+
+    else:
+        bpy.context.scene.collection.children.link(coll)
+
+    return coll
+
+
+# -----------------------------------------------------------------------------
 # Object
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 def new_object(_name:str, _data:ID, _collection:str=None, _parent:Object=None):
     obj = bpy.data.objects.new(_name, _data)
     link_object_to_scene(obj, _collection)
+
     if(_parent): obj.parent = _parent
+
     set_active_object(obj)
+
     return obj
 
 
 # -----------------------------------------------------------------------------
 def link_object_to_scene(_obj:Object, _collection:str=None):
-    if _obj == None: return
-    """If the collection == None, then the object will be linked to the root collection"""
+    """If the _collection == None, then the object will be linked to the root collection"""
+    if not _obj: return
+
     for uc in _obj.users_collection:
         uc.objects.unlink(_obj)
 
-    if _collection is not None:
-        c = bpy.context.blend_data.collections.get(_collection)
-        if c == None:
-            c = bpy.data.collections.new(_collection)
-            bpy.context.scene.collection.children.link(c)
-        c.objects.link(_obj)
+    if _collection:
+        coll = new_collection(_collection)
+        coll.objects.link(_obj)
+
     else:
         bpy.context.scene.collection.objects.link(_obj)
 
@@ -53,15 +82,19 @@ def remove_object(_obj:Object):
 # -----------------------------------------------------------------------------
 def duplicate_object(_obj:Object, _instance=False, _collection=None) -> Object:
     if _instance:
-        instance = new_object(_obj.name + '_INST', _obj.data, _collection)
+        instance = new_object('INST_' + _obj.name, _obj.data, _collection)
         set_active_object(instance)
+
         return instance
+    
     else:
         copy = _obj.copy()
         copy.data = _obj.data.copy()
-        copy.name = _obj.name + '_COPY'
+        copy.name = 'COPY_' + _obj.name
+
         link_object_to_scene(copy, _collection)
         set_active_object(copy)
+
         return copy
 
 
@@ -76,6 +109,7 @@ def join_objects(_objects:list[Object]) -> Object:
     bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='MEDIAN')
 
     return bpy.context.object
+
 
 # -----------------------------------------------------------------------------
 def set_object_mode(_obj:Object, _mode:str):
@@ -104,7 +138,6 @@ def select_all_objects():
 def deselect_all_objects():
     for obj in bpy.context.selected_objects:
         obj.select_set(False)
-
 
 
 # -----------------------------------------------------------------------------
@@ -152,6 +185,7 @@ def set_parent(_child:Object, _parent:Object, _keep_world_location=True):
 # -----------------------------------------------------------------------------
 # https://blender.stackexchange.com/questions/9200/how-to-make-object-a-a-parent-of-object-b-via-blenders-python-api
 def unparent(_obj:Object, _keep_world_location=True):
+    if not _obj.parent: return
     parented_wm = _obj.matrix_world.copy()
     _obj.parent = None
     if _keep_world_location:
@@ -467,20 +501,15 @@ def create_cylinder(_radius=2,
 
 # -----------------------------------------------------------------------------
 #https://blender.stackexchange.com/questions/127603/how-to-specify-nurbs-path-vertices-in-python
-def create_curve(_num_points=3, 
-                 _step=1, 
-                 _dir:tuple[float, float, float]=(1, 0, 0)) -> bpy.types.Curve:
+def create_curve(_num_points=3) -> tuple[Curve, Spline]:
     curve = bpy.data.curves.new('CURVE', 'CURVE')
-    path = curve.splines.new('NURBS')
     curve.dimensions = '3D'
+
+    path = curve.splines.new('NURBS')
     path.points.add(_num_points - 1)
-
-    for k in range(_num_points):
-        p = Vector(_dir) * _step * k
-        path.points[k].co = (*p, 1)
-
     path.use_endpoint_u = True
-    return curve
+    
+    return curve, path
 
 
 # -----------------------------------------------------------------------------
@@ -829,8 +858,11 @@ class GenericList:
         return item
 
 
-    def remove_selected(self):
-        self.items.remove(self.selected_item_idx)
+    def remove(self, _index:int=None):
+        if not _index:
+            _index = self.selected_item_idx
+
+        self.items.remove(_index)
         self.selected_item_idx = min(max(0, self.selected_item_idx - 1), len(self.items) - 1)
 
     
@@ -885,7 +917,7 @@ class B3D_OT_GenericList_Remove(Operator):
 
     def execute(self, _context:Context):
         global active_generic_list
-        active_generic_list.remove_selected()
+        active_generic_list.remove()
         return {'FINISHED'}
 
 
@@ -1000,6 +1032,9 @@ def register_subpackage(_subpackage=''):
 
     registered_modules.extend(modules)
     registered_classes.extend(classes)
+
+    auto_load.modules = registered_modules.copy()
+    auto_load.ordered_classes = registered_classes.copy()
 
 
 # -----------------------------------------------------------------------------

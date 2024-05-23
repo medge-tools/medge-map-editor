@@ -48,7 +48,8 @@ def new_actor(_actor_type:ActorType, _object_type='MESH', _data=None):
         obj = b3d_utils.new_object('Actor', b3d_utils.create_cube())
 
     elif _object_type == 'CURVE':
-        obj = b3d_utils.new_object('Actor', b3d_utils.create_curve())
+        curve, _ = b3d_utils.create_curve()
+        obj = b3d_utils.new_object('Actor', curve)
             
     obj.location = bpy.context.scene.cursor.location
 
@@ -102,7 +103,13 @@ def create_springboard() -> Object:
 
 # -----------------------------------------------------------------------------
 def create_zipline() -> Object:
-    zipline = new_actor(ActorType.STATIC_MESH, 'CURVE', b3d_utils.create_curve(3, 8, (1, 0, 0)))
+    curve, path = b3d_utils.create_curve(3)
+
+    for k, p in enumerate(path.points):
+        v = Vector((8, 0, 0)) * k
+        p.co = (*v, 1)
+
+    zipline = new_actor(ActorType.STATIC_MESH, 'CURVE', curve)
 
     zipline.name = 'S_Zipline'
     zipline.data.bevel_depth = 0.04
