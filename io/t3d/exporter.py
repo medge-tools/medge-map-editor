@@ -1,6 +1,6 @@
 import bpy
 from bpy.props           import StringProperty, EnumProperty, BoolProperty
-from bpy.types           import Operator, Context
+from bpy.types           import Operator, Context, TOPBAR_MT_file_export
 from bpy_extras.io_utils import ExportHelper
 from mathutils           import Vector
 
@@ -35,6 +35,12 @@ class MET_OT_T3D_Export(Operator, ExportHelper):
         name='Units')
 
 
+    selected_collection: BoolProperty(
+        name='Selected Collection',
+        default=False
+    )
+
+
     selected_objects: BoolProperty(
         name='Selected Objects',
         default=False)
@@ -50,6 +56,7 @@ class MET_OT_T3D_Export(Operator, ExportHelper):
         layout.use_property_decorate = False
         layout.use_property_split = True
         layout.prop(self, 'units')
+        layout.prop(self, 'selected_collection')
         layout.prop(self, 'selected_objects')
         layout.prop(self, 'export_static_meshes')
 
@@ -67,10 +74,14 @@ class MET_OT_T3D_Export(Operator, ExportHelper):
         # Export T3D
         try:
             options = T3DBuilderOptions()
+            options.selected_collection = self.selected_collection
             options.selected_objects = self.selected_objects
+
             us = self.units_scale[self.units]
             options.scale = Vector((us, us, us))
+
             scene = T3DBuilder().build(_context, options)
+
             self.write(self.filepath, scene)
             self.report({'INFO'}, 'T3D exported successful')
             
@@ -94,9 +105,9 @@ def menu_func_export(self, _context:Context):
 
 # -----------------------------------------------------------------------------
 def register():
-    bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
+    TOPBAR_MT_file_export.append(menu_func_export)
 
 
 # -----------------------------------------------------------------------------
 def unregister():
-    bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
+    TOPBAR_MT_file_export.remove(menu_func_export)

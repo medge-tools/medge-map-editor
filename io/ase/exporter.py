@@ -1,6 +1,6 @@
 import bpy
 from bpy.props           import StringProperty, BoolProperty, EnumProperty
-from bpy.types           import Operator, Context, Object
+from bpy.types           import Operator, Context, Object, TOPBAR_MT_file_export
 from bpy_extras.io_utils import ExportHelper
 from mathutils           import Matrix
 
@@ -156,9 +156,9 @@ def menu_func_export(self, _context:Context):
 
 # -----------------------------------------------------------------------------
 def register():
-    bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
+    TOPBAR_MT_file_export.append(menu_func_export)
 
 
 # -----------------------------------------------------------------------------
 def unregister():
-    bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
+    TOPBAR_MT_file_export.remove(menu_func_export)

@@ -10,20 +10,28 @@ EULER_TO_URU = 65536 / math.tau
 
 
 # -----------------------------------------------------------------------------
-# RHS needs to be exactly the same as LHS it to work in Blender
-class ActorType(str, Enum):
-    NONE            = 'NONE'
-    PLAYER_START    = 'PLAYER_START'
-    CHECKPOINT      = 'CHECKPOINT'
-    BRUSH           = 'BRUSH'
-    LADDER_VOLUME   = 'LADDER_VOLUME'
-    SWING_VOLUME    = 'SWING_VOLUME'
-    STATIC_MESH     = 'STATIC_MESH'
-    ZIPLINE         = 'ZIPLINE'
-    SPRINGBOARD     = 'SPRINGBOARD'
-    BLOCKING_VOLUME = 'BLOCKING_VOLUME'
-    TRIGGER_VOLUME  = 'TRIGGER_VOLUME'
-    KILL_VOLUME     = 'KILL_VOLUME'
+class ActorType(int, Enum):
+    def __new__(cls, 
+            _value: int, 
+            _label: str):
+        obj = int.__new__(cls, _value)
+        obj._value_ = _value
+        obj.label = _label
+    
+        return obj
+
+    NONE            = 0, 'None'
+    PLAYER_START    = 1, 'PlayerStart'
+    CHECKPOINT      = 2, 'Checkpoint'
+    BRUSH           = 3, 'Brush'
+    LADDER_VOLUME   = 4, 'Ladder'
+    SWING_VOLUME    = 5, 'Swing'
+    STATIC_MESH     = 6, 'StaticMesh'
+    ZIPLINE         = 7, 'Zipline'
+    SPRINGBOARD     = 8, 'Springboard'
+    BLOCKING_VOLUME = 9, 'BlockingVolume'
+    TRIGGER_VOLUME  = 10, 'TriggerVolume'
+    KILL_VOLUME     = 11, 'KillVolume'
 
 
 # -----------------------------------------------------------------------------

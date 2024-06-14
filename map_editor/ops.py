@@ -1,5 +1,7 @@
 from bpy.types import Operator, Context
-from .props    import ActorTypeProperty, new_actor, create_skydome, cleanup_widgets
+
+from ..io.t3d.scene import ActorType
+from .props         import ActorTypeProperty, new_actor, create_skydome, cleanup_widgets
 
 
 # -----------------------------------------------------------------------------
@@ -12,7 +14,8 @@ class MET_OT_AddActor(Operator):
 
 
     def execute(self, _context:Context):
-        new_actor(self.type)
+        new_actor(ActorType[self.type])
+        
         return {'FINISHED'}
 
 
@@ -25,6 +28,7 @@ class MET_OT_AddSkydome(Operator):
 
     def execute(self, _context:Context):
         create_skydome()
+
         return {'FINISHED'}
 
 
@@ -37,4 +41,5 @@ class MET_OT_CleanupWidgets(Operator):
 
     def execute(self, _context:Context):
         cleanup_widgets()
+
         return {'FINISHED'}

@@ -7,21 +7,10 @@ from mathutils        import Vector, Matrix
 
 import math
 from typing    import Callable
-from mathutils import Matrix, Vector, geometry
+from mathutils import Matrix, Vector
 
 from ..             import b3d_utils
 from ..io.t3d.scene import ActorType, TrackIndex
-
-# ACTOR_DEFAULT_STATIC_MESH = {
-#     ActorType.PLAYERSTART   : ('MyPackage', ''),
-#     ActorType.BRUSH         : ('MyPackage', ''),
-#     ActorType.LADDER        : ('P_Generic.Ladders', 'S_LadderSystem_01b'),
-#     ActorType.PIPE          : ('P_Pipes.PipeSystem_03', 'S_PipeSystem_03h'),
-#     ActorType.SWING         : ('P_RunnerObjects.SwingPole_01', 'S_SwingPole_01c'),
-#     ActorType.ZIPLINE       : ('MyPackage', ''),
-#     ActorType.SPRINGBOARD   : ('P_Gameplay.SpringBoard', 'SpringBoardHigh_layoutMesh'),
-#     ActorType.STATICMESH    : ('MyPackage', ''),
-# }
 
 COLLECTION_WIDGETS = 'Widgets'
 MY_PACKAGE         = 'MyPackage'
@@ -42,19 +31,17 @@ def cleanup_widgets():
 # -----------------------------------------------------------------------------
 def new_actor(_actor_type:ActorType, _object_type='MESH', _data=None):
     if _data:
-        obj = b3d_utils.new_object('Actor', _data)
+        obj = b3d_utils.new_object(_data, _actor_type.label)
 
     elif _object_type == 'MESH':
-        obj = b3d_utils.new_object('Actor', b3d_utils.create_cube())
+        obj = b3d_utils.new_object(b3d_utils.create_cube(), _actor_type.label)
 
     elif _object_type == 'CURVE':
         curve, _ = b3d_utils.create_curve()
-        obj = b3d_utils.new_object('Actor', curve)
+        obj = b3d_utils.new_object(curve, _actor_type.label)
             
-    obj.location = bpy.context.scene.cursor.location
-
     me_actor = get_actor_prop(obj)
-    me_actor.type = _actor_type
+    me_actor.type = _actor_type.name
 
     return obj
 
@@ -71,13 +58,14 @@ def update_prefix(_obj:Object, _new_prefix:str, _prev_prefix:str=''):
 
 # -----------------------------------------------------------------------------
 def create_player_start() -> Mesh:
-    scale = (.5, .5, -1)
+    scale = (.5, .5, 1)
 
+    # The origin will be at the bottom, but when we export we add +1 to the z value
     verts = [
-        Vector((-0.5        * scale[0], -1 * scale[1], 0           )),
-        Vector((-0.5        * scale[0],  1 * scale[1], 0           )),
-        Vector(( 0.866025   * scale[0],  0           , 0           )),
-        Vector((-0.5        * scale[0],  0           , 1 * scale[2])),
+        Vector((-0.5        * scale[0], -1 * scale[1], 1 * scale[2])),
+        Vector((-0.5        * scale[0],  1 * scale[1], 1 * scale[2])),
+        Vector(( 0.866025   * scale[0],  0           , 1 * scale[2])),
+        Vector((-0.5        * scale[0],  0           , 0 * scale[2])),
     ]
 
     faces = [
@@ -120,7 +108,7 @@ def create_zipline() -> Object:
 
 # -----------------------------------------------------------------------------
 def create_checkpoint() -> Object:
-    return b3d_utils.create_cylinder(make_faces=False)
+    return b3d_utils.create_cylinder(_make_faces=False)
 
 
 # -----------------------------------------------------------------------------
@@ -153,7 +141,7 @@ def create_skydome():
 # -----------------------------------------------------------------------------
 def ActorTypeProperty(_callback:Callable=None):
     def get_actor_type_items(self, _context:Context):
-        return [(data.name, data.value, '') for data in ActorType]
+        return [(data.name, data.label, '') for data in ActorType]
 
     return EnumProperty(name='Type', 
                         items=get_actor_type_items, 
@@ -187,8 +175,8 @@ class MaterialProperty:
         _layout.prop(self, 'material')
 
 
-    material_package: PointerProperty(type=bpy.types.Collection, name='Package')
-    material:         PointerProperty(type=Object, name='Material', poll=__filter_on_package)
+    material_package: PointerProperty(type=bpy.types.Collection, name='Material Package')
+    material:         PointerProperty(type=Object, name='Name', poll=__filter_on_package)
 
 
 # -----------------------------------------------------------------------------
@@ -204,8 +192,8 @@ class PhysMaterialProperty:
         _layout.prop(self, 'phys_material')
 
 
-    phys_material_package: PointerProperty(type=bpy.types.Collection, name='Package')
-    phys_material:         PointerProperty(type=Object, name='PhysMaterial', poll=__filter_on_package)
+    phys_material_package: PointerProperty(type=bpy.types.Collection, name='Phys Material Package')
+    phys_material:         PointerProperty(type=Object, name='Name', poll=__filter_on_package)
 
 
 # -----------------------------------------------------------------------------
@@ -388,7 +376,7 @@ class MET_ACTOR_PG_LadderVolume(Actor, PropertyGroup):
         self.id_data.display_type = 'WIRE'
 
         arrow = self.widgets.add()
-        arrow.obj = b3d_utils.new_object('ArrowWidget', b3d_utils.create_arrow(scale), COLLECTION_WIDGETS, self.id_data)
+        arrow.obj = b3d_utils.new_object(b3d_utils.create_arrow(scale), 'ArrowWidget', COLLECTION_WIDGETS, self.id_data, False)
         b3d_utils.set_object_selectable(arrow.obj, False)
 
         self.id_data.name = 'LadderVolume'
@@ -436,7 +424,7 @@ class MET_ACTOR_PG_SwingVolume(Actor, PropertyGroup):
 
         for arrow in self.widgets:
             s = scale * .3
-            arrow.obj = b3d_utils.new_object('ArrowWidget', b3d_utils.create_arrow(s), COLLECTION_WIDGETS, self.id_data)
+            arrow.obj = b3d_utils.new_object(b3d_utils.create_arrow(s), 'ArrowWidget', COLLECTION_WIDGETS, self.id_data, False)
             b3d_utils.set_object_selectable(arrow.obj, False)
 
         b3d_utils.transform(arrow0.obj.data, [m_t07_x , m_r90_x])
@@ -444,6 +432,7 @@ class MET_ACTOR_PG_SwingVolume(Actor, PropertyGroup):
         b3d_utils.transform(arrow2.obj.data, [m_t07_x , m_r90_x, m_mir_x]) 
 
         self.id_data.name = 'Swing'
+
 
     def draw(self, _layout: UILayout):
         b3d_utils.draw_box('Do not apply any transforms, these values are needed for export', _layout)     
@@ -593,7 +582,7 @@ class MET_ACTOR_PG_Zipline(Actor, PropertyGroup):
     auto_bb:  BoolProperty(name='Automatic Bounding Box', default=True)
     align_z: BoolProperty(name='Align Z', update=__force_update_bb_bounds)
 
-    bb_resolution: IntProperty(name='Resolution', min=0, update=__force_update_bb_bounds)
+    bb_resolution: IntProperty(name='Resolution', default=5, min=0, update=__force_update_bb_bounds)
     bb_scale:      FloatVectorProperty(name='Scale', subtype='TRANSLATION', default=(1, 1, 1), update=__force_update_bb_bounds)
     bb_offset:     FloatVectorProperty(name='Offset', subtype='TRANSLATION', update=__force_update_bb_bounds)
 
@@ -681,25 +670,25 @@ class MET_OBJECT_PG_Actor(PropertyGroup):
         col.separator()
 
         match(self.type):
-            case ActorType.PLAYER_START:
+            case ActorType.PLAYER_START.name:
                 self.player_start.draw(col)
-            case ActorType.CHECKPOINT:
+            case ActorType.CHECKPOINT.name:
                 self.checkpoint.draw(col)
-            case ActorType.STATIC_MESH:
+            case ActorType.STATIC_MESH.name:
                 self.static_mesh.draw(col)
-            case ActorType.BRUSH:
+            case ActorType.BRUSH.name:
                 self.brush.draw(col)
-            case ActorType.LADDER_VOLUME:
+            case ActorType.LADDER_VOLUME.name:
                 self.ladder.draw(col)
-            case ActorType.SWING_VOLUME:
+            case ActorType.SWING_VOLUME.name:
                 self.swing.draw(col)
-            case ActorType.ZIPLINE:
+            case ActorType.ZIPLINE.name:
                 self.zipline.draw(col)
-            case ActorType.SPRINGBOARD:
+            case ActorType.SPRINGBOARD.name:
                 self.springboard.draw(col)
-            case ActorType.BLOCKING_VOLUME:
+            case ActorType.BLOCKING_VOLUME.name:
                 self.blocking_volume.draw(col)
-            case ActorType.TRIGGER_VOLUME | ActorType.KILL_VOLUME:
+            case ActorType.TRIGGER_VOLUME.name | ActorType.KILL_VOLUME.name:
                 self.trigger_volume.draw(col)
 
     
@@ -707,25 +696,25 @@ class MET_OBJECT_PG_Actor(PropertyGroup):
         b3d_utils.set_active_object(self.id_data)
 
         match(self.type):
-            case ActorType.PLAYER_START:
+            case ActorType.PLAYER_START.name:
                 self.player_start.init()
-            case ActorType.CHECKPOINT:
+            case ActorType.CHECKPOINT.name:
                 self.checkpoint.init()
-            case ActorType.STATIC_MESH:
+            case ActorType.STATIC_MESH.name:
                 self.static_mesh.init()
-            case ActorType.BRUSH:
+            case ActorType.BRUSH.name:
                 self.brush.init()
-            case ActorType.LADDER_VOLUME:
+            case ActorType.LADDER_VOLUME.name:
                 self.ladder.init()
-            case ActorType.SWING_VOLUME:
+            case ActorType.SWING_VOLUME.name:
                 self.swing.init()
-            case ActorType.ZIPLINE:
+            case ActorType.ZIPLINE.name:
                 self.zipline.init()
-            case ActorType.SPRINGBOARD:
+            case ActorType.SPRINGBOARD.name:
                 self.springboard.init()
-            case ActorType.BLOCKING_VOLUME:
+            case ActorType.BLOCKING_VOLUME.name:
                 self.blocking_volume.init()
-            case ActorType.TRIGGER_VOLUME | ActorType.KILL_VOLUME:
+            case ActorType.TRIGGER_VOLUME.name | ActorType.KILL_VOLUME.name:
                 self.trigger_volume.init()
 
     
@@ -809,4 +798,4 @@ def register():
 # -----------------------------------------------------------------------------
 def unregister():
     b3d_utils.remove_callback(depsgraph_update_post, on_depsgraph_update_post)
-    del Object.medge_actor
+    if hasattr(Object, 'medge_actor'): del Object.medge_actor

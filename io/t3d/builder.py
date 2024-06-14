@@ -3,6 +3,8 @@ import bmesh
 from   bpy.types import Object, Context, Collection
 from   mathutils import Vector
 
+from dataclasses import dataclass
+
 from .scene import (
     ActorType, 
     Actor, 
@@ -21,10 +23,12 @@ from ...map_editor.props import get_actor_prop
 
 
 # -----------------------------------------------------------------------------
+@dataclass
 class T3DBuilderOptions:
 
-    selected_objects : bool
-    scale : int
+    selected_collection : bool
+    selected_objects    : bool
+    scale               : int
 
 
 # -----------------------------------------------------------------------------
@@ -118,8 +122,11 @@ class PlayerStartBuilder(Builder):
 
     def build(self, _obj:Object) -> Actor | None:
         player_start = get_actor_prop(_obj).player_start
+        location, rotation = self.get_location_rotation(_obj)
+        
+        location.z += 1
 
-        return PlayerStart(*self.get_location_rotation(_obj), player_start.is_time_trial, player_start.track_index)
+        return PlayerStart(location, rotation, player_start.is_time_trial, player_start.track_index)
 
 
 # -----------------------------------------------------------------------------
@@ -303,7 +310,10 @@ class T3DBuilder():
         objects = _context.scene.objects
         collection_paths = CollectionPaths('GenericBrowser')
 
-        if _options.selected_objects:
+        if _options.selected_collection:
+            objects = _context.collection.all_objects
+
+        elif _options.selected_objects:
             objects = _context.selected_objects
 
         for obj in objects:
