@@ -333,30 +333,30 @@ class T3DBuilder():
 
         me_actor = get_actor_prop(_obj)
 
-        if me_actor.type == ActorType.NONE: return None
+        if me_actor.type == ActorType.NONE.name: return None
 
         match(me_actor.type):
-            case ActorType.PLAYER_START:
+            case ActorType.PLAYER_START.name:
                 return PlayerStartBuilder(_options, _collection_paths).build(_obj)
-            case ActorType.CHECKPOINT:
+            case ActorType.CHECKPOINT.name:
                 return CheckpointBuilder(_options, _collection_paths).build(_obj)
-            case ActorType.STATIC_MESH:
+            case ActorType.STATIC_MESH.name:
                 return StaticMeshBuilder(_options, _collection_paths).build(_obj)
-            case ActorType.ZIPLINE:
+            case ActorType.ZIPLINE.name:
                 return ZiplineBuilder(_options, _collection_paths).build(_obj)
-            case ActorType.SPRINGBOARD:
+            case ActorType.SPRINGBOARD.name:
                 return SpringBoardBuilder(_options, _collection_paths).build(_obj)
-            case ActorType.BRUSH:
+            case ActorType.BRUSH.name:
                 return BrushBuilder(_options, _collection_paths).build(_obj)
-            case ActorType.LADDER_VOLUME:
+            case ActorType.LADDER_VOLUME.name:
                 return LadderVolumeBuilder(_options, _collection_paths).build(_obj)
-            case ActorType.SWING_VOLUME:
+            case ActorType.SWING_VOLUME.name:
                 return SwingVolumeBuilder(_options, _collection_paths).build(_obj)
-            case ActorType.BLOCKING_VOLUME:
+            case ActorType.BLOCKING_VOLUME.name:
                 return BlockingVolumeBuilder(_options, _collection_paths).build(_obj)
-            case ActorType.TRIGGER_VOLUME:
+            case ActorType.TRIGGER_VOLUME.name:
                 return TriggerVolumeBuilder(_options, _collection_paths).build(_obj)
-            case ActorType.KILL_VOLUME:
+            case ActorType.KILL_VOLUME.name:
                 return KillVolumeBuilder(_options, _collection_paths).build(_obj)
         
         return None

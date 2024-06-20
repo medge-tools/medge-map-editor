@@ -118,7 +118,7 @@ def create_skydome():
     obj.name = 'Skydome'
 
     actor = get_actor_prop(obj)
-    actor.type = ActorType.STATIC_MESH
+    actor.type = ActorType.STATIC_MESH.name
     
     sm = actor.static_mesh
     sm.use_prefab = True
@@ -240,7 +240,7 @@ class MET_ACTOR_PG_PlayerStart(Actor, PropertyGroup):
 
 
     def draw(self, _layout:UILayout):
-        b3d_utils.draw_box('Do not apply any transforms, these values are needed for export', _layout) 
+        b3d_utils.draw_box(_layout, 'Do not apply any transforms, these values are needed for export') 
         _layout.separator()
 
         _layout.prop(self, 'is_time_trial')
@@ -302,7 +302,7 @@ class MET_ACTOR_PG_StaticMesh(Actor, MaterialProperty, PropertyGroup):
 
     
     def draw(self, _layout:UILayout):
-        b3d_utils.draw_box('Do not apply any transforms, these values are needed for export', _layout)   
+        b3d_utils.draw_box(_layout, 'Do not apply any transforms, these values are needed for export')   
         _layout.separator()
 
         _layout.prop(self, 'use_prefab')
@@ -383,7 +383,7 @@ class MET_ACTOR_PG_LadderVolume(Actor, PropertyGroup):
 
 
     def draw(self, _layout:UILayout):
-        b3d_utils.draw_box('Do not apply any transforms, these values are needed for export', _layout) 
+        b3d_utils.draw_box(_layout, 'Do not apply any transforms, these values are needed for export') 
         _layout.separator()
         _layout.prop(self, 'is_pipe')
 
@@ -435,7 +435,7 @@ class MET_ACTOR_PG_SwingVolume(Actor, PropertyGroup):
 
 
     def draw(self, _layout: UILayout):
-        b3d_utils.draw_box('Do not apply any transforms, these values are needed for export', _layout)     
+        b3d_utils.draw_box(_layout, 'Do not apply any transforms, these values are needed for export')     
 
 
 # -----------------------------------------------------------------------------
@@ -577,6 +577,7 @@ class MET_ACTOR_PG_Zipline(Actor, PropertyGroup):
 
     def __force_update_bb_bounds(self, _context:Context):
         self.update_bounds(True)
+        
 
     curve:    PointerProperty(type=Object, name='Curve')
     auto_bb:  BoolProperty(name='Automatic Bounding Box', default=True)
@@ -638,7 +639,7 @@ class MET_ACTOR_PG_SpringBoard(Actor, PropertyGroup):
 
 
     def draw(self, _layout: UILayout):
-        b3d_utils.draw_box('Do not apply any transforms, these values are needed for export', _layout) 
+        b3d_utils.draw_box(_layout, 'Do not apply any transforms, these values are needed for export') 
         _layout.separator()
         _layout.prop(self, 'is_hidden_game')
 
@@ -782,7 +783,7 @@ def on_depsgraph_update_post(_scene:Scene, _depsgraph:Depsgraph):
                 actor.user_editable = False
 
         match(actor.type):
-            case ActorType.ZIPLINE:
+            case ActorType.ZIPLINE.name:
                 actor.zipline.update_bounds()
 
 
@@ -792,10 +793,12 @@ def on_depsgraph_update_post(_scene:Scene, _depsgraph:Depsgraph):
 # -----------------------------------------------------------------------------
 def register():
     Object.medge_actor = bpy.props.PointerProperty(type=MET_OBJECT_PG_Actor)
+    
     b3d_utils.add_callback(depsgraph_update_post, on_depsgraph_update_post)
 
 
 # -----------------------------------------------------------------------------
 def unregister():
     b3d_utils.remove_callback(depsgraph_update_post, on_depsgraph_update_post)
+    
     if hasattr(Object, 'medge_actor'): del Object.medge_actor

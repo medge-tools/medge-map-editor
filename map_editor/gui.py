@@ -49,17 +49,11 @@ class MET_PT_Actors(MapEditorMainPanel, Panel):
     bl_label = 'Actors'
 
 
-    def create_row(self, _layout:UILayout):
-        row = _layout.row(align=True)
-        row.scale_y = 2
-
-        return row
-
-
     def row_actor(self, 
                   _layout:UILayout, 
                   _types:tuple[ActorType, ...]):
-        row = self.create_row(_layout)
+        row = _layout.row(align=True)
+        row.scale_y = 2
 
         for type in _types:
             if type == ActorType.NONE:
@@ -79,10 +73,10 @@ class MET_PT_Actors(MapEditorMainPanel, Panel):
         
         col = layout.column(align=True)
 
-        self.row_actor(col, (ActorType.BRUSH, ActorType.PLAYER_START))
-        self.row_actor(col, (ActorType.LADDER_VOLUME, ActorType.SWING_VOLUME))
-        self.row_actor(col, (ActorType.SPRINGBOARD, ActorType.STATIC_MESH))
-        self.row_actor(col, (ActorType.ZIPLINE, ActorType.BLOCKING_VOLUME))
+        self.row_actor(col, (ActorType.BRUSH,          ActorType.PLAYER_START))
+        self.row_actor(col, (ActorType.LADDER_VOLUME,  ActorType.SWING_VOLUME))
+        self.row_actor(col, (ActorType.SPRINGBOARD,    ActorType.STATIC_MESH))
+        self.row_actor(col, (ActorType.ZIPLINE,        ActorType.BLOCKING_VOLUME))
         self.row_actor(col, (ActorType.TRIGGER_VOLUME, ActorType.KILL_VOLUME))
 
         row = self.row_actor(col, (ActorType.CHECKPOINT, ))
@@ -94,7 +88,7 @@ class MET_PT_Actors(MapEditorMainPanel, Panel):
 
 
 # -----------------------------------------------------------------------------
-class VIEW3D_MT_PIE_medge_actors(Menu):
+class VIEW3D_MT_PIE_MEdgeActors(Menu):
     bl_label = 'MEdge Actors'
 
     

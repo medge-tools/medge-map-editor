@@ -74,7 +74,7 @@ class MET_OT_ASE_Export(Operator, ExportHelper):
 
             me_actor = get_actor_prop(obj)
 
-            if me_actor.type != ActorType.STATIC_MESH: continue
+            if me_actor.type != ActorType.STATIC_MESH.name: continue
             if me_actor.static_mesh.use_prefab: continue
 
             # Convert to mesh

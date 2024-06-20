@@ -56,8 +56,13 @@ class MET_OT_T3D_Export(Operator, ExportHelper):
         layout.use_property_decorate = False
         layout.use_property_split = True
         layout.prop(self, 'units')
-        layout.prop(self, 'selected_collection')
-        layout.prop(self, 'selected_objects')
+        
+        if not self.selected_objects:
+            layout.prop(self, 'selected_collection')
+        
+        if not self.selected_collection:
+            layout.prop(self, 'selected_objects')
+        
         layout.prop(self, 'export_static_meshes')
 
 
@@ -73,12 +78,12 @@ class MET_OT_T3D_Export(Operator, ExportHelper):
     def execute(self, _context: Context):
         # Export T3D
         try:
-            options = T3DBuilderOptions()
-            options.selected_collection = self.selected_collection
-            options.selected_objects = self.selected_objects
-
             us = self.units_scale[self.units]
-            options.scale = Vector((us, us, us))
+            scale = Vector((us, us, us))
+
+            options = T3DBuilderOptions(self.selected_collection,
+                                        self.selected_objects,
+                                        scale)
 
             scene = T3DBuilder().build(_context, options)
 
