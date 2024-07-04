@@ -114,7 +114,7 @@ class Builder:
 
 
     def build(self, _obj:Object) -> Actor | None:
-        pass
+        raise Exception('Method should be overridden')
 
 
 # -----------------------------------------------------------------------------
@@ -254,8 +254,11 @@ class BlockingVolumeBuilder(Builder):
 
         blocking_volume = get_actor_prop(_obj).get_blocking_volume()
 
-        name = blocking_volume.phys_material.name
-        path = self.collection_paths[name] + name
+        path = ''
+
+        if (material := blocking_volume.phys_material):
+            name = material.name
+            path = self.collection_paths[name] + name
 
         return BlockingVolume(polylist, location, rotation, path)
     
@@ -282,8 +285,6 @@ class KillVolumeBuilder(Builder):
         return Brush(polylist, location, rotation, 
                      'TdKillVolume',
                      'TdGame.Default__TdKillVolume')
-    
-
 
 
 # -----------------------------------------------------------------------------

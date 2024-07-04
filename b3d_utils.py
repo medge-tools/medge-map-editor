@@ -135,15 +135,19 @@ def link_object_to_scene(_obj:Object, _collection:Collection|str=None, _clear_us
             coll = new_collection(_collection)
 
         coll.objects.link(_obj)
+
     else:
-        bpy.context.scene.collection.objects.link(_obj)
+        if (coll := bpy.context.collection):
+            coll.objects.link(_obj)
+            
+        else:
+            bpy.context.scene.collection.objects.link(_obj)
 
 
 # -----------------------------------------------------------------------------
 def new_object(_data:ID, _name:str, _collection:Collection|str=None, _parent:Object=None, _set_active=True):
     obj = bpy.data.objects.new(_name, _data)
     obj.location = bpy.context.scene.cursor.location
-    bpy.context.view_layer.update()
 
     link_object_to_scene(obj, _collection)
 
@@ -572,11 +576,11 @@ def create_cylinder(_radius=2,
 
 # -----------------------------------------------------------------------------
 #https://blender.stackexchange.com/questions/127603/how-to-specify-nurbs-path-vertices-in-python
-def create_curve(_num_points=3) -> tuple[Curve, Spline]:
+def create_curve(_type='NURBS', _num_points=3) -> tuple[Curve, Spline]:
     curve = bpy.data.curves.new('CURVE', 'CURVE')
     curve.dimensions = '3D'
 
-    path = curve.splines.new('NURBS')
+    path = curve.splines.new(_type)
     path.points.add(_num_points - 1)
 
     for k, p in enumerate(path.points):
@@ -795,7 +799,7 @@ def multiline_text(_context:Context, _layout:UILayout, _text:str):
 # Generic List
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-class B3D_UL_GenericList(UIList):
+class B3D_UL_generic_list_draw(UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_property, index, flt_flag):
         if self.layout_type == 'GRID':
             layout.alignment = 'CENTER'
@@ -847,7 +851,7 @@ generic_lists:dict[str, GenericList] = dict()
 
 
 # -----------------------------------------------------------------------------
-class B3D_OT_GenericList_Add(Operator):
+class B3D_OT_generic_list_add(Operator):
     bl_idname = 'b3d_utils.generic_list_add'
     bl_label = 'Add'
 
@@ -861,7 +865,7 @@ class B3D_OT_GenericList_Add(Operator):
 
 
 # -----------------------------------------------------------------------------
-class B3D_OT_GenericList_Remove(Operator):
+class B3D_OT_generic_list_remove(Operator):
     bl_idname = 'b3d_utils.generic_list_remove'
     bl_label = 'Remove'
     bl_options = {'UNDO'}
@@ -876,7 +880,7 @@ class B3D_OT_GenericList_Remove(Operator):
 
 
 # -----------------------------------------------------------------------------
-class B3D_OT_GenericList_Clear(Operator):
+class B3D_OT_generic_list_clear(Operator):
     bl_idname = 'b3d_utils.generic_list_clear'
     bl_label = 'Clear'
     bl_options = {'UNDO'}
@@ -891,13 +895,13 @@ class B3D_OT_GenericList_Clear(Operator):
 
 
 # -----------------------------------------------------------------------------
-class B3D_OT_GenericList_Move(Operator):
+class B3D_OT_generic_list_move(Operator):
     bl_idname = 'b3d_utils.generic_list_move'
     bl_label = 'Move'
     
     list_name: StringProperty()
 
-    direction : EnumProperty(items=(
+    direction: EnumProperty(items=(
         ('UP', 'Up', ''),
         ('DOWN', 'Down', ''),
     ))
@@ -915,109 +919,34 @@ class B3D_OT_GenericList_Move(Operator):
 # -----------------------------------------------------------------------------
 def draw_generic_list_ops(_layout:UILayout, _list_name:str, _filter:set):
     if 'ADD' in _filter:
-        _layout.operator(B3D_OT_GenericList_Add.bl_idname, icon='ADD', text='').list_name = _list_name
+        _layout.operator(B3D_OT_generic_list_add.bl_idname, icon='ADD', text='').list_name = _list_name
 
     if 'REMOVE' in _filter:
-        _layout.operator(B3D_OT_GenericList_Remove.bl_idname, icon='REMOVE', text='').list_name = _list_name
+        _layout.operator(B3D_OT_generic_list_remove.bl_idname, icon='REMOVE', text='').list_name = _list_name
     
     if 'MOVE' in _filter:
-        op = _layout.operator(B3D_OT_GenericList_Move.bl_idname, icon='TRIA_UP', text='')
+        op = _layout.operator(B3D_OT_generic_list_move.bl_idname, icon='TRIA_UP', text='')
         op.list_name = _list_name
         op.direction = 'UP'
         
-        op = _layout.operator(B3D_OT_GenericList_Move.bl_idname, icon='TRIA_DOWN', text='')
+        op = _layout.operator(B3D_OT_generic_list_move.bl_idname, icon='TRIA_DOWN', text='')
         op.list_name = _list_name
         op.direction = 'DOWN'
 
     if 'CLEAR' in _filter:
-        _layout.operator(B3D_OT_GenericList_Clear.bl_idname, icon='TRASH', text='')
+        _layout.operator(B3D_OT_generic_list_clear.bl_idname, icon='TRASH', text='')
 
 
 # -----------------------------------------------------------------------------
 def draw_generic_list(_layout:UILayout, _list:GenericList, _name:str, _rows=4, _generic_ops_filter:set={'ADD', 'REMOVE', 'MOVE', 'CLEAR'}):
     row = _layout.row(align=True)
-    row.template_list('B3D_UL_GenericList', _name, _list, 'items', _list, 'selected_item_idx', rows=_rows)
+    row.template_list('B3D_UL_generic_list_draw', _name, _list, 'items', _list, 'selected_item_idx', rows=_rows)
 
     global generic_lists
     generic_lists[_name] = _list
 
     col = row.column(align=True)
     draw_generic_list_ops(col, _name, _generic_ops_filter)
-
-
-# -----------------------------------------------------------------------------
-# Registration
-# -----------------------------------------------------------------------------
-# -----------------------------------------------------------------------------
-""" 
-Registration depends on auto_load.py:
-https://gist.github.com/JacquesLucke/11fecc6ea86ef36ea72f76ca547e795b 
-
-Use these functions when the order of registration is important
-"""
-import importlib
-from . import auto_load
-
-
-# -----------------------------------------------------------------------------
-registered_modules = []
-registered_classes = []
-
-
-# -----------------------------------------------------------------------------
-def register_subpackage(_subpackage=''):
-    """
-    Use empty string '' to register root 
-    """
-    def get_all_submodules(directory, package_name):
-        return list(iter_submodules(directory, package_name))
-
-    def iter_submodules(path, package_name):
-        for name in sorted(iter_submodule_names(path)):
-            name = '.' + name
-            if _subpackage:
-                name = '.' + _subpackage + name
-            yield importlib.import_module(name, package_name)
-
-    def iter_submodule_names(path):
-        import pkgutil
-        for _, module_name, is_package in pkgutil.iter_modules([str(path)]):
-            if not is_package:
-                yield module_name
-
-
-    from pathlib import Path
-    
-    package = Path(__file__).parent
-    path = package 
-
-    if _subpackage:
-        path /= _subpackage
-
-    modules = get_all_submodules(path, package.name)
-    classes = auto_load.get_ordered_classes_to_register(modules)
-
-    auto_load.modules = modules.copy()
-    auto_load.ordered_classes = classes.copy()
-
-    auto_load.register()
-
-    global registered_modules
-    global registered_classes
-
-    registered_modules.extend(modules)
-    registered_classes.extend(classes)
-
-
-# -----------------------------------------------------------------------------
-def unregister_subpackages():
-    global registered_modules
-    global registered_classes
-
-    auto_load.modules = registered_modules.copy()
-    auto_load.ordered_classes = registered_classes.copy()
-
-    auto_load.unregister()
 
 
 # -----------------------------------------------------------------------------

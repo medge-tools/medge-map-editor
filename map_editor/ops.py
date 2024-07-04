@@ -1,7 +1,7 @@
 from bpy.types import Operator, Context
 
 from ..io.t3d.scene import ActorType
-from .props         import ActorTypeProperty, new_actor, create_skydome, cleanup_widgets
+from .props         import ActorTypeEnumProperty, new_actor, create_skydome, cleanup_widgets
 
 
 # -----------------------------------------------------------------------------
@@ -10,7 +10,7 @@ class MET_OT_AddActor(Operator):
     bl_label   = 'Add Actor'
     bl_options = {'UNDO'}
 
-    type: ActorTypeProperty()
+    type: ActorTypeEnumProperty()
 
 
     def execute(self, _context:Context):

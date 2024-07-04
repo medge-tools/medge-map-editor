@@ -13,7 +13,6 @@ from ..             import b3d_utils
 from ..io.t3d.scene import ActorType, TrackIndex
 
 COLLECTION_WIDGETS = 'Widgets'
-MY_PACKAGE         = 'MyPackage'
 
 
 # -----------------------------------------------------------------------------
@@ -139,7 +138,7 @@ def create_skydome():
 # Properties
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-def ActorTypeProperty(_callback:Callable=None):
+def ActorTypeEnumProperty(_callback:Callable=None):
     def get_actor_type_items(self, _context:Context):
         return [(data.name, data.label, '') for data in ActorType]
 
@@ -150,7 +149,7 @@ def ActorTypeProperty(_callback:Callable=None):
 
 
 # -----------------------------------------------------------------------------
-def TrackIndexProperty(_callback:Callable=None):
+def TrackIndexEnumProperty(_callback:Callable=None):
     def get_track_index_items(self, _context:Context):
         return [((data.name, data.value, '')) for data in TrackIndex]
 
@@ -250,7 +249,7 @@ class MET_ACTOR_PG_PlayerStart(Actor, PropertyGroup):
 
 
     is_time_trial: BoolProperty(name='Is Time Trial')
-    track_index:   TrackIndexProperty()
+    track_index:   TrackIndexEnumProperty()
 
 
 # -----------------------------------------------------------------------------
@@ -275,7 +274,7 @@ class MET_ACTOR_PG_Checkpoint(Actor, PropertyGroup):
     def __on_order_index_update(self, _context:Context):
         self.id_data.name = 'TimeTrialCheckpoint_' + self.order_index
 
-    track_index:          TrackIndexProperty()
+    track_index:          TrackIndexEnumProperty()
     order_index:          IntProperty(name='Order Index', update=__on_order_index_update)
     custom_height:        FloatProperty(name='CustomHeight')
     custom_width_scale:   FloatProperty(name='Custom Width Scale')
@@ -294,9 +293,6 @@ class MET_ACTOR_PG_StaticMesh(Actor, MaterialProperty, PropertyGroup):
     def init(self):
         super().init()
 
-        if not self.prefab:
-            b3d_utils.link_object_to_scene(self.id_data, MY_PACKAGE)
-
         if not self.id_data.data: 
             b3d_utils.set_data(self.id_data, b3d_utils.create_cube())
 
@@ -305,42 +301,34 @@ class MET_ACTOR_PG_StaticMesh(Actor, MaterialProperty, PropertyGroup):
         b3d_utils.draw_box(_layout, 'Do not apply any transforms, these values are needed for export')   
         _layout.separator()
 
+        self.draw_material_prop(_layout)
+        
         _layout.prop(self, 'use_prefab')
-
         if self.use_prefab:
             _layout.prop(self, 'prefab')
-        else:
-            _layout.prop(self, 'use_material')
-            if self.use_material:
-                self.draw_material_prop()
     
     
-    def __on_use_prefab_update(self, _context:Context):
+    def __update_name(self, _dummy:Context):
         if self.use_prefab:
-            b3d_utils.link_object_to_scene(self.id_data, None)
-
             self.id_data.name = 'PREFAB_'
 
             if self.prefab:
                 self.id_data.name += self.prefab.name
 
         else:
-            b3d_utils.link_object_to_scene(self.id_data, MY_PACKAGE)
-            update_prefix(self.id_data, 'SM_', 'PREFAB_')
+            self.id_data.name = 'SM_'
 
         
-    def __on_prefab_update(self, _context:Context):
+    def __on_prefab_update(self, _dummy:Context):
         if self.prefab: 
-            b3d_utils.set_data(self.id_data, self.prefab.data)
-            self.id_data.name = 'PREFAB_' + self.prefab.name
-
+            if self.prefab.type == 'MESH': 
+                b3d_utils.set_data(self.id_data, self.prefab.data)
+            self.__update_name(_dummy)
         else:
             b3d_utils.set_data(self.id_data, None)
-            update_prefix(self.id_data, 'SM_', 'PREFAB_')
 
     
-    use_material: BoolProperty(name='Use Material')
-    use_prefab:   BoolProperty(name='Use Prefab', update=__on_use_prefab_update)
+    use_prefab:   BoolProperty(name='Use Prefab', update=__update_name)
     prefab:       PointerProperty(type=Object, name='Prefab', update=__on_prefab_update)
 
 
@@ -352,9 +340,11 @@ class MET_ACTOR_PG_Brush(Actor, MaterialProperty, PropertyGroup):
     
     def init(self):
         super().init()
+        
         if self.id_data.type != 'MESH':
             b3d_utils.set_data(self.id_data, b3d_utils.create_cube())
-        update_prefix(self.id_data, 'Brush_')
+        
+        self.id_data.name = 'Brush'
 
 
     def draw(self, _layout:UILayout):
@@ -459,7 +449,6 @@ class MET_ACTOR_PG_Zipline(Actor, PropertyGroup):
         self.curve.location = (0, 0, 0)
 
         b3d_utils.set_parent(self.curve, self.id_data, False)
-        b3d_utils.link_object_to_scene(self.curve, MY_PACKAGE)
 
         self.id_data.display_type = 'WIRE'
         self.id_data.name = 'Zipline_BoundingBox'
@@ -605,6 +594,7 @@ class MET_ACTOR_PG_BlockingVolume(Actor, PhysMaterialProperty, PropertyGroup):
             b3d_utils.set_data(self.id_data, b3d_utils.create_cube())  
 
         self.id_data.display_type = 'WIRE'
+        self.id_data.name = 'BlockingVolume'
     
 
     def draw(self, _layout: UILayout):
@@ -750,7 +740,7 @@ class MET_OBJECT_PG_Actor(PropertyGroup):
         return self.trigger_volume
     
 
-    type:            ActorTypeProperty(__on_type_update)
+    type:            ActorTypeEnumProperty(__on_type_update)
     user_editable:   BoolProperty(name='PRIVATE', default=True)
 
     player_start:    PointerProperty(type=MET_ACTOR_PG_PlayerStart)

@@ -10,28 +10,27 @@ EULER_TO_URU = 65536 / math.tau
 
 
 # -----------------------------------------------------------------------------
-class ActorType(int, Enum):
-    def __new__(cls, 
-            _value: int, 
-            _label: str):
-        obj = int.__new__(cls, _value)
+class ActorType(str, Enum):
+    def __new__(cls, _value:str):
+        obj = str.__new__(cls, _value)
         obj._value_ = _value
-        obj.label = _label
+        obj.label = _value
     
         return obj
 
-    NONE            = 0, 'None'
-    PLAYER_START    = 1, 'PlayerStart'
-    CHECKPOINT      = 2, 'Checkpoint'
-    BRUSH           = 3, 'Brush'
-    LADDER_VOLUME   = 4, 'Ladder'
-    SWING_VOLUME    = 5, 'Swing'
-    STATIC_MESH     = 6, 'StaticMesh'
-    ZIPLINE         = 7, 'Zipline'
-    SPRINGBOARD     = 8, 'Springboard'
-    BLOCKING_VOLUME = 9, 'BlockingVolume'
-    TRIGGER_VOLUME  = 10, 'TriggerVolume'
-    KILL_VOLUME     = 11, 'KillVolume'
+
+    NONE            = 'None'
+    PLAYER_START    = 'PlayerStart'
+    CHECKPOINT      = 'Checkpoint'
+    BRUSH           = 'Brush'
+    LADDER_VOLUME   = 'Ladder'
+    SWING_VOLUME    = 'Swing'
+    STATIC_MESH     = 'StaticMesh'
+    ZIPLINE         = 'Zipline'
+    SPRINGBOARD     = 'Springboard'
+    BLOCKING_VOLUME = 'BlockingVolume'
+    TRIGGER_VOLUME  = 'TriggerVolume'
+    KILL_VOLUME     = 'KillVolume'
 
 
 # -----------------------------------------------------------------------------
@@ -65,7 +64,7 @@ class TrackIndex(str, Enum):
 
 # -----------------------------------------------------------------------------
 class Point3D(Vector):
-    def __init__(self, _point: tuple[float, float, float]=(0, 0, 0)):
+    def __init__(self, _point=(0, 0, 0)):
         super().__init__() 
         self.x = _point[0]
         self.y = _point[1]
@@ -129,14 +128,14 @@ class Polygon:
             _u:          tuple[float, float, float],
             _v:          tuple[float, float, float],
             _verts:      list[tuple[float, float, float]],
-            _texture:str=None,
+            _texture:    str=None,
             _flags=      3585):
         
-        self.Flags = _flags
-        self.Texture = _texture
+        self.Flags      = _flags
+        self.Texture    = _texture
         self.Link : int = None
-        self.__Origin = Point3D(_origin)
-        self.__Normal = Point3D(_normal)
+        self.__Origin   = Point3D(_origin)
+        self.__Normal   = Point3D(_normal)
         self.__TextureU = Point3D(_u)
         self.__TextureV = Point3D(_v)
         self.__Vertices = [Point3D(x) for x in _verts]
@@ -168,8 +167,8 @@ class Actor:
                  _location=(0, 0, 0),
                  _rotation=(0, 0, 0),
                  _scale   =(1, 1, 1)):
-        self.Location = Location(_location)
-        self.Rotation = Rotation(_rotation)
+        self.Location    = Location(_location)
+        self.Rotation    = Rotation(_rotation)
         self.DrawScale3D = Location(_scale)
 
     def __str__(self) -> str:
@@ -185,7 +184,7 @@ class PlayerStart(Actor):
                  _track_index  =TrackIndex.ETTS_TUTORIAL_A01):
         super().__init__(_location, _rotation)
         self.is_time_trial = _is_time_trial
-        self.TrackIndex = _track_index
+        self.TrackIndex    = _track_index
 
     def __str__(self) -> str:
         if self.is_time_trial: 
@@ -217,15 +216,16 @@ class Checkpoint(Actor):
                  _no_respawn          =False,
                  _enabled             =True,
                  _should_be_based     =True):
+        
         super().__init__(_location, (0, 0, 0))
-        self.TrackIndex = _track_index
-        self.OrderIndex = _order_index
+        self.TrackIndex         = _track_index
+        self.OrderIndex         = _order_index
         self.NoIntermediateTime = _no_intermediate_time
-        self.CustomHeight = _custom_height
-        self.CustomWidthScale = _custom_width_scale
-        self.NoRespawn = _no_respawn
-        self.Enabled = _enabled
-        self.ShouldBeBased = _should_be_based
+        self.CustomHeight       = _custom_height
+        self.CustomWidthScale   = _custom_width_scale
+        self.NoRespawn          = _no_respawn
+        self.Enabled            = _enabled
+        self.ShouldBeBased      = _should_be_based
     
     def __str__(self) -> str:
         return \
@@ -251,7 +251,7 @@ class StaticMesh(Actor):
                  _hidden_game=False):
         super().__init__(_location, _rotation, _scale)
         self.StaticMesh = _static_mesh
-        self.Material = _material
+        self.Material   = _material
         self.HiddenGame = _hidden_game
     
     def __str__(self) -> str:
@@ -278,13 +278,13 @@ class Brush(Actor):
                  _package_name='Engine.Default__Brush',
                  _csg_oper=    'CSG_Active'):
         super().__init__(_location, _rotation)
-        self.Package =   _package_name
-        self.Class =     _class_name
-        self.Archetype = _class_name + '\'' + _package_name + '\''
-        self.CsgOper =   _csg_oper
+        self.Package                   = _package_name
+        self.Class                     = _class_name
+        self.Archetype                 = _class_name + '\'' + _package_name + '\''
+        self.CsgOper                   = _csg_oper
         self.ObjectSettings: list[str] = []
-        self.ActorSettings: list[str] = []
-        self.PolyList: list[Polygon] = _polylist
+        self.ActorSettings: list[str]  = []
+        self.PolyList: list[Polygon]   = _polylist
 
 
     def __str__(self) -> str:

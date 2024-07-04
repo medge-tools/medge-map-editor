@@ -7,15 +7,15 @@ from .props         import get_actor_prop
 
 
 # -----------------------------------------------------------------------------
-class MapEditorMainPanel:
+class MEdgeToolsPanel:
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = 'MEdge Tools'
 
 
 # -----------------------------------------------------------------------------
-class MET_PT_MapEditorMainPanel(MapEditorMainPanel, Panel):
-    bl_idname = 'MET_PT_MapEditorMainPanel'
+class MET_PT_map_editor(MEdgeToolsPanel, Panel):
+    bl_idname = 'MET_PT_map_editor'
     bl_label = 'Map Editor'
     
 
@@ -24,8 +24,8 @@ class MET_PT_MapEditorMainPanel(MapEditorMainPanel, Panel):
 
 
 # -----------------------------------------------------------------------------
-class MET_PT_ActiveActor(MapEditorMainPanel, Panel):
-    bl_parent_id = MET_PT_MapEditorMainPanel.bl_idname
+class MET_PT_selected_actor(MEdgeToolsPanel, Panel):
+    bl_parent_id = MET_PT_map_editor.bl_idname
     bl_label = 'Selected'
 
 
@@ -44,8 +44,8 @@ class MET_PT_ActiveActor(MapEditorMainPanel, Panel):
 
 
 # -----------------------------------------------------------------------------
-class MET_PT_Actors(MapEditorMainPanel, Panel):
-    bl_parent_id = MET_PT_MapEditorMainPanel.bl_idname
+class MET_PT_actors(MEdgeToolsPanel, Panel):
+    bl_parent_id = MET_PT_map_editor.bl_idname
     bl_label = 'Actors'
 
 
@@ -88,7 +88,28 @@ class MET_PT_Actors(MapEditorMainPanel, Panel):
 
 
 # -----------------------------------------------------------------------------
-class VIEW3D_MT_PIE_MEdgeActors(Menu):
+class MET_PT_measurements(MEdgeToolsPanel, Panel):
+    bl_parent_id = MET_PT_map_editor.bl_idname
+    bl_label = 'Measurements'
+
+
+    def draw(self, _context:Context):
+        layout = self.layout
+
+        row  =layout.row()
+        col1 = row.column()
+        col2 = row.column()
+
+        col1.label(text='Player Height')
+        col2.label(text='1.95m')
+        col1.label(text='Max Height')
+        col2.label(text='11m')
+        col1.label(text='Min Crouch')
+        col2.label(text='1.5m')
+
+
+# -----------------------------------------------------------------------------
+class VIEW3D_MT_PIE_medge_actors(Menu):
     bl_label = 'MEdge Actors'
 
     

@@ -7,6 +7,7 @@ from mathutils           import Vector
 from .scene   import Actor, SkyLight
 from .builder import T3DBuilder, T3DBuilderOptions
 
+
 # -----------------------------------------------------------------------------
 class MET_OT_T3D_Export(Operator, ExportHelper):
     '''Export scene to a .t3d file'''
