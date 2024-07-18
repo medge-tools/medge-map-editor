@@ -176,6 +176,92 @@ class Actor:
 
 
 # -----------------------------------------------------------------------------
+class Brush(Actor):
+    def __init__(self, 
+                 _polylist: list[Polygon],
+                 _location: tuple[float, float, float], 
+                 _rotation: tuple[float, float, float],
+                 _class_name=  'Brush',
+                 _package_name='Engine.Default__Brush',
+                 _csg_oper=    'CSG_Active'):
+        super().__init__(_location, _rotation)
+        self.Package                   = _package_name
+        self.Class                     = _class_name
+        self.Archetype                 = _class_name + '\'' + _package_name + '\''
+        self.CsgOper                   = _csg_oper
+        self.ObjectSettings: list[str] = []
+        self.ActorSettings: list[str]  = []
+        self.PolyList: list[Polygon]   = _polylist
+
+
+    def __str__(self) -> str:
+        polylist = ''
+        link = 0
+
+        for poly in self.PolyList:
+            if not poly.Texture:
+                poly.Link = link
+                link += 1
+            polylist += str(poly)
+
+        object_settings = ''
+
+        for s in self.ObjectSettings:
+            object_settings += s + '\n'
+
+
+        actor_settings = ''
+
+        for s in self.ActorSettings:
+            actor_settings += s + '\n'
+
+        return \
+f'Begin Actor Class={self.Class} Name={self.Class}_0 Archetype={self.Archetype}\n\
+\tBegin Object Class=BrushComponent Name=BrushComponent0 Archetype=BrushComponent\'{self.Package}:BrushComponent0\'\n\
+{object_settings}\
+\tEnd Object\n\
+\tBegin Brush Name=Model_0\n\
+\t\tBegin PolyList\n\
+\t\t\t{polylist}\
+\t\tEnd PolyList\n\
+\tEnd Brush\n\
+\tBrush=Model\'Model_0\'\n\
+\tCsgOper={self.CsgOper}\n\
+{actor_settings}\
+\tLocation=({self.Location})\n\
+\tRotation=({self.Rotation})\n\
+End Actor\n'
+
+
+# -----------------------------------------------------------------------------
+class StaticMesh(Actor):
+    def __init__(self, 
+                 _location: tuple[float, float, float], 
+                 _rotation: tuple[float, float, float],
+                 _scale:    tuple[float, float, float],
+                 _static_mesh: str,
+                 _material='',
+                 _hidden_game=False):
+        super().__init__(_location, _rotation, _scale)
+        self.StaticMesh = _static_mesh
+        self.Material   = _material
+        self.HiddenGame = _hidden_game
+    
+    def __str__(self) -> str:
+        return \
+f'Begin Actor Class=StaticMeshActor Name=StaticMeshActor_0 Archetype=StaticMeshActor\'Engine.Default__StaticMeshActor\'\n\
+\tBegin Object Class=StaticMeshComponent Name=StaticMeshComponent0 Archetype=StaticMeshComponent\'Engine.Default__StaticMeshActor:StaticMeshComponent0\'\n\
+\t\tStaticMesh=StaticMesh\'{self.StaticMesh}\'\n\
+\t\tHiddenGame={self.HiddenGame}\n\
+\t\tMaterials(0)=Material\'{self.Material}\'\n\
+\tEnd Object\n\
+\tLocation=({self.Location})\n\
+\tRotation=({self.Rotation})\n\
+\tDrawScale3D=({self.DrawScale3D})\n\
+End Actor\n'
+    
+
+# -----------------------------------------------------------------------------
 class PlayerStart(Actor):
     def __init__(self, 
                  _location     =(0, 0, 0), 
@@ -238,92 +324,6 @@ f'Begin Actor Class=TdTimerCheckpoint Name=TdTimerCheckpoint_0 Archetype=TdTimer
 \tbShouldBeBased={self.ShouldBeBased}\n\
 \tLocation=({self.Location})\n\
 End Actor\n'
-    
-
-# -----------------------------------------------------------------------------
-class StaticMesh(Actor):
-    def __init__(self, 
-                 _location: tuple[float, float, float], 
-                 _rotation: tuple[float, float, float],
-                 _scale:    tuple[float, float, float],
-                 _static_mesh: str,
-                 _material='',
-                 _hidden_game=False):
-        super().__init__(_location, _rotation, _scale)
-        self.StaticMesh = _static_mesh
-        self.Material   = _material
-        self.HiddenGame = _hidden_game
-    
-    def __str__(self) -> str:
-        return \
-f'Begin Actor Class=StaticMeshActor Name=StaticMeshActor_0 Archetype=StaticMeshActor\'Engine.Default__StaticMeshActor\'\n\
-\tBegin Object Class=StaticMeshComponent Name=StaticMeshComponent0 Archetype=StaticMeshComponent\'Engine.Default__StaticMeshActor:StaticMeshComponent0\'\n\
-\t\tStaticMesh=StaticMesh\'{self.StaticMesh}\'\n\
-\t\tHiddenGame={self.HiddenGame}\n\
-\t\tMaterials(0)=Material\'{self.Material}\'\n\
-\tEnd Object\n\
-\tLocation=({self.Location})\n\
-\tRotation=({self.Rotation})\n\
-\tDrawScale3D=({self.DrawScale3D})\n\
-End Actor\n'
-
-
-# -----------------------------------------------------------------------------
-class Brush(Actor):
-    def __init__(self, 
-                 _polylist: list[Polygon],
-                 _location: tuple[float, float, float], 
-                 _rotation: tuple[float, float, float],
-                 _class_name=  'Brush',
-                 _package_name='Engine.Default__Brush',
-                 _csg_oper=    'CSG_Active'):
-        super().__init__(_location, _rotation)
-        self.Package                   = _package_name
-        self.Class                     = _class_name
-        self.Archetype                 = _class_name + '\'' + _package_name + '\''
-        self.CsgOper                   = _csg_oper
-        self.ObjectSettings: list[str] = []
-        self.ActorSettings: list[str]  = []
-        self.PolyList: list[Polygon]   = _polylist
-
-
-    def __str__(self) -> str:
-        polylist = ''
-        link = 0
-
-        for poly in self.PolyList:
-            if not poly.Texture:
-                poly.Link = link
-                link += 1
-            polylist += str(poly)
-
-        object_settings = ''
-
-        for s in self.ObjectSettings:
-            object_settings += s + '\n'
-
-
-        actor_settings = ''
-
-        for s in self.ActorSettings:
-            actor_settings += s + '\n'
-
-        return \
-f'Begin Actor Class={self.Class} Name={self.Class}_0 Archetype={self.Archetype}\n\
-\tBegin Object Class=BrushComponent Name=BrushComponent0 Archetype=BrushComponent\'{self.Package}:BrushComponent0\'\n\
-{object_settings}\
-\tEnd Object\n\
-\tBegin Brush Name=Model_0\n\
-\t\tBegin PolyList\n\
-\t\t\t{polylist}\
-\t\tEnd PolyList\n\
-\tEnd Brush\n\
-\tBrush=Model\'Model_0\'\n\
-\tCsgOper={self.CsgOper}\n\
-{actor_settings}\
-\tLocation=({self.Location})\n\
-\tRotation=({self.Rotation})\n\
-End Actor\n'
 
 
 # -----------------------------------------------------------------------------
@@ -379,7 +379,7 @@ class BlockingVolume(Brush):
         
         if _phys_material:
             self.ObjectSettings.append(f'PhysMaterialOverride=PhysicalMaterial\'{_phys_material}\'')
-        
+
 
 # -----------------------------------------------------------------------------
 # Lights
