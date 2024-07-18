@@ -20,46 +20,46 @@ class ActorType(str, Enum):
 
 
     NONE            = 'None'
-    PLAYER_START    = 'PlayerStart'
-    CHECKPOINT      = 'Checkpoint'
     BRUSH           = 'Brush'
+    STATIC_MESH     = 'StaticMesh'
     LADDER_VOLUME   = 'Ladder'
     SWING_VOLUME    = 'Swing'
-    STATIC_MESH     = 'StaticMesh'
     ZIPLINE         = 'Zipline'
     SPRINGBOARD     = 'Springboard'
     BLOCKING_VOLUME = 'BlockingVolume'
     TRIGGER_VOLUME  = 'TriggerVolume'
     KILL_VOLUME     = 'KillVolume'
+    PLAYER_START    = 'PlayerStart'
+    CHECKPOINT      = 'Checkpoint'
 
 
 # -----------------------------------------------------------------------------
 class TrackIndex(str, Enum):
-    ETTS_NONE           = 'ETTS_NONE'
-    ETTS_CRANES_A01     = 'ETTS_CRANES_A01'
-    ETTS_CRANES_B01     = 'ETTS_CRANES_B01'
-    ETTS_CRANES_B02     = 'ETTS_CRANES_B02'
-    ETTS_CRANES_C01     = 'ETTS_CRANES_C01'   
-    ETTS_CRANES_D01     = 'ETTS_CRANES_D01'
-    ETTS_EDGE_A01       = 'ETTS_EDGE_A01'
-    ETTS_STORMDRAIN_A01 = 'ETTS_STORMDRAIN_A01'
-    ETTS_STORMDRAIN_A02 = 'ETTS_STORMDRAIN_A02'
-    ETTS_STORMDRAIN_B01 = 'ETTS_STORMDRAIN_B01'
-    ETTS_STORMDRAIN_B02 = 'ETTS_STORMDRAIN_B02'
-    ETTS_STORMDRAIN_B03 = 'ETTS_STORMDRAIN_B03'
-    ETTS_CONVOY_A01     = 'ETTS_CONVOY_A01'
-    ETTS_CONVOY_A02     = 'ETTS_CONVOY_A02'
-    ETTS_CONVOY_B01     = 'ETTS_CONVOY_B01'
-    ETTS_CONVOY_B02     = 'ETTS_CONVOY_B02'
-    ETTS_MALL_A01       = 'ETTS_MALL_A01'
-    ETTS_TUTORIAL_A01   = 'ETTS_TUTORIAL_A01'
-    ETTS_TUTORIAL_A02   = 'ETTS_TUTORIAL_A02'
-    ETTS_TUTORIAL_A03   = 'ETTS_TUTORIAL_A03'
-    ETTS_FACTORY_A01    = 'ETTS_FACTORY_A01'
-    ETTS_SKYSCRAPER_A01 = 'ETTS_SKYSCRAPER_A01'
-    ETTS_SKYSCRAPER_B01 = 'ETTS_SKYSCRAPER_B01'
-    ETTS_ESCAPE_A01     = 'ETTS_ESCAPE_A01'
-    ETTS_ESCAPE_B01     = 'ETTS_ESCAPE_B01'
+    ETTS_NONE          = 'ETTS_NONE'
+    ETTS_CRANESA01     = 'ETTS_CRANESA01'
+    ETTS_CRANESB01     = 'ETTS_CRANESB01'
+    ETTS_CRANESB02     = 'ETTS_CRANESB02'
+    ETTS_CRANESC01     = 'ETTS_CRANESC01'   
+    ETTS_CRANESD01     = 'ETTS_CRANESD01'
+    ETTS_EDGEA01       = 'ETTS_EDGEA01'
+    ETTS_STORMDRAINA01 = 'ETTS_STORMDRAINA01'
+    ETTS_STORMDRAINA02 = 'ETTS_STORMDRAINA02'
+    ETTS_STORMDRAINB01 = 'ETTS_STORMDRAINB01'
+    ETTS_STORMDRAINB02 = 'ETTS_STORMDRAINB02'
+    ETTS_STORMDRAINB03 = 'ETTS_STORMDRAINB03'
+    ETTS_CONVOYA01     = 'ETTS_CONVOYA01'
+    ETTS_CONVOYA02     = 'ETTS_CONVOYA02'
+    ETTS_CONVOYB01     = 'ETTS_CONVOYB01'
+    ETTS_CONVOYB02     = 'ETTS_CONVOYB02'
+    ETTS_MALLA01       = 'ETTS_MALLA01'
+    ETTS_TUTORIALA01   = 'ETTS_TUTORIALA01'
+    ETTS_TUTORIALA02   = 'ETTS_TUTORIALA02'
+    ETTS_TUTORIALA03   = 'ETTS_TUTORIALA03'
+    ETTS_FACTORYA01    = 'ETTS_FACTORYA01'
+    ETTS_SKYSCRAPERA01 = 'ETTS_SKYSCRAPERA01'
+    ETTS_SKYSCRAPERB01 = 'ETTS_SKYSCRAPERB01'
+    ETTS_ESCAPEA01     = 'ETTS_ESCAPEA01'
+    ETTS_ESCAPEB01     = 'ETTS_ESCAPEB01'
 
 
 # -----------------------------------------------------------------------------
@@ -181,7 +181,7 @@ class PlayerStart(Actor):
                  _location     =(0, 0, 0), 
                  _rotation     =(0, 0, 0),
                  _is_time_trial=False,
-                 _track_index  =TrackIndex.ETTS_TUTORIAL_A01):
+                 _track_index  =TrackIndex.ETTS_TUTORIALA01):
         super().__init__(_location, _rotation)
         self.is_time_trial = _is_time_trial
         self.TrackIndex    = _track_index
@@ -208,7 +208,7 @@ End Actor\n'
 class Checkpoint(Actor):
     def __init__(self, 
                  _location            =(0, 0, 0), 
-                 _track_index         =TrackIndex.ETTS_TUTORIAL_A01,
+                 _track_index         =TrackIndex.ETTS_TUTORIALA01,
                  _order_index         =0,
                  _no_intermediate_time=False,
                  _custom_height       =0.0,

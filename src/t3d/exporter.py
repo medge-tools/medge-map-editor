@@ -17,6 +17,7 @@ class MET_OT_T3D_Export(Operator, ExportHelper):
     bl_region_type  = 'WINDOW'
     filename_ext    = '.t3d'
 
+
     filter_glob: StringProperty(
         default='*.t3d',
         options={'HIDDEN'},
@@ -38,8 +39,7 @@ class MET_OT_T3D_Export(Operator, ExportHelper):
 
     selected_collection: BoolProperty(
         name='Selected Collection',
-        default=False
-    )
+        default=False)
 
 
     selected_objects: BoolProperty(
@@ -96,7 +96,10 @@ class MET_OT_T3D_Export(Operator, ExportHelper):
 
         # Export ASE
         if self.export_static_meshes:
-            bpy.ops.medge_map_editor.ase_export(filepath=self.filepath, units=self.units, selected_objects=self.selected_objects)
+            bpy.ops.medge_map_editor.ase_export(filepath=self.filepath, 
+                                                units=self.units, 
+                                                selected_collection=self.selected_collection,
+                                                selected_objects=self.selected_objects)
 
         return {'FINISHED'}
     

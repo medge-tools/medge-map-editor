@@ -14,7 +14,7 @@ bl_info = {
 from bpy.utils import register_class
 
 from . import auto_load
-from .map_editor.gui import MET_PT_map_editor, MET_PT_actors, MET_PT_selected_actor, MET_PT_measurements
+from .src.gui import MET_PT_map_editor, MET_PT_actors, MET_PT_selected_actor, MET_PT_measurements
 
 
 # -----------------------------------------------------------------------------

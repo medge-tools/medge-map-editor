@@ -167,6 +167,16 @@ def remove_object(_obj:Object):
 
 
 # -----------------------------------------------------------------------------
+def remove_object_with_children(_obj:Object):
+    if not _obj: return
+
+    for child in _obj.children_recursive:
+        bpy.data.objects.remove(child)
+
+    bpy.data.objects.remove(_obj)
+    
+
+# -----------------------------------------------------------------------------
 def duplicate_object(_obj:Object, _instance=False, _collection:Collection|str=None) -> Object:
     if _instance:
         instance = new_object(_obj.data, 'INST_' + _obj.name, _collection)
@@ -247,6 +257,21 @@ def apply_all_transforms(_obj:Object):
         
     _obj.matrix_basis.identity()
 
+# -----------------------------------------------------------------------------
+# https://stackoverflow.com/questions/13840418/force-matrix-world-to-be-recalculated-in-blender/57485640#57485640
+def update_matrices(_obj:Object):
+    """
+    Calls to bpy.context.scene.update() can become expensive when called within a loop. 
+    If your objects have no complex constraints (e.g. plain or parented), the following can be used to recompute the world matrix after changing object's .location, .rotation_euler\quaternion, or .scale. 
+    """
+    if _obj.parent is None:
+        _obj.matrix_world = _obj.matrix_basis
+
+    else:
+        _obj.matrix_world = _obj.parent.matrix_world * \
+                           _obj.matrix_parent_inverse * \
+                           _obj.matrix_basis
+        
 
 # -----------------------------------------------------------------------------
 # Data
@@ -576,17 +601,25 @@ def create_cylinder(_radius=2,
 
 # -----------------------------------------------------------------------------
 #https://blender.stackexchange.com/questions/127603/how-to-specify-nurbs-path-vertices-in-python
-def create_curve(_type='NURBS', _num_points=3) -> tuple[Curve, Spline]:
+def create_curve(_type='NURBS', _num_points=3, _resolution=12) -> tuple[Curve, Spline]:
     curve = bpy.data.curves.new('CURVE', 'CURVE')
     curve.dimensions = '3D'
 
     path = curve.splines.new(_type)
-    path.points.add(_num_points - 1)
 
-    for k, p in enumerate(path.points):
-        x = 1 * k
-        p.co = x, 0, 0, 1
+    if _type != 'BEZIER':
+        path.points.add(_num_points - 1)
+        for k, p in enumerate(path.points):
+            x = 1 * k
+            p.co = x, 0, 0, 1
 
+    else:
+        path.bezier_points.add(_num_points - 1)
+        for k, p in enumerate(path.bezier_points):
+            x = 1 * k
+            p.co = x, 0, 0
+
+    path.resolution_u = _resolution
     path.use_endpoint_u = True
 
     return curve, path
@@ -793,6 +826,20 @@ def multiline_text(_context:Context, _layout:UILayout, _text:str):
 
     for line in text_lines:
         _layout.label(text=line)
+
+
+# -----------------------------------------------------------------------------
+# Logging
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# https://blenderartists.org/t/print-to-info-area/1383928/3
+def print_console(_text:str):
+    for w in bpy.context.window_manager.windows:
+        s = w.screen
+        for a in s.areas:
+            if a.type == 'CONSOLE':
+                with bpy.context.temp_override(window=w, screen=s, area=a):
+                    bpy.ops.console.scrollback_append(text=_text, type="OUTPUT")
 
 
 # -----------------------------------------------------------------------------

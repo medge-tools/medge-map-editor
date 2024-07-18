@@ -1,5 +1,4 @@
 import bpy
-import bmesh
 from bpy.props        import EnumProperty, PointerProperty, CollectionProperty, BoolProperty, IntProperty, FloatVectorProperty, FloatProperty
 from bpy.types        import Scene, Depsgraph, Object, Mesh, PropertyGroup, Context, UILayout
 from bpy.app.handlers import depsgraph_update_post
@@ -9,8 +8,8 @@ import math
 from typing    import Callable
 from mathutils import Matrix, Vector
 
-from ..             import b3d_utils
-from ..io.t3d.scene import ActorType, TrackIndex
+from ..         import b3d_utils
+from .t3d.scene import ActorType, TrackIndex
 
 COLLECTION_WIDGETS = 'Widgets'
 
@@ -43,95 +42,6 @@ def new_actor(_actor_type:ActorType, _object_type='MESH', _data=None):
     me_actor.type = _actor_type.name
 
     return obj
-
-
-# -----------------------------------------------------------------------------
-def update_prefix(_obj:Object, _new_prefix:str, _prev_prefix:str=''):
-    if _prev_prefix:
-        if _obj.name.startswith(_prev_prefix):
-            _obj.name.removeprefix(_prev_prefix)
-
-    if not _obj.name.startswith(_new_prefix):
-        _obj.name = _new_prefix + _obj.name
-
-
-# -----------------------------------------------------------------------------
-def create_player_start() -> Mesh:
-    scale = (.5, .5, 1)
-
-    # The origin will be at the bottom, but when we export we add +1 to the z value
-    verts = [
-        Vector((-0.5        * scale[0], -1 * scale[1], 1 * scale[2])),
-        Vector((-0.5        * scale[0],  1 * scale[1], 1 * scale[2])),
-        Vector(( 0.866025   * scale[0],  0           , 1 * scale[2])),
-        Vector((-0.5        * scale[0],  0           , 0 * scale[2])),
-    ]
-
-    faces = [
-        (2, 1, 0),
-        (0, 1, 3),
-        (1, 2, 3),
-        (0, 3, 2)
-    ]
-
-    return b3d_utils.new_mesh(verts, [], faces, 'PlayerStart')
-
-
-# -----------------------------------------------------------------------------
-def create_springboard() -> Object:
-    small_step = b3d_utils.create_cube((.48, .96, .62))
-    b3d_utils.transform(small_step, [Matrix.Translation((.48, .96, .31))])
-
-    big_step = b3d_utils.create_cube((1.02, 1.6, 1.42))
-    b3d_utils.transform(big_step, [Matrix.Translation((1.82, .8, .72))])
-
-    return b3d_utils.join_meshes([small_step, big_step])
-
-
-# -----------------------------------------------------------------------------
-def create_zipline() -> Object:
-    curve, path = b3d_utils.create_curve(3)
-
-    for k, p in enumerate(path.points):
-        v = Vector((8, 0, 0)) * k
-        p.co = (*v, 1)
-
-    zipline = new_actor(ActorType.STATIC_MESH, 'CURVE', curve)
-
-    zipline.name = 'S_Zipline'
-    zipline.data.bevel_depth = 0.04
-    zipline.data.use_fill_caps = True
-
-    return zipline
-
-
-# -----------------------------------------------------------------------------
-def create_checkpoint() -> Object:
-    return b3d_utils.create_cylinder(_make_faces=False)
-
-
-# -----------------------------------------------------------------------------
-def create_skydome():
-    bpy.ops.mesh.primitive_uv_sphere_add()
-    obj = bpy.context.object
-    obj.name = 'Skydome'
-
-    actor = get_actor_prop(obj)
-    actor.type = ActorType.STATIC_MESH.name
-    
-    sm = actor.static_mesh
-    sm.use_prefab = True
-
-    # Remove bottom half
-    bm = bmesh.new()
-    bm.from_mesh(obj.data)
-
-    for v in bm.verts:
-        if v.co.z < 0:
-            bm.verts.remove(v)
-
-    bm.to_mesh(obj.data)
-    bm.free()
 
 
 # -----------------------------------------------------------------------------
@@ -225,6 +135,25 @@ class Actor:
 
 
 # -----------------------------------------------------------------------------
+# Brush
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+class MET_ACTOR_PG_Brush(Actor, MaterialProperty, PropertyGroup):
+    
+    def init(self):
+        super().init()
+        
+        if self.id_data.type != 'MESH':
+            b3d_utils.set_data(self.id_data, b3d_utils.create_cube())
+        
+        self.id_data.name = 'Brush'
+
+
+    def draw(self, _layout:UILayout):
+        self.draw_material_prop(_layout)
+
+
+# -----------------------------------------------------------------------------
 # PlayerStart
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -233,7 +162,7 @@ class MET_ACTOR_PG_PlayerStart(Actor, PropertyGroup):
     def init(self):
         super().init()
 
-        b3d_utils.set_data(self.id_data, create_player_start())
+        b3d_utils.set_data(self.id_data, self.create())
         self.id_data.display_type = 'WIRE'
         self.id_data.name = 'PlayerStart'
 
@@ -248,40 +177,29 @@ class MET_ACTOR_PG_PlayerStart(Actor, PropertyGroup):
             _layout.prop(self, 'track_index')
 
 
+    def create(self):
+        scale = (.5, .5, 1)
+
+        # The origin will be at the bottom, but when we export we add +1 to the z value
+        verts = [
+            Vector((0        * scale[0], -1 * scale[1], 1 * scale[2])),
+            Vector((0        * scale[0],  1 * scale[1], 1 * scale[2])),
+            Vector((1.366025 * scale[0],  0           , 1 * scale[2])),
+            Vector((0        * scale[0],  0           , 0 * scale[2])),
+        ]
+
+        faces = [
+            (2, 1, 0),
+            (0, 1, 3),
+            (1, 2, 3),
+            (0, 3, 2)
+        ]
+
+        return b3d_utils.new_mesh(verts, [], faces, 'PlayerStart')
+
+
     is_time_trial: BoolProperty(name='Is Time Trial')
     track_index:   TrackIndexEnumProperty()
-
-
-# -----------------------------------------------------------------------------
-# Checkpoint
-# -----------------------------------------------------------------------------
-# -----------------------------------------------------------------------------
-class MET_ACTOR_PG_Checkpoint(Actor, PropertyGroup):
-    
-    def init(self):
-        super().init()
-
-        b3d_utils.set_data(self.id_data, create_checkpoint())
-        
-        self.id_data.display_type = 'WIRE'
-        self.id_data.name = 'TimeTrialCheckpoint_0'
-
-
-    def draw(self, _layout:UILayout):
-        b3d_utils.auto_gui_props(self, _layout)
-
-
-    def __on_order_index_update(self, _context:Context):
-        self.id_data.name = 'TimeTrialCheckpoint_' + self.order_index
-
-    track_index:          TrackIndexEnumProperty()
-    order_index:          IntProperty(name='Order Index', update=__on_order_index_update)
-    custom_height:        FloatProperty(name='CustomHeight')
-    custom_width_scale:   FloatProperty(name='Custom Width Scale')
-    should_be_based:      BoolProperty(name='Should Be Based')
-    no_intermediate_time: BoolProperty(name='No Intermediate Time')
-    no_respawn:           BoolProperty(name='No Respawn')
-    enabled:              BoolProperty(name='Enabled')
 
 
 # -----------------------------------------------------------------------------
@@ -333,22 +251,41 @@ class MET_ACTOR_PG_StaticMesh(Actor, MaterialProperty, PropertyGroup):
 
 
 # -----------------------------------------------------------------------------
-# Brush
+# SpringBoard
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-class MET_ACTOR_PG_Brush(Actor, MaterialProperty, PropertyGroup):
+class MET_ACTOR_PG_SpringBoard(Actor, PropertyGroup):
     
     def init(self):
-        super().init()
-        
-        if self.id_data.type != 'MESH':
-            b3d_utils.set_data(self.id_data, b3d_utils.create_cube())
-        
-        self.id_data.name = 'Brush'
+        super().init()   
+        b3d_utils.set_data(self.id_data, self.create())
+        self.id_data.name = 'SpringBoard'
 
 
-    def draw(self, _layout:UILayout):
-        self.draw_material_prop(_layout)
+    def draw(self, _layout: UILayout):
+        b3d_utils.draw_box(_layout, 'Do not apply any transforms, these values are needed for export') 
+        _layout.separator()
+        _layout.prop(self, 'is_hidden_game')
+
+
+    def create(self):
+        small_step = b3d_utils.create_cube((.48, .96, .62))
+        b3d_utils.transform(small_step, [Matrix.Translation((.48, .96, .31))])
+
+        big_step = b3d_utils.create_cube((1.02, 1.6, 1.42))
+        b3d_utils.transform(big_step, [Matrix.Translation((1.82, .8, .72))])
+
+        return b3d_utils.join_meshes([small_step, big_step])
+
+
+    def __on_is_hidden_game_update(self, _context:Context):
+        if self.is_hidden_game:
+            self.id_data.display_type = 'WIRE'
+        else:
+            self.id_data.display_type = 'SOLID'
+
+
+    is_hidden_game: BoolProperty(name='Is Hidden In Game', update=__on_is_hidden_game_update)
 
 
 # -----------------------------------------------------------------------------
@@ -360,13 +297,18 @@ class MET_ACTOR_PG_LadderVolume(Actor, PropertyGroup):
     def init(self):
         super().init()
 
-        scale = (1, 1, 4)
-        b3d_utils.set_data(self.id_data, b3d_utils.create_cube(scale))
+        scale = 1, 1, 3
+        volume = b3d_utils.create_cube(scale)
+        b3d_utils.transform(volume, [Matrix.Translation((0, 0, 1.5))])
+
+        b3d_utils.set_data(self.id_data, volume)
 
         self.id_data.display_type = 'WIRE'
 
         arrow = self.widgets.add()
         arrow.obj = b3d_utils.new_object(b3d_utils.create_arrow(scale), 'ArrowWidget', COLLECTION_WIDGETS, self.id_data, False)
+        arrow.obj.location = self.id_data.location
+        arrow.obj.location.z += 4.9
         b3d_utils.set_object_selectable(arrow.obj, False)
 
         self.id_data.name = 'LadderVolume'
@@ -376,6 +318,10 @@ class MET_ACTOR_PG_LadderVolume(Actor, PropertyGroup):
         b3d_utils.draw_box(_layout, 'Do not apply any transforms, these values are needed for export') 
         _layout.separator()
         _layout.prop(self, 'is_pipe')
+
+
+    def create(self):
+        verts = []
 
 
     def __on_is_pipe_update(self, _context:Context):
@@ -402,12 +348,6 @@ class MET_ACTOR_PG_SwingVolume(Actor, PropertyGroup):
         scale = Vector((2, 2, 1))
         b3d_utils.set_data(self.id_data, b3d_utils.create_cube(scale))
 
-        m_t07_x = Matrix.Translation((.7, 0, 0))
-        m_t035_x = Matrix.Translation((.2, 0, 0))
-        m_r90_x = Matrix.Rotation(math.radians(90), 3, (1, 0, 0))
-        m_r90_y = Matrix.Rotation(math.radians(90), 3, (0, 1, 0))
-        m_mir_x = Matrix.Scale(-1, 3, (1, 0, 0))
-
         arrow0 = self.widgets.add()
         arrow1 = self.widgets.add()
         arrow2 = self.widgets.add()
@@ -415,7 +355,14 @@ class MET_ACTOR_PG_SwingVolume(Actor, PropertyGroup):
         for arrow in self.widgets:
             s = scale * .3
             arrow.obj = b3d_utils.new_object(b3d_utils.create_arrow(s), 'ArrowWidget', COLLECTION_WIDGETS, self.id_data, False)
+            arrow.obj.location = self.id_data.location
             b3d_utils.set_object_selectable(arrow.obj, False)
+
+        m_t07_x = Matrix.Translation((.7, 0, 0))
+        m_t035_x = Matrix.Translation((.2, 0, 0))
+        m_r90_x = Matrix.Rotation(math.radians(90), 3, (1, 0, 0))
+        m_r90_y = Matrix.Rotation(math.radians(90), 3, (0, 1, 0))
+        m_mir_x = Matrix.Scale(-1, 3, (1, 0, 0))
 
         b3d_utils.transform(arrow0.obj.data, [m_t07_x , m_r90_x])
         b3d_utils.transform(arrow1.obj.data, [m_t035_x, m_r90_x, m_r90_y])
@@ -445,8 +392,8 @@ class MET_ACTOR_PG_Zipline(Actor, PropertyGroup):
         if self.curve:
             b3d_utils.remove_object(self.curve)
 
-        self.curve = create_zipline()
-        self.curve.location = (0, 0, 0)
+        self.curve = self.create_zipline()
+        self.curve.location = 0, 0, 0
 
         b3d_utils.set_parent(self.curve, self.id_data, False)
 
@@ -471,6 +418,22 @@ class MET_ACTOR_PG_Zipline(Actor, PropertyGroup):
             _layout.prop(self, 'bb_scale')
             _layout.separator()
             _layout.prop(self, 'bb_offset')
+
+
+    def create_zipline(self) -> Object:
+        curve, path = b3d_utils.create_curve()
+
+        for k, p in enumerate(path.points):
+            v = Vector((8, 0, 0)) * k
+            p.co = (*v, 1)
+
+        zipline = new_actor(ActorType.STATIC_MESH, 'CURVE', curve)
+
+        zipline.name = 'S_Zipline'
+        zipline.data.bevel_depth = 0.04
+        zipline.data.use_fill_caps = True
+
+        return zipline
 
 
     def update_bounds(self, _force=False):   
@@ -568,17 +531,17 @@ class MET_ACTOR_PG_Zipline(Actor, PropertyGroup):
         self.update_bounds(True)
         
 
-    curve:    PointerProperty(type=Object, name='Curve')
-    auto_bb:  BoolProperty(name='Automatic Bounding Box', default=True)
-    align_z: BoolProperty(name='Align Z', update=__force_update_bb_bounds)
+    curve:         PointerProperty(type=Object, name='Curve')
+    auto_bb:       BoolProperty(name='Automatic Bounding Box', default=True)
+    align_z:       BoolProperty(name='Align Z', update=__force_update_bb_bounds)
 
     bb_resolution: IntProperty(name='Resolution', default=5, min=0, update=__force_update_bb_bounds)
     bb_scale:      FloatVectorProperty(name='Scale', subtype='TRANSLATION', default=(1, 1, 1), update=__force_update_bb_bounds)
     bb_offset:     FloatVectorProperty(name='Offset', subtype='TRANSLATION', update=__force_update_bb_bounds)
 
-    c1: FloatVectorProperty(name='PRIVATE', subtype='TRANSLATION')
-    c2: FloatVectorProperty(name='PRIVATE', subtype='TRANSLATION')
-    c3: FloatVectorProperty(name='PRIVATE', subtype='TRANSLATION')
+    c1:            FloatVectorProperty(name='PRIVATE', subtype='TRANSLATION')
+    c2:            FloatVectorProperty(name='PRIVATE', subtype='TRANSLATION')
+    c3:            FloatVectorProperty(name='PRIVATE', subtype='TRANSLATION')
 
 
 # -----------------------------------------------------------------------------
@@ -617,31 +580,53 @@ class MET_ACTOR_PG_TriggerVolume(Actor, PropertyGroup):
 
 
 # -----------------------------------------------------------------------------
-# SpringBoard
+# Checkpoint
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-class MET_ACTOR_PG_SpringBoard(Actor, PropertyGroup):
+class MET_ACTOR_PG_Checkpoint(Actor, PropertyGroup):
     
     def init(self):
-        super().init()   
-        b3d_utils.set_data(self.id_data, create_springboard())
-        self.id_data.name = 'SpringBoard'
+        super().init()
+
+        b3d_utils.set_data(self.id_data, self.create())
+        
+        self.id_data.display_type = 'WIRE'
+        self.id_data.name = 'TimeTrialCheckpoint_0'
 
 
-    def draw(self, _layout: UILayout):
-        b3d_utils.draw_box(_layout, 'Do not apply any transforms, these values are needed for export') 
-        _layout.separator()
-        _layout.prop(self, 'is_hidden_game')
+    def draw(self, _layout:UILayout):
+        b3d_utils.auto_gui_props(self, _layout)
+
+    
+    def create(self) -> Mesh:
+        height = 30
+
+        verts = [ 
+            (-1, -1, 0), (-1, 1, 0), (1, 1, 0), (1, -1, 0), 
+            (0, 0, 0),
+            (0, 0, height), (-.5, -.5, height), (-.5, .5, height), (.5, .5, height), (.5, -.5, height), 
+        ]
+
+        edges = [
+            (0, 1), (1, 2), (2, 3), (3, 0),
+            (4, 5), (4, 6), (4, 7), (4, 8), (4, 9),
+        ]
+
+        return b3d_utils.new_mesh(verts, edges, [], 'Checkpoint')
 
 
-    def __on_is_hidden_game_update(self, _context:Context):
-        if self.is_hidden_game:
-            self.id_data.display_type = 'WIRE'
-        else:
-            self.id_data.display_type = 'SOLID'
+    def __on_order_index_update(self, _context:Context):
+        self.id_data.name = 'TimeTrialCheckpoint_' + self.order_index
 
 
-    is_hidden_game: BoolProperty(name='Is Hidden In Game', update=__on_is_hidden_game_update)
+    track_index:          TrackIndexEnumProperty()
+    order_index:          IntProperty(name='Order Index', update=__on_order_index_update)
+    custom_height:        FloatProperty(name='CustomHeight')
+    custom_width_scale:   FloatProperty(name='Custom Width Scale')
+    should_be_based:      BoolProperty(name='Should Be Based')
+    no_intermediate_time: BoolProperty(name='No Intermediate Time')
+    no_respawn:           BoolProperty(name='No Respawn')
+    enabled:              BoolProperty(name='Enabled', default=True)
 
 
 # -----------------------------------------------------------------------------

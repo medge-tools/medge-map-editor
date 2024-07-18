@@ -18,8 +18,8 @@ from .scene import (
     DirectionalLight,
     Zipline)
 
-from ...                 import b3d_utils
-from ...map_editor.props import get_actor_prop
+from ...     import b3d_utils
+from ..props import get_actor_prop
 
 
 # -----------------------------------------------------------------------------

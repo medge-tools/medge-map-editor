@@ -1,9 +1,9 @@
 import bpy
 from bpy.types import Panel, Context, UILayout, Menu
 
-from ..io.t3d.scene import ActorType
-from .ops           import MET_OT_AddActor, MET_OT_AddSkydome, MET_OT_CleanupWidgets
-from .props         import get_actor_prop
+from .t3d.scene import ActorType
+from .ops       import MET_OT_AddActor, MET_OT_AddSkydome, MET_OT_CleanupWidgets
+from .props     import get_actor_prop
 
 
 # -----------------------------------------------------------------------------
@@ -73,14 +73,13 @@ class MET_PT_actors(MEdgeToolsPanel, Panel):
         
         col = layout.column(align=True)
 
-        self.row_actor(col, (ActorType.BRUSH,          ActorType.PLAYER_START))
-        self.row_actor(col, (ActorType.LADDER_VOLUME,  ActorType.SWING_VOLUME))
-        self.row_actor(col, (ActorType.SPRINGBOARD,    ActorType.STATIC_MESH))
-        self.row_actor(col, (ActorType.ZIPLINE,        ActorType.BLOCKING_VOLUME))
-        self.row_actor(col, (ActorType.TRIGGER_VOLUME, ActorType.KILL_VOLUME))
-
-        row = self.row_actor(col, (ActorType.CHECKPOINT, ))
+        self.row_actor(col, (ActorType.BRUSH,           ActorType.STATIC_MESH))
+        self.row_actor(col, (ActorType.LADDER_VOLUME,   ActorType.SWING_VOLUME))
+        self.row_actor(col, (ActorType.SPRINGBOARD,     ActorType.ZIPLINE))
+        self.row_actor(col, (ActorType.BLOCKING_VOLUME, ActorType.TRIGGER_VOLUME))
+        row = self.row_actor(col, (ActorType.KILL_VOLUME, ))
         row.operator(MET_OT_AddSkydome.bl_idname, text='Skydome')
+        row = self.row_actor(col, (ActorType.PLAYER_START, ActorType.CHECKPOINT))
         
         col.separator()
         row = col.row(align=True)

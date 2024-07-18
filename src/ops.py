@@ -1,7 +1,9 @@
+import bpy
+import bmesh
 from bpy.types import Operator, Context
 
-from ..io.t3d.scene import ActorType
-from .props         import ActorTypeEnumProperty, new_actor, create_skydome, cleanup_widgets
+from .t3d.scene import ActorType
+from .props     import ActorTypeEnumProperty, new_actor, cleanup_widgets, get_actor_prop
 
 
 # -----------------------------------------------------------------------------
@@ -27,10 +29,29 @@ class MET_OT_AddSkydome(Operator):
 
 
     def execute(self, _context:Context):
-        create_skydome()
+        bpy.ops.mesh.primitive_uv_sphere_add()
+        obj = bpy.context.object
+        obj.name = 'Skydome'
+
+        actor = get_actor_prop(obj)
+        actor.type = ActorType.STATIC_MESH.name
+        
+        sm = actor.static_mesh
+        sm.use_prefab = True
+
+        # Remove bottom half
+        bm = bmesh.new()
+        bm.from_mesh(obj.data)
+
+        for v in bm.verts:
+            if v.co.z < 0:
+                bm.verts.remove(v)
+
+        bm.to_mesh(obj.data)
+        bm.free()
 
         return {'FINISHED'}
-
+    
 
 # -----------------------------------------------------------------------------
 class MET_OT_CleanupWidgets(Operator):

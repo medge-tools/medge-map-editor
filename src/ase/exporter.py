@@ -4,9 +4,9 @@ from bpy.types           import Operator, Context, Object, TOPBAR_MT_file_export
 from bpy_extras.io_utils import ExportHelper
 from mathutils           import Matrix
 
-from ...                 import b3d_utils
-from ...map_editor.props import get_actor_prop
-from ..t3d.scene         import ActorType
+from ...         import b3d_utils
+from ..props     import get_actor_prop
+from ..t3d.scene import ActorType
 
 
 # -----------------------------------------------------------------------------
@@ -16,7 +16,7 @@ class ASEExportError(Exception):
 
 # -----------------------------------------------------------------------------
 class MET_OT_ASE_Export(Operator, ExportHelper):
-    '''Process selection before exporting to a .ase files'''
+    '''Process selection before exporting to .ase files'''
     bl_idname = 'medge_map_editor.ase_export'
     bl_label = 'Export ASE'
     bl_space_type = 'PROPERTIES'
@@ -42,6 +42,11 @@ class MET_OT_ASE_Export(Operator, ExportHelper):
         name='Units')
     
     
+    selected_collection: BoolProperty(
+        name='Selected Collection',
+        default=False)
+
+
     selected_objects: BoolProperty(
         name='Selected Objects',
         default=False)
@@ -52,12 +57,18 @@ class MET_OT_ASE_Export(Operator, ExportHelper):
         layout.use_property_decorate = False
         layout.use_property_split = True
         layout.prop(self, 'units')
-        layout.prop(self, 'selected_objects')
+
+        if not self.selected_objects:
+            layout.prop(self, 'selected_collection')
+
+        if not self.selected_collection:
+            layout.prop(self, 'selected_objects')
+
         layout.prop(self, 'combine_meshes')
 
 
     def execute(self, _context:Context):
-        # Apply transform to temporary copies and mirror x-axis
+        # Apply transforms to temporary copies and mirror x-axis
         temp_objs_to_export = []
 
         # To convert curves to mesh we create a new mesh to keep the curve intact.
@@ -67,11 +78,13 @@ class MET_OT_ASE_Export(Operator, ExportHelper):
 
         objects = _context.scene.objects
 
-        if self.selected_objects:
+        if self.selected_collection:
+            objects = _context.collection.all_objects
+
+        elif self.selected_objects:
             objects = _context.selected_objects
 
         for obj in objects:
-
             me_actor = get_actor_prop(obj)
 
             if me_actor.type != ActorType.STATIC_MESH.name: continue
@@ -111,14 +124,15 @@ class MET_OT_ASE_Export(Operator, ExportHelper):
 
         except ASEExportError as e:
             self.report({'ERROR'}, str(e))
+        
+        # Remove temp objects first before swapping names, 
+        # otherwise Blender thinks there are two objects with the same name and adds a .001
+        for obj in temp_objs_to_export:
+            b3d_utils.remove_object(obj)
 
         # Restore original names
         for obj, name in orig_obj_names:
             obj.name = name
-
-        # Remove temp objects
-        for obj in temp_objs_to_export:
-            b3d_utils.remove_object(obj)
             
         return {'FINISHED'}
     
