@@ -18,7 +18,7 @@ Inside UnrealEd meshes and materials are refenced by their package path inside t
 
 The following actors are implemented and are accessible from the addon panel:
 
-| Actor          | Description
+| *Actor*        | *Description*
 |----------------|----------------
 | Brush          | This exports a mesh as a Brush with the CSG_Add option and you can add a material by name
 | StaticMesh     | If this is an instance of another StaticMesh, use the option `use_prefab`, e.g. when creating a ladder (see `example.blend`). If it is not an instance, it will be automatically exported with the export option `Export StaticMeshes`.
@@ -31,9 +31,10 @@ The following actors are implemented and are accessible from the addon panel:
 | KillVolume     | - 
 | PlayerStart    | Player start with the option to make it the time trial start.
 | Checkpoint     | Time Trial checkpoint.
-| Lights         | Currently only the Sun light can be exported and rotations do not work correctly (see #todo)
+|                |
+| Lights         | Currently only the Sun light can be exported and rotations are not exported correctly (see [TODO](#todo)).
 
-For some actors, do not apply any transforms, as we want to export those. This is the case for StaticMesh, Ladder, Swing, Springboard, PlayerStart. There are info boxes at those actors.
+For some actors, do not apply any transforms, as we want to export those. This is the case for StaticMesh, Ladder, Swing, Springboard and PlayerStart. There are info boxes at those actors.
 
 ### Import Into UnrealEd
 
