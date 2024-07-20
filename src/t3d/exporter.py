@@ -48,7 +48,7 @@ class MET_OT_T3D_Export(Operator, ExportHelper):
     
 
     export_static_meshes: BoolProperty(
-        name='Export Static Meshes',
+        name='Export StaticMeshes',
         default=False)
 
 

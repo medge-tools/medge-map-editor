@@ -83,13 +83,13 @@ class Point3D(Vector):
 
         return f'{self.__prefix_x}{x},{self.__prefix_y}{y},{self.__prefix_z}{z}'
     
-    def set_prefix(self, _x: str, _y: str, _z: str):
+    def set_prefix(self, _x:str, _y:str, _z:str):
         self.__prefix_x = _x + '='
         self.__prefix_y = _y + '='
         self.__prefix_z = _z + '='
 
-    def set_format(self, f : str):
-        self.format = f
+    def set_format(self, _f:str):
+        self.format = _f
 
 
 # -----------------------------------------------------------------------------
@@ -123,13 +123,13 @@ class Color(Point3D):
 class Polygon:
     def __init__(
             self, 
-            _origin:     tuple[float, float, float], 
-            _normal:     tuple[float, float, float],
-            _u:          tuple[float, float, float],
-            _v:          tuple[float, float, float],
-            _verts:      list[tuple[float, float, float]],
-            _texture:    str=None,
-            _flags=      3585):
+            _origin: tuple[float, float, float], 
+            _normal: tuple[float, float, float],
+            _u:      tuple[float, float, float],
+            _v:      tuple[float, float, float],
+            _verts:  list[tuple[float, float, float]],
+            _texture:str=None,
+            _flags=  3585):
         
         self.Flags      = _flags
         self.Texture    = _texture
@@ -140,10 +140,11 @@ class Polygon:
         self.__TextureV = Point3D(_v)
         self.__Vertices = [Point3D(x) for x in _verts]
 
+
     def __str__(self) -> str:
         texture = f'Texture={self.Texture} ' if self.Texture else ''
-        link =    f'Link={self.Link} '       if self.Link or self.Link == 0 else ''
-        verts = ''
+        link    = f'Link={self.Link} '       if self.Link or self.Link == 0 else ''
+        verts   = ''
 
         for v in self.__Vertices:
             verts += f'\tVertex   {v}\n'
@@ -178,12 +179,12 @@ class Actor:
 # -----------------------------------------------------------------------------
 class Brush(Actor):
     def __init__(self, 
-                 _polylist: list[Polygon],
-                 _location: tuple[float, float, float], 
-                 _rotation: tuple[float, float, float],
-                 _class_name=  'Brush',
+                 _polylist:list[Polygon],
+                 _location:tuple[float, float, float], 
+                 _rotation:tuple[float, float, float],
+                 _class_name  ='Brush',
                  _package_name='Engine.Default__Brush',
-                 _csg_oper=    'CSG_Active'):
+                 _csg_oper    ='CSG_Active'):
         super().__init__(_location, _rotation)
         self.Package                   = _package_name
         self.Class                     = _class_name
@@ -247,6 +248,7 @@ class StaticMesh(Actor):
         self.Material   = _material
         self.HiddenGame = _hidden_game
     
+
     def __str__(self) -> str:
         return \
 f'Begin Actor Class=StaticMeshActor Name=StaticMeshActor_0 Archetype=StaticMeshActor\'Engine.Default__StaticMeshActor\'\n\
@@ -271,6 +273,7 @@ class PlayerStart(Actor):
         super().__init__(_location, _rotation)
         self.is_time_trial = _is_time_trial
         self.TrackIndex    = _track_index
+
 
     def __str__(self) -> str:
         if self.is_time_trial: 
@@ -312,6 +315,7 @@ class Checkpoint(Actor):
         self.NoRespawn          = _no_respawn
         self.Enabled            = _enabled
         self.ShouldBeBased      = _should_be_based
+    
     
     def __str__(self) -> str:
         return \
