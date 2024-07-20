@@ -34,7 +34,7 @@ The following actors are implemented and are accessible from the addon panel:
 |                |
 | Lights         | Currently only the Sun light can be exported and rotations are not exported correctly (see [TODO](#todo)).
 
-For some actors, do not apply any transforms, as we want to export those. This is the case for StaticMesh, Ladder, Swing, Springboard and PlayerStart. There are info boxes at those actors.
+For some actors, do not apply any transforms, as we want to export those. This is the case for StaticMesh, Ladder, Swing, Springboard and PlayerStart. There are info boxes at those actors to remind you.
 
 ### Import Into UnrealEd
 
