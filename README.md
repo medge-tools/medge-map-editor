@@ -1,14 +1,16 @@
 # MEdge Editor
 
+With this addon you can export Blender scenes to a T3D file, which can be imported into UnrealEd.
+
 ## Dependencies
 
-If you want to export StaticMeshes automatically, then you need to use [io_scene_ase](https://github.com/medge-tools/io_scene_ase), which is a fork that can export selected objects separately. You can use other addons, but if those operators are called anything other than io_scene_ase, then the export option `Export StaticMeshes` will do nothing.
+If you want to export StaticMeshes when exporting to T3D, then you need to use [io_scene_ase](https://github.com/medge-tools/io_scene_ase), which is a fork that can export selected objects separately. You can use other addons, but if those operators are called anything other than `io_scene_ase`, then the export option `Export StaticMeshes` will do nothing.
 
 ## How It Works
 
 ### T3D
 
-Inside UnrealEd a scene or selected objects can be exported to a [.t3d](https://wiki.beyondunreal.com/Legacy:T3D_File) file. The T3D file format holds a text list of Unreal objects and their settings. Geometry data of Brushes and Volumes are stored, but meshes and materials are referenced. This addon does the same for Blender objects.
+Inside UnrealEd a scene or selected objects can be exported to a [T3D](https://wiki.beyondunreal.com/Legacy:T3D_File) file. The T3D file format holds a text list of Unreal objects and their settings. Geometry data of Brushes and Volumes are stored, but meshes and materials are referenced. This addon does the same for Blender objects.
 
 ### Inside Blender
 
@@ -29,8 +31,9 @@ The following actors are implemented and are accessible from the addon panel:
 | KillVolume     | - 
 | PlayerStart    | Player start with the option to make it the time trial start.
 | Checkpoint     | Time Trial checkpoint.
+| Lights         | Currently only the Sun light can be exported and rotations do not work correctly (see #todo)
 
-For some actors do not apply any transforms as we want to export those. This is the case for StaticMesh, Ladder, Swing, Springboard, PlayerStart. There are info boxes at those actors.
+For some actors, do not apply any transforms, as we want to export those. This is the case for StaticMesh, Ladder, Swing, Springboard, PlayerStart. There are info boxes at those actors.
 
 ### Import Into UnrealEd
 
@@ -46,18 +49,18 @@ For some actors do not apply any transforms as we want to export those. This is 
 
 In this section we go over how to extend the map editor with other Unreal objects that you would like to export from Blender. The relevant source files are:
 
-- `src > t3d > scene.py`: This file contains the actor types like Brush, StaticMesh, Volumes in their .t3d format.
-- `src > t3d > builder.py`: For each actor type this file contains the implementation to translate a Blender object to its respective .t3d format.
+- `src > t3d > scene.py`: This file contains the actor types like Brush, StaticMesh, Volumes in their T3D format.
+- `src > t3d > builder.py`: For each actor type this file contains the implementation to translate a Blender object to its respective T3D format.
 - `src > props.py`: For each actor type this file contains its respective PropertyGroup.
 - `src > gui.py`: For each actor type there is a button to create a instance.
 
 ### Step-By-Step
 
-1. Inside UnrealEd export the object to a .t3d file: `File > Export > Selected Only...`
+1. Inside UnrealEd export the object to a T3D file: `File > Export > Selected Only...`
 
-2. UnrealEd exports alot of default data about the object that you don't need perse to import it back into UnrealEd. Open the .t3d file and start removing text that you deem irrelevant, and import the file back to check if it still works. Keep doing this till you are satisfied. As a reference you can export one of the already implemented Unreal objects and compare them to the object in `scene.py`.
+2. UnrealEd exports alot of default data about the object that you don't need perse to import it back into UnrealEd. Open the T3D file and start removing text that you deem irrelevant, and import the file back to check if it still works. Keep doing this till you are satisfied. As a reference you can export one of the already implemented Unreal objects and compare them to the object in `scene.py`.
 
-3. Go to `scene.py`, add your object type to `ActorType` and add your .t3d implementation below. If your object is a volume, you can inherit from `Brush`. Look at the other objects for reference.
+3. Go to `scene.py`, add your object type to `ActorType` and add your T3D implementation below. If your object is a volume, you can inherit from `Brush`. Look at the other objects for reference.
 
 4. Go to `props.py`, create a `PropertyGroup` for your object, which inherits from `Actor` and override `init()` and `draw()`. Add your object as a `PointerProperty` to `MET_OBJECT_PG_Actor`, which is at the bottom of the file. In `MET_OBJECT_PG_Actor` you also have to update `draw()` and `__on_type_update()`. While not necessary I like to write getters as they help the intellisense.
 
