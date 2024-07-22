@@ -14,7 +14,7 @@ Inside UnrealEd a scene or selected objects can be exported to a [T3D](https://w
 
 ### Inside Blender
 
-Inside UnrealEd meshes and materials are refenced by their package path inside the GenericBrowser. These paths can be replicated inside Blender using Collections. You need a Collection named `GenericBrowser` and add child Collections with the name of the packages as they are in the UnrealEd GenericBrowser (see also `example.blend`). 
+Inside UnrealEd meshes and materials are refenced by their package path inside the GenericBrowser. We can replicated this structure inside Blender using Collections. You need a Collection named `GenericBrowser` and add child Collections with the name of the packages as they are in the UnrealEd GenericBrowser (see also `example.blend`). 
 
 The following actors are implemented and are accessible from the addon panel:
 
@@ -57,19 +57,19 @@ In this section we go over how to extend the map editor with other Unreal object
 
 ### Step-By-Step
 
-1. Inside UnrealEd export the object to a T3D file: `File > Export > Selected Only...`
+1. Inside UnrealEd export the actors to a T3D file: `File > Export > Selected Only...`
 
-2. UnrealEd exports alot of default data about the object that you don't need perse to import it back into UnrealEd. Open the T3D file and start removing text that you deem irrelevant, and import the file back to check if it still works. Keep doing this till you are satisfied. As a reference you can export one of the already implemented Unreal objects and compare them to the object in `scene.py`.
+2. UnrealEd exports alot of default data about the actor that you don't need perse to import it back into UnrealEd. Open the T3D file and start removing text that you deem irrelevant, and import the file back to check if it still works. Keep doing this till you are satisfied. As a reference you can export one of the already implemented Unreal objects and compare them to the actor in `scene.py`.
 
-3. Go to `scene.py`, add your object type to `ActorType` and add your T3D implementation below. If your object is a volume, you can inherit from `Brush`. Look at the other objects for reference.
+3. Go to `scene.py`, add your actor type to the end of `ActorType` and add your T3D implementation below. If your actor is a volume, you can inherit from `Brush`. Look at the other volumes for reference.
 
-4. Go to `props.py`, create a `PropertyGroup` for your object, which inherits from `Actor` and override `init()` and `draw()`. Add your object as a `PointerProperty` to `MET_OBJECT_PG_Actor`, which is at the bottom of the file. In `MET_OBJECT_PG_Actor` you also have to update `draw()` and `__on_type_update()`. While not necessary, we like to write getters as they help the intellisense.
+4. Go to `props.py`, create a `PropertyGroup` for your actor, which inherits from `Actor` and override `init()` and `draw()`. Add your actor as a `PointerProperty` to `MET_OBJECT_PG_Actor`, which is at the bottom of the file. In `MET_OBJECT_PG_Actor` you also have to update `draw()` and `__on_type_update()`. While not necessary, we like to write getters as they help the intellisense.
 
-5. Go to `gui.py > MET_PT_actors` and update `draw()` to add a button for your object.
+5. Go to `gui.py > MET_PT_actors` and update `draw()` to add a button for your actor.
 
-6. Go to `builder.py`, create a `Builder` for your object and update `T3DBuilder.build_actor()`, which is at the bottom of the file.
+6. Go to `builder.py`, create a `Builder` for your actor and update `T3DBuilder.build_actor()`, which is at the bottom of the file.
 
-These are all the steps, but you may not need all of them. For example, for the Springboard, which is a StaticMesh, we skipped step 3. 
+These are all the steps, but you may not need all of them. For example, for the Springboard, which is an instance of a StaticMesh, we skipped step 3. 
 
 ## TODO
 
