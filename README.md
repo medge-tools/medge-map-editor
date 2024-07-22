@@ -63,11 +63,11 @@ In this section we go over how to extend the map editor with other Unreal object
 
 3. Go to `scene.py`, add your actor type to the end of `ActorType` and add your T3D implementation below. If your actor is a volume, you can inherit from `Brush`. Look at the other volumes for reference.
 
-4. Go to `props.py`, create a `PropertyGroup` for your actor, which inherits from `Actor` and override `init()` and `draw()`. Add your actor as a `PointerProperty` to `MET_OBJECT_PG_Actor`, which is at the bottom of the file. In `MET_OBJECT_PG_Actor` you also have to update `draw()` and `__on_type_update()`. While not necessary, we like to write getters as they help the intellisense.
+4. Go to `props.py`, create a `PropertyGroup` for your actor, which inherits from `Actor` and override `init()` and `draw()`. Add your actor as a `PointerProperty` to `MET_OBJECT_PG_Actor`, which is at the bottom of the file. In `MET_OBJECT_PG_Actor` you also have to update `draw()` and `__on_type_update()`. While not necessary, we like to write getters as they help with intellisense.
 
 5. Go to `gui.py > MET_PT_actors` and update `draw()` to add a button for your actor.
 
-6. Go to `builder.py`, create a `Builder` for your actor and update `T3DBuilder.build_actor()`, which is at the bottom of the file.
+6. Go to `builder.py`, create a `Builder` for your actor and update `T3DBuilder > build_actor()`, which is at the bottom of the file.
 
 These are all the steps, but you may not need all of them. For example, for the Springboard, which is an instance of a StaticMesh, we skipped step 3. 
 
