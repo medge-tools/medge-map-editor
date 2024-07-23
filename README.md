@@ -1,6 +1,6 @@
 # MEdge Editor
 
-With this addon you can export Blender scenes to a T3D file, which can be imported into UnrealEd. See `example.blend` for a complete setup.
+With this addon you can export Blender scenes to a T3D file, which can be imported into UnrealEd. See `example_medge_map_editor.blend` in Releases for a complete setup.
 
 ## Dependencies
 
