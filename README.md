@@ -14,14 +14,14 @@ Inside UnrealEd a scene or selected objects can be exported to a [T3D](https://w
 
 ### Inside Blender
 
-Inside UnrealEd meshes and materials are refenced by their package path inside the GenericBrowser. We can replicated this structure inside Blender using Collections. You need a Collection named `GenericBrowser` and add child Collections with the name of the packages as they are in the UnrealEd GenericBrowser (see also `example.blend`). 
+Inside UnrealEd meshes and materials are refenced by their package path inside the GenericBrowser. We can replicated this structure inside Blender using Collections. You need a Collection named `GenericBrowser` and add child Collections with the name of the packages as they are in the UnrealEd GenericBrowser. 
 
 The following actors are implemented and are accessible from the addon panel:
 
 | *Actor*        | *Description*
 |----------------|----------------
 | Brush          | This exports a mesh as a Brush with the CSG_Add option and you can add a material by name
-| StaticMesh     | If this is an instance of another StaticMesh, use the option `use_prefab`, e.g. when creating a ladder (see `example.blend`). If it is not an instance, it will be automatically exported with the export option `Export StaticMeshes`.
+| StaticMesh     | If this is an instance of another StaticMesh, use the option `use_prefab`, e.g. when creating a ladder. If it is not an instance, it will be automatically exported with the export option `Export StaticMeshes`.
 | Ladder         | Ladder volume with an `is_pipe` option.
 | Swing          | -
 | Zipline        | Curve with a bounding box that deforms with the curve. Do remember to put it inside a child Collection of the GenericBrowser.
