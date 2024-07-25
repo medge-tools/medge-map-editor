@@ -158,14 +158,17 @@ class StaticMeshBuilder(Builder):
             if (prefab := static_mesh.prefab):
                 name = prefab.name
                 path = self.collection_paths[name]
-                return StaticMesh(location, rotation, _obj.scale, path + name)
+
+                return StaticMesh(location, rotation, _obj.scale, path + name, static_mesh.is_hidden_game)
+            
             else:
                 print(f'Object {_obj.name} uses prefab, but has not prefab selected')
         
         else:
             name = _obj.name
             path = self.collection_paths[name]
-            return StaticMesh(location, rotation, _obj.scale, path + name)
+            
+            return StaticMesh(location, rotation, _obj.scale, path + name, static_mesh.is_hidden_game)
 
 
 # -----------------------------------------------------------------------------
@@ -189,20 +192,6 @@ class ZiplineBuilder(Builder):
         _, rotation = self.get_location_rotation(_obj)
 
         return Zipline(polylist, rotation, start, middle, end)
-
-
-# -----------------------------------------------------------------------------
-class SpringBoardBuilder(Builder):
-
-    def build(self, _obj:Object) -> Actor | None:
-        springboard = get_actor_prop(_obj).get_springboard()
-
-        location, rotation = self.get_location_rotation(_obj)
-
-        return StaticMesh(location, rotation, (1, 1, 1), 
-                          'P_Gameplay.SpringBoard.SpringBoardHigh_ColMesh', 
-                          None, 
-                          springboard.is_hidden_game)
 
 
 # -----------------------------------------------------------------------------
@@ -345,8 +334,6 @@ class T3DBuilder():
                 return StaticMeshBuilder(_options, _collection_paths).build(_obj)
             case ActorType.ZIPLINE.name:
                 return ZiplineBuilder(_options, _collection_paths).build(_obj)
-            case ActorType.SPRINGBOARD.name:
-                return SpringBoardBuilder(_options, _collection_paths).build(_obj)
             case ActorType.BRUSH.name:
                 return BrushBuilder(_options, _collection_paths).build(_obj)
             case ActorType.LADDER_VOLUME.name:

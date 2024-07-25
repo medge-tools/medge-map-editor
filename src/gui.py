@@ -2,7 +2,7 @@ import bpy
 from bpy.types import Panel, Context, UILayout, Menu
 
 from .t3d.scene import ActorType
-from .ops       import MET_OT_AddActor, MET_OT_AddSkydome, MET_OT_CleanupWidgets
+from .ops       import MET_OT_add_actor, MET_OT_cleanup_widgets, MET_OT_add_skydome, MET_OT_add_springboard
 from .props     import get_actor_prop
 
 
@@ -49,21 +49,16 @@ class MET_PT_actors(MEdgeToolsPanel, Panel):
     bl_label = 'Actors'
 
 
-    def row_actor(self, 
-                  _layout:UILayout, 
-                  _types:tuple[ActorType, ...]):
+    def create_row(self, _layout:UILayout):
         row = _layout.row(align=True)
         row.scale_y = 2
-
-        for type in _types:
-            if type == ActorType.NONE:
-                row.label(text='')
-                continue                
-
-            op = row.operator(MET_OT_AddActor.bl_idname, text=type.label)
-            op.type = type.name
         
         return row
+
+
+    def add_actor(self, _layout:UILayout, _type:ActorType):
+        op = _layout.operator(MET_OT_add_actor.bl_idname, text=_type.label)
+        op.type = _type.name
 
 
     def draw(self, _context:Context):
@@ -73,17 +68,33 @@ class MET_PT_actors(MEdgeToolsPanel, Panel):
         
         col = layout.column(align=True)
 
-        self.row_actor(col, (ActorType.BRUSH,           ActorType.STATIC_MESH))
-        self.row_actor(col, (ActorType.LADDER_VOLUME,   ActorType.SWING_VOLUME))
-        self.row_actor(col, (ActorType.SPRINGBOARD,     ActorType.ZIPLINE))
-        self.row_actor(col, (ActorType.BLOCKING_VOLUME, ActorType.TRIGGER_VOLUME))
-        row = self.row_actor(col, (ActorType.KILL_VOLUME, ))
-        row.operator(MET_OT_AddSkydome.bl_idname, text='Skydome')
-        row = self.row_actor(col, (ActorType.PLAYER_START, ActorType.CHECKPOINT))
+        row = self.create_row(col)
+        self.add_actor(row, ActorType.BRUSH)
+        self.add_actor(row, ActorType.STATIC_MESH)
         
+        row = self.create_row(col)
+        self.add_actor(row, ActorType.LADDER_VOLUME)
+        self.add_actor(row, ActorType.SWING_VOLUME)
+
+        row = self.create_row(col)
+        row.operator(MET_OT_add_springboard.bl_idname, text='Springboard')
+        self.add_actor(row, ActorType.ZIPLINE)
+
+        row = self.create_row(col)
+        self.add_actor(row, ActorType.BLOCKING_VOLUME)
+        self.add_actor(row, ActorType.TRIGGER_VOLUME)
+
+        row = self.create_row(col)
+        self.add_actor(row, ActorType.KILL_VOLUME)
+        row.operator(MET_OT_add_skydome.bl_idname, text='Skydome')
+
+        row = self.create_row(col)
+        self.add_actor(row, ActorType.PLAYER_START)
+        self.add_actor(row, ActorType.CHECKPOINT)
+
         col.separator()
         row = col.row(align=True)
-        row.operator(MET_OT_CleanupWidgets.bl_idname, text='Cleanup Widgets')
+        row.operator(MET_OT_cleanup_widgets.bl_idname, text='Cleanup Widgets')
 
 
 # -----------------------------------------------------------------------------
@@ -100,7 +111,7 @@ class MET_PT_measurements(MEdgeToolsPanel, Panel):
         col2 = row.column()
 
         col1.label(text='Player Height')
-        col2.label(text='1.95m')
+        col2.label(text='1.92m')
         col1.label(text='Max Height')
         col2.label(text='11m')
         col1.label(text='Min Crouch')
@@ -116,7 +127,7 @@ class VIEW3D_MT_PIE_medge_actors(Menu):
         col = _layout.column(align=True)
 
         for type in _types:
-            op = col.operator(MET_OT_AddActor.bl_idname, text=type.label)
+            op = col.operator(MET_OT_add_actor.bl_idname, text=type.label)
             op.type = type.name
 
         return col
@@ -126,12 +137,15 @@ class VIEW3D_MT_PIE_medge_actors(Menu):
         pie = self.layout.menu_pie()
 
         self.add_operators(pie, (ActorType.BRUSH, ActorType.STATIC_MESH))
-        self.add_operators(pie, (ActorType.LADDER_VOLUME, ActorType.SWING_VOLUME, ActorType.SPRINGBOARD, ActorType.ZIPLINE))
+        
+        col = self.add_operators(pie, (ActorType.LADDER_VOLUME, ActorType.SWING_VOLUME, ActorType.ZIPLINE))
+        col.operator(MET_OT_add_springboard.bl_idname, text='Springboard')
+
         self.add_operators(pie, (ActorType.PLAYER_START, ActorType.CHECKPOINT))
         self.add_operators(pie, (ActorType.BLOCKING_VOLUME, ActorType.KILL_VOLUME, ActorType.TRIGGER_VOLUME))
 
         col = pie.column(align=True)
-        col.operator(MET_OT_AddSkydome.bl_idname, text='Skydome')
+        col.operator(MET_OT_add_skydome.bl_idname, text='Skydome')
 
 
 # -----------------------------------------------------------------------------

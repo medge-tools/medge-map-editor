@@ -69,13 +69,12 @@ In this section we go over how to extend the map editor with other Unreal object
 
 6. Go to `builder.py`, create a `Builder` for your actor and update `T3DBuilder > build_actor()`, which is at the bottom of the file.
 
-These are all the steps, but you may not need all of them. For example, for the Springboard, which is an instance of a StaticMesh, we skipped step 3. 
+These are all the steps, but you may not need all of them. For example, the Springboard is an instance of a StaticMesh, so we only created an operator in `src > ops.py`.
 
 ## TODO
 
 ### Should Have
 - Only the sun light can be exported and the conversion method for rotation doesn't work for lights; they probably use quaternions instead of Euler's.
-- Player height is 192cm and not 195cm
 - To be able to export different level collections to seperate t3d files
 
 ### Could Have

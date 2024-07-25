@@ -25,7 +25,6 @@ class ActorType(str, Enum):
     LADDER_VOLUME   = 'Ladder'
     SWING_VOLUME    = 'Swing'
     ZIPLINE         = 'Zipline'
-    SPRINGBOARD     = 'Springboard'
     BLOCKING_VOLUME = 'BlockingVolume'
     TRIGGER_VOLUME  = 'TriggerVolume'
     KILL_VOLUME     = 'KillVolume'

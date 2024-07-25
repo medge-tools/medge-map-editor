@@ -1,6 +1,6 @@
 import bpy
 from bpy.props        import EnumProperty, PointerProperty, CollectionProperty, BoolProperty, IntProperty, FloatVectorProperty, FloatProperty
-from bpy.types        import Scene, Depsgraph, Object, Mesh, PropertyGroup, Context, UILayout
+from bpy.types        import Scene, Depsgraph, Object, Mesh, ID, PropertyGroup, Context, UILayout
 from bpy.app.handlers import depsgraph_update_post
 from mathutils        import Vector, Matrix
 
@@ -27,17 +27,12 @@ def cleanup_widgets():
 
 
 # -----------------------------------------------------------------------------
-def new_actor(_actor_type:ActorType, _object_type='MESH', _data=None):
+def new_actor(_actor_type:ActorType, _data:ID=None):
+    obj = b3d_utils.new_object(b3d_utils.create_cube(), _actor_type.label)
+
     if _data:
         obj = b3d_utils.new_object(_data, _actor_type.label)
 
-    elif _object_type == 'MESH':
-        obj = b3d_utils.new_object(b3d_utils.create_cube(), _actor_type.label)
-
-    elif _object_type == 'CURVE':
-        curve, _ = b3d_utils.create_curve()
-        obj = b3d_utils.new_object(curve, _actor_type.label)
-            
     me_actor = get_actor_prop(obj)
     me_actor.type = _actor_type.name
 
@@ -219,14 +214,17 @@ class MET_ACTOR_PG_StaticMesh(Actor, MaterialProperty, PropertyGroup):
         b3d_utils.draw_box(_layout, 'Do not apply any transforms, these values are needed for export')   
         _layout.separator()
 
-        self.draw_material_prop(_layout)
+        _layout.prop(self, 'is_hidden_game')
+
+        if not self.is_hidden_game:
+            self.draw_material_prop(_layout)
         
         _layout.prop(self, 'use_prefab')
         if self.use_prefab:
             _layout.prop(self, 'prefab')
     
     
-    def __update_name(self, _dummy:Context):
+    def __update_name(self, _context:Context):
         if self.use_prefab:
             self.id_data.name = 'PREFAB_'
 
@@ -236,47 +234,6 @@ class MET_ACTOR_PG_StaticMesh(Actor, MaterialProperty, PropertyGroup):
         else:
             self.id_data.name = 'SM_'
 
-        
-    def __on_prefab_update(self, _dummy:Context):
-        if self.prefab: 
-            if self.prefab.type == 'MESH': 
-                b3d_utils.set_data(self.id_data, self.prefab.data)
-            self.__update_name(_dummy)
-        else:
-            b3d_utils.set_data(self.id_data, None)
-
-    
-    use_prefab:   BoolProperty(name='Use Prefab', update=__update_name)
-    prefab:       PointerProperty(type=Object, name='Prefab', update=__on_prefab_update)
-
-
-# -----------------------------------------------------------------------------
-# SpringBoard
-# -----------------------------------------------------------------------------
-# -----------------------------------------------------------------------------
-class MET_ACTOR_PG_SpringBoard(Actor, PropertyGroup):
-    
-    def init(self):
-        super().init()   
-        b3d_utils.set_data(self.id_data, self.create())
-        self.id_data.name = 'SpringBoard'
-
-
-    def draw(self, _layout: UILayout):
-        b3d_utils.draw_box(_layout, 'Do not apply any transforms, these values are needed for export') 
-        _layout.separator()
-        _layout.prop(self, 'is_hidden_game')
-
-
-    def create(self):
-        small_step = b3d_utils.create_cube((.48, .96, .62))
-        b3d_utils.transform(small_step, [Matrix.Translation((.48, .96, .31))])
-
-        big_step = b3d_utils.create_cube((1.02, 1.6, 1.42))
-        b3d_utils.transform(big_step, [Matrix.Translation((1.82, .8, .72))])
-
-        return b3d_utils.join_meshes([small_step, big_step])
-
 
     def __on_is_hidden_game_update(self, _context:Context):
         if self.is_hidden_game:
@@ -284,8 +241,19 @@ class MET_ACTOR_PG_SpringBoard(Actor, PropertyGroup):
         else:
             self.id_data.display_type = 'SOLID'
 
+        
+    def __on_prefab_update(self, _context:Context):
+        if self.prefab: 
+            if self.prefab.type == 'MESH': 
+                b3d_utils.set_data(self.id_data, self.prefab.data)
+            self.__update_name(_context)
+        else:
+            b3d_utils.set_data(self.id_data, None)
 
+    
     is_hidden_game: BoolProperty(name='Is Hidden In Game', update=__on_is_hidden_game_update)
+    use_prefab:     BoolProperty(name='Use Prefab', update=__update_name)
+    prefab:         PointerProperty(type=Object, name='Prefab', update=__on_prefab_update)
 
 
 # -----------------------------------------------------------------------------
@@ -427,7 +395,7 @@ class MET_ACTOR_PG_Zipline(Actor, PropertyGroup):
             v = Vector((8, 0, 0)) * k
             p.co = (*v, 1)
 
-        zipline = new_actor(ActorType.STATIC_MESH, 'CURVE', curve)
+        zipline = new_actor(ActorType.STATIC_MESH, curve)
 
         zipline.name = 'S_Zipline'
         zipline.data.bevel_depth = 0.04
@@ -660,8 +628,6 @@ class MET_OBJECT_PG_Actor(PropertyGroup):
                 self.swing.draw(col)
             case ActorType.ZIPLINE.name:
                 self.zipline.draw(col)
-            case ActorType.SPRINGBOARD.name:
-                self.springboard.draw(col)
             case ActorType.BLOCKING_VOLUME.name:
                 self.blocking_volume.draw(col)
             case ActorType.TRIGGER_VOLUME.name | ActorType.KILL_VOLUME.name:
@@ -686,8 +652,6 @@ class MET_OBJECT_PG_Actor(PropertyGroup):
                 self.swing.init()
             case ActorType.ZIPLINE.name:
                 self.zipline.init()
-            case ActorType.SPRINGBOARD.name:
-                self.springboard.init()
             case ActorType.BLOCKING_VOLUME.name:
                 self.blocking_volume.init()
             case ActorType.TRIGGER_VOLUME.name | ActorType.KILL_VOLUME.name:
@@ -715,9 +679,6 @@ class MET_OBJECT_PG_Actor(PropertyGroup):
     def get_zipline(self) -> MET_ACTOR_PG_Zipline:
         return self.zipline
     
-    def get_springboard(self) -> MET_ACTOR_PG_SpringBoard:
-        return self.springboard
-    
     def get_blocking_volume(self) -> MET_ACTOR_PG_BlockingVolume:
         return self.blocking_volume
     
@@ -735,7 +696,6 @@ class MET_OBJECT_PG_Actor(PropertyGroup):
     ladder:          PointerProperty(type=MET_ACTOR_PG_LadderVolume)
     swing:           PointerProperty(type=MET_ACTOR_PG_SwingVolume)
     zipline:         PointerProperty(type=MET_ACTOR_PG_Zipline)
-    springboard:     PointerProperty(type=MET_ACTOR_PG_SpringBoard)
     blocking_volume: PointerProperty(type=MET_ACTOR_PG_BlockingVolume)
     trigger_volume:  PointerProperty(type=MET_ACTOR_PG_TriggerVolume)
 
@@ -754,7 +714,7 @@ def on_depsgraph_update_post(_scene:Scene, _depsgraph:Depsgraph):
         actor = get_actor_prop(obj)
         
         match(obj.type):
-            case 'LIGHT' | 'CURVE': 
+            case 'LIGHT': 
                 actor.user_editable = False
 
         match(actor.type):
