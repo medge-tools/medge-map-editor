@@ -50,10 +50,10 @@ For some actors, do not apply any transforms, as we want to export those. This i
 
 In this section we go over how to extend the map editor with other Unreal objects that you would like to export from Blender. The relevant source files are:
 
-- `src > t3d > scene.py`: This file contains the actor types like Brush, StaticMesh, Volumes in their T3D format.
-- `src > t3d > builder.py`: For each actor type this file contains the implementation to translate a Blender object to its respective T3D format.
-- `src > props.py`: For each actor type this file contains its respective PropertyGroup.
-- `src > gui.py`: For each actor type there is a button to create a instance.
+- `src > t3d > scene.py` This file contains the actor types like Brush, StaticMesh, Volumes in their T3D format.
+- `src > t3d > builder.py` For each actor type this file contains the implementation to translate a Blender object to its respective T3D format.
+- `src > props.py` For each actor type this file contains its respective PropertyGroup.
+- `src > gui.py` For each actor type there is a button to create a instance.
 
 ### Step-By-Step
 
