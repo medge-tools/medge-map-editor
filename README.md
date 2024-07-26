@@ -75,7 +75,8 @@ These are all the steps, but you may not need all of them. For example, the Spri
 
 ### Should Have
 - Only the sun light can be exported and the conversion method for rotation doesn't work for lights; they probably use quaternions instead of Euler's.
-- To be able to export different level collections to seperate t3d files
+- To be able to export different level collections to seperate t3d files.
+- Remove the need to set the material package, before being able to select a material.
 
 ### Could Have
 - You can add materials to Brushes, but only by name. It would be nice if we could texture Brushes inside Blender and export those materials also.
