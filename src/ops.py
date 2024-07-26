@@ -81,7 +81,7 @@ class MET_OT_add_springboard(Operator):
         prefab = _context.scene.objects.get(name)
         
         if not prefab:
-            coll = b3d_utils.new_collection('P_Gameplay.SpringBoard', 'GenericBrowser')
+            coll = b3d_utils.new_collection('P_Gameplay.SpringBoard', True, 'GenericBrowser')
 
             prefab = b3d_utils.new_object(self.create_springboard(), name, coll)
             prefab.location = 12, 0, 0

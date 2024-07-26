@@ -1,5 +1,5 @@
 import bpy
-from bpy.props        import EnumProperty, PointerProperty, CollectionProperty, BoolProperty, IntProperty, FloatVectorProperty, FloatProperty
+from bpy.props        import EnumProperty, PointerProperty, CollectionProperty, BoolProperty, IntProperty, FloatVectorProperty, FloatProperty, StringProperty
 from bpy.types        import Scene, Depsgraph, Object, Mesh, ID, PropertyGroup, Context, UILayout
 from bpy.app.handlers import depsgraph_update_post
 from mathutils        import Vector, Matrix
@@ -28,10 +28,12 @@ def cleanup_widgets():
 
 # -----------------------------------------------------------------------------
 def new_actor(_actor_type:ActorType, _data:ID=None):
-    obj = b3d_utils.new_object(b3d_utils.create_cube(), _actor_type.label)
 
     if _data:
         obj = b3d_utils.new_object(_data, _actor_type.label)
+    else:
+        obj = b3d_utils.new_object(b3d_utils.create_cube(), _actor_type.label)
+
 
     me_actor = get_actor_prop(obj)
     me_actor.type = _actor_type.name
@@ -67,37 +69,73 @@ def TrackIndexEnumProperty(_callback:Callable=None):
 
 
 # -----------------------------------------------------------------------------
+# We cannot make this a PropertyGroup and add it as a PointerProperty to actors,
+# otherwise we will get a stackoverflow.
+# I think it's because of to many nested PointerProperties
 class MaterialProperty:
 
     def __filter_on_package(self, _obj:Object):
-        is_material = _obj.name.startswith('M_')
-        return self.material_package in _obj.users_collection and is_material
+        if _obj:
+            if self.material_filter:
+                valid = self.material_filter_collection in _obj.users_collection
+                
+                if (prefix := self.material_filter_prefix):
+                    valid = valid and _obj.name.startswith(prefix)
+
+                return valid
+        
+        return True
     
 
-    def draw_material_prop(self, _layout:UILayout):
-        _layout.prop(self, 'material_package')
+    def draw_material(self, _layout:UILayout):
+        _layout.prop(self, 'material_filter')
+
+        if self.material_filter:
+            _layout.prop(self, 'material_filter_collection')
+            _layout.prop(self, 'material_filter_prefix')
+        
         _layout.prop(self, 'material')
 
 
-    material_package: PointerProperty(type=bpy.types.Collection, name='Material Package')
-    material:         PointerProperty(type=Object, name='Name', poll=__filter_on_package)
+    material_filter:            BoolProperty(name='Filter')
+    material_filter_collection: PointerProperty(type=bpy.types.Collection, name='Collection')
+    material_filter_prefix:     StringProperty(name='Prefix')
+    material:                   PointerProperty(type=Object, name='Material', update=__filter_on_package)
 
 
 # -----------------------------------------------------------------------------
+# We cannot make this a PropertyGroup and add it as a PointerProperty to actors,
+# otherwise we will get a stackoverflow. 
+# I think it's because of to many nested PointerProperties
 class PhysMaterialProperty:
 
     def __filter_on_package(self, _obj:Object):
-        is_material = _obj.name.startswith('PM_')
-        return self.phys_material_package in _obj.users_collection and is_material
+        if _obj:
+            if self.phys_material_filter:
+                valid = self.phys_material_filter_collection in _obj.users_collection
+                
+                if (prefix := self.phys_material_filter_prefix):
+                    valid = valid and _obj.name.startswith(prefix)
+
+                return valid
+        
+        return True
     
 
-    def draw_phys_material_prop(self, _layout:UILayout):
-        _layout.prop(self, 'phys_material_package')
+    def draw_phys_material(self, _layout:UILayout):
+        _layout.prop(self, 'phys_material_filter')
+
+        if self.phys_material_filter:
+            _layout.prop(self, 'phys_material_filter_collection')
+            _layout.prop(self, 'phys_material_filter_prefix')
+        
         _layout.prop(self, 'phys_material')
 
 
-    phys_material_package: PointerProperty(type=bpy.types.Collection, name='Phys Material Package')
-    phys_material:         PointerProperty(type=Object, name='Name', poll=__filter_on_package)
+    phys_material_filter:            BoolProperty(name='Filter')
+    phys_material_filter_collection: PointerProperty(type=bpy.types.Collection, name='Collection')
+    phys_material_filter_prefix:     StringProperty(name='Prefix')
+    phys_material:                   PointerProperty(type=Object, name='PhysMaterial', update=__filter_on_package)
 
 
 # -----------------------------------------------------------------------------
@@ -111,7 +149,6 @@ class Actor:
 
     def init(self):
         self.clear_widgets()
-        b3d_utils.link_object_to_scene(self.id_data)
         self.id_data.display_type = 'TEXTURED'
     
 
@@ -145,56 +182,7 @@ class MET_ACTOR_PG_Brush(Actor, MaterialProperty, PropertyGroup):
 
 
     def draw(self, _layout:UILayout):
-        self.draw_material_prop(_layout)
-
-
-# -----------------------------------------------------------------------------
-# PlayerStart
-# -----------------------------------------------------------------------------
-# -----------------------------------------------------------------------------
-class MET_ACTOR_PG_PlayerStart(Actor, PropertyGroup):
-    
-    def init(self):
-        super().init()
-
-        b3d_utils.set_data(self.id_data, self.create())
-        self.id_data.display_type = 'WIRE'
-        self.id_data.name = 'PlayerStart'
-
-
-    def draw(self, _layout:UILayout):
-        b3d_utils.draw_box(_layout, 'Do not apply any transforms, these values are needed for export') 
-        _layout.separator()
-
-        _layout.prop(self, 'is_time_trial')
-
-        if self.is_time_trial:
-            _layout.prop(self, 'track_index')
-
-
-    def create(self):
-        scale = (.5, .5, 1)
-
-        # The origin will be at the bottom, but when we export we add +1 to the z value
-        verts = [
-            Vector((0        * scale[0], -1 * scale[1], 1 * scale[2])),
-            Vector((0        * scale[0],  1 * scale[1], 1 * scale[2])),
-            Vector((1.366025 * scale[0],  0           , 1 * scale[2])),
-            Vector((0        * scale[0],  0           , 0 * scale[2])),
-        ]
-
-        faces = [
-            (2, 1, 0),
-            (0, 1, 3),
-            (1, 2, 3),
-            (0, 3, 2)
-        ]
-
-        return b3d_utils.new_mesh(verts, [], faces, 'PlayerStart')
-
-
-    is_time_trial: BoolProperty(name='Is Time Trial')
-    track_index:   TrackIndexEnumProperty()
+        self.draw_material(_layout)
 
 
 # -----------------------------------------------------------------------------
@@ -217,7 +205,7 @@ class MET_ACTOR_PG_StaticMesh(Actor, MaterialProperty, PropertyGroup):
         _layout.prop(self, 'is_hidden_game')
 
         if not self.is_hidden_game:
-            self.draw_material_prop(_layout)
+            self.draw_material(_layout)
         
         _layout.prop(self, 'use_prefab')
         if self.use_prefab:
@@ -326,11 +314,11 @@ class MET_ACTOR_PG_SwingVolume(Actor, PropertyGroup):
             arrow.obj.location = self.id_data.location
             b3d_utils.set_object_selectable(arrow.obj, False)
 
-        m_t07_x = Matrix.Translation((.7, 0, 0))
+        m_t07_x  = Matrix.Translation((.7, 0, 0))
         m_t035_x = Matrix.Translation((.2, 0, 0))
-        m_r90_x = Matrix.Rotation(math.radians(90), 3, (1, 0, 0))
-        m_r90_y = Matrix.Rotation(math.radians(90), 3, (0, 1, 0))
-        m_mir_x = Matrix.Scale(-1, 3, (1, 0, 0))
+        m_r90_x  = Matrix.Rotation(math.radians(90), 3, (1, 0, 0))
+        m_r90_y  = Matrix.Rotation(math.radians(90), 3, (0, 1, 0))
+        m_mir_x  = Matrix.Scale(-1, 3, (1, 0, 0))
 
         b3d_utils.transform(arrow0.obj.data, [m_t07_x , m_r90_x])
         b3d_utils.transform(arrow1.obj.data, [m_t035_x, m_r90_x, m_r90_y])
@@ -529,7 +517,7 @@ class MET_ACTOR_PG_BlockingVolume(Actor, PhysMaterialProperty, PropertyGroup):
     
 
     def draw(self, _layout: UILayout):
-        self.draw_phys_material_prop(_layout)
+        self.draw_phys_material(_layout)
 
 
 # -----------------------------------------------------------------------------
@@ -545,6 +533,55 @@ class MET_ACTOR_PG_TriggerVolume(Actor, PropertyGroup):
             b3d_utils.set_data(self.id_data, b3d_utils.create_cube())  
 
         self.id_data.display_type = 'WIRE'
+
+
+# -----------------------------------------------------------------------------
+# PlayerStart
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+class MET_ACTOR_PG_PlayerStart(Actor, PropertyGroup):
+    
+    def init(self):
+        super().init()
+
+        b3d_utils.set_data(self.id_data, self.create())
+        self.id_data.display_type = 'WIRE'
+        self.id_data.name = 'PlayerStart'
+
+
+    def draw(self, _layout:UILayout):
+        b3d_utils.draw_box(_layout, 'Do not apply any transforms, these values are needed for export') 
+        _layout.separator()
+
+        _layout.prop(self, 'is_time_trial')
+
+        if self.is_time_trial:
+            _layout.prop(self, 'track_index')
+
+
+    def create(self):
+        scale = (.5, .5, 1)
+
+        # The origin will be at the bottom, but when we export we add +1 to the z value
+        verts = [
+            Vector((0        * scale[0], -1 * scale[1], 1 * scale[2])),
+            Vector((0        * scale[0],  1 * scale[1], 1 * scale[2])),
+            Vector((1.366025 * scale[0],  0           , 1 * scale[2])),
+            Vector((0        * scale[0],  0           , 0 * scale[2])),
+        ]
+
+        faces = [
+            (2, 1, 0),
+            (0, 1, 3),
+            (1, 2, 3),
+            (0, 3, 2)
+        ]
+
+        return b3d_utils.new_mesh(verts, [], faces, 'PlayerStart')
+
+
+    is_time_trial: BoolProperty(name='Is Time Trial')
+    track_index:   TrackIndexEnumProperty()
 
 
 # -----------------------------------------------------------------------------
@@ -614,14 +651,10 @@ class MET_OBJECT_PG_Actor(PropertyGroup):
         col.separator()
 
         match(self.type):
-            case ActorType.PLAYER_START.name:
-                self.player_start.draw(col)
-            case ActorType.CHECKPOINT.name:
-                self.checkpoint.draw(col)
-            case ActorType.STATIC_MESH.name:
-                self.static_mesh.draw(col)
             case ActorType.BRUSH.name:
                 self.brush.draw(col)
+            case ActorType.STATIC_MESH.name:
+                self.static_mesh.draw(col)
             case ActorType.LADDER_VOLUME.name:
                 self.ladder.draw(col)
             case ActorType.SWING_VOLUME.name:
@@ -632,20 +665,20 @@ class MET_OBJECT_PG_Actor(PropertyGroup):
                 self.blocking_volume.draw(col)
             case ActorType.TRIGGER_VOLUME.name | ActorType.KILL_VOLUME.name:
                 self.trigger_volume.draw(col)
+            case ActorType.PLAYER_START.name:
+                self.player_start.draw(col)
+            case ActorType.CHECKPOINT.name:
+                self.checkpoint.draw(col)
 
     
     def __on_type_update(self, _context:Context):
         b3d_utils.set_active_object(self.id_data)
 
         match(self.type):
-            case ActorType.PLAYER_START.name:
-                self.player_start.init()
-            case ActorType.CHECKPOINT.name:
-                self.checkpoint.init()
-            case ActorType.STATIC_MESH.name:
-                self.static_mesh.init()
             case ActorType.BRUSH.name:
                 self.brush.init()
+            case ActorType.STATIC_MESH.name:
+                self.static_mesh.init()
             case ActorType.LADDER_VOLUME.name:
                 self.ladder.init()
             case ActorType.SWING_VOLUME.name:
@@ -656,19 +689,17 @@ class MET_OBJECT_PG_Actor(PropertyGroup):
                 self.blocking_volume.init()
             case ActorType.TRIGGER_VOLUME.name | ActorType.KILL_VOLUME.name:
                 self.trigger_volume.init()
+            case ActorType.PLAYER_START.name:
+                self.player_start.init()
+            case ActorType.CHECKPOINT.name:
+                self.checkpoint.init()
 
-    
-    def get_player_start(self) -> MET_ACTOR_PG_PlayerStart:
-        return self.player_start
-    
-    def get_checkpoint(self) -> MET_ACTOR_PG_Checkpoint:
-        return self.checkpoint
-
-    def get_static_mesh(self) -> MET_ACTOR_PG_StaticMesh:
-        return self.static_mesh
     
     def get_brush(self) -> MET_ACTOR_PG_Brush:
         return self.brush
+    
+    def get_static_mesh(self) -> MET_ACTOR_PG_StaticMesh:
+        return self.static_mesh
     
     def get_ladder(self) -> MET_ACTOR_PG_LadderVolume:
         return self.ladder
@@ -685,19 +716,24 @@ class MET_OBJECT_PG_Actor(PropertyGroup):
     def get_trigger_volume(self) -> MET_ACTOR_PG_TriggerVolume:
         return self.trigger_volume
     
+    def get_player_start(self) -> MET_ACTOR_PG_PlayerStart:
+        return self.player_start
+    
+    def get_checkpoint(self) -> MET_ACTOR_PG_Checkpoint:
+        return self.checkpoint
 
     type:            ActorTypeEnumProperty(__on_type_update)
     user_editable:   BoolProperty(name='PRIVATE', default=True)
 
-    player_start:    PointerProperty(type=MET_ACTOR_PG_PlayerStart)
-    checkpoint:      PointerProperty(type=MET_ACTOR_PG_Checkpoint)
-    static_mesh:     PointerProperty(type=MET_ACTOR_PG_StaticMesh)
     brush:           PointerProperty(type=MET_ACTOR_PG_Brush)
+    static_mesh:     PointerProperty(type=MET_ACTOR_PG_StaticMesh)
     ladder:          PointerProperty(type=MET_ACTOR_PG_LadderVolume)
     swing:           PointerProperty(type=MET_ACTOR_PG_SwingVolume)
     zipline:         PointerProperty(type=MET_ACTOR_PG_Zipline)
     blocking_volume: PointerProperty(type=MET_ACTOR_PG_BlockingVolume)
     trigger_volume:  PointerProperty(type=MET_ACTOR_PG_TriggerVolume)
+    player_start:    PointerProperty(type=MET_ACTOR_PG_PlayerStart)
+    checkpoint:      PointerProperty(type=MET_ACTOR_PG_Checkpoint)
 
 
 # -----------------------------------------------------------------------------
