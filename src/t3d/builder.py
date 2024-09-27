@@ -25,10 +25,7 @@ from ..props import get_actor_prop
 # -----------------------------------------------------------------------------
 @dataclass
 class T3DBuilderOptions:
-
-    selected_collection : bool
-    selected_objects    : bool
-    scale               : int
+    scale : int
 
 
 # -----------------------------------------------------------------------------
@@ -295,18 +292,11 @@ class DirectionalLightBuilder(Builder):
 # -----------------------------------------------------------------------------
 class T3DBuilder():
 
-    def build(self, _context:Context, _options:T3DBuilderOptions) -> list[Actor]:
+    def build(self, _objects:list[Object], _options:T3DBuilderOptions) -> list[Actor]:
         scene = []
-        objects = _context.scene.objects
         collection_paths = CollectionPaths('GenericBrowser')
 
-        if _options.selected_collection:
-            objects = _context.collection.all_objects
-
-        elif _options.selected_objects:
-            objects = _context.selected_objects
-
-        for obj in objects:
+        for obj in _objects:
             if(actor := self.build_actor(obj, _options, collection_paths)):
                 scene.append(actor)
 

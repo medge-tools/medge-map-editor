@@ -53,6 +53,29 @@ def new_collection(_name:str, _unique=True, _parent:Collection|str=None):
     return coll
 
 
+def get_selected_collection_names() -> list[str]:
+    area  = next(area for area in bpy.context.window.screen.areas if area.type == 'OUTLINER')
+
+    with bpy.context.temp_override(
+        window=bpy.context.window,
+        area=area,
+        region=next(region for region in area.regions if region.type == 'WINDOW'),
+        screen=bpy.context.window.screen):
+
+        selection = bpy.context.selected_ids
+        selected_collections = [sel.name for sel in selection if sel.rna_type.name == 'Collection']
+        
+        return selected_collections
+
+
+# -----------------------------------------------------------------------------
+def delete_hierarchy(_collection:Collection):
+    for c in _collection.children:
+        delete_hierarchy(c)
+
+    bpy.data.collections.remove(_collection, do_unlink=True)
+
+
 # -----------------------------------------------------------------------------
 # Object
 # -----------------------------------------------------------------------------

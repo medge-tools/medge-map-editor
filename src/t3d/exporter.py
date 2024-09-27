@@ -1,11 +1,14 @@
 import bpy
 from bpy.props           import StringProperty, EnumProperty, BoolProperty
-from bpy.types           import Operator, Context, TOPBAR_MT_file_export
+from bpy.types           import Operator, Context, TOPBAR_MT_file_export, Collection
 from bpy_extras.io_utils import ExportHelper
 from mathutils           import Vector
 
-from .scene   import Actor, SkyLight
-from .builder import T3DBuilder, T3DBuilderOptions
+import os.path
+
+from ...b3d_utils import get_selected_collection_names
+from .scene       import Actor, SkyLight
+from .builder     import T3DBuilder, T3DBuilderOptions
 
 
 # -----------------------------------------------------------------------------
@@ -37,8 +40,8 @@ class MET_OT_T3D_Export(Operator, ExportHelper):
         name='Units')
 
 
-    selected_collection: BoolProperty(
-        name='Selected Collection',
+    selected_collections: BoolProperty(
+        name='Selected Collections',
         default=False)
 
 
@@ -59,9 +62,9 @@ class MET_OT_T3D_Export(Operator, ExportHelper):
         layout.prop(self, 'units')
         
         if not self.selected_objects:
-            layout.prop(self, 'selected_collection')
+            layout.prop(self, 'selected_collections')
         
-        if not self.selected_collection:
+        if not self.selected_collections:
             layout.prop(self, 'selected_objects')
         
         layout.prop(self, 'export_static_meshes')
@@ -82,13 +85,25 @@ class MET_OT_T3D_Export(Operator, ExportHelper):
             us = self.units_scale[self.units]
             scale = Vector((us, us, us))
 
-            options = T3DBuilderOptions(self.selected_collection,
-                                        self.selected_objects,
-                                        scale)
+            options = T3DBuilderOptions(scale)
 
-            scene = T3DBuilder().build(_context, options)
+            if self.selected_collections:
+                for name in get_selected_collection_names():
+                    coll:Collection = bpy.data.collections.get(name)
+                    scene = T3DBuilder().build(coll.all_objects, options)
+                    dir = os.path.dirname(self.filepath)
+                    self.write(f'{dir}\\{coll.name}.t3d', scene)
 
-            self.write(self.filepath, scene)
+            else:
+                objects = _context.scene.objects
+                
+                if self.selected_objects:
+                    objects = _context.selected_objects
+
+                scene = T3DBuilder().build(objects, options)
+
+                self.write(self.filepath, scene)
+
             self.report({'INFO'}, 'T3D exported successful')
             
         except Exception as e:
@@ -98,7 +113,7 @@ class MET_OT_T3D_Export(Operator, ExportHelper):
         if self.export_static_meshes:
             bpy.ops.medge_map_editor.ase_export(filepath=self.filepath, 
                                                 units=self.units, 
-                                                selected_collection=self.selected_collection,
+                                                selected_collection=self.selected_collections,
                                                 selected_objects=self.selected_objects)
 
         return {'FINISHED'}
