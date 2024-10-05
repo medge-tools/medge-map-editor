@@ -1,10 +1,11 @@
 import bpy
 import bmesh
 from   bpy.types import Object, Collection
-from   mathutils import Vector
+from   mathutils import Vector, Euler
 
 from dataclasses import dataclass
 import math
+from math import atan2, hypot
 
 from .scene import (
     ActorType, 
@@ -59,6 +60,15 @@ class CollectionPaths:
 
 
 # -----------------------------------------------------------------------------
+def get_rotation_mirrored(_obj:Object) -> Euler:
+    q = _obj.matrix_world.to_quaternion()
+    q.x *= -1
+    q.w *= -1
+
+    return q.to_euler()
+
+
+# -----------------------------------------------------------------------------
 # Actor Builders
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -75,9 +85,9 @@ class Builder:
 
 
     def get_rotation(self, _obj:Object) -> tuple[float, float, float]:
-        rot = b3d_utils.get_rotation(_obj, 'X')
+        r = get_rotation_mirrored(_obj)
         # X and Y need to be swapped
-        rotation = (rot.y, rot.x, rot.z)
+        rotation = (r.y, r.x, r.z)
 
         return rotation
 
@@ -291,18 +301,43 @@ class KillVolumeBuilder(Builder):
 # Lights
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-# For some reason the default rotation conversion doesn't work for lights
-class LightBuilder(Builder):
-    def get_rotation(self, _obj: Object) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
-        rot = b3d_utils.get_rotation(_obj, 'X')
-        rotation = (rot.x, rot.y, rot.z - math.pi)
+# In UnrealEd the default direction of every light is not the same. 
 
-        return rotation
+class EulerLightBuilder(Builder):
 
+    def get_rotation(self, _obj: Object) -> tuple[float, float, float]:
+        direction = Vector((0, 0, -1))
+        
+        rotation = _obj.matrix_world.to_quaternion()
+        direction.rotate(rotation)
+        
+        x = direction.x
+        y = direction.y
+        z = direction.z
+
+        # Align 
+        pitch = atan2(hypot(x, y), -z)
+        yaw = atan2(x, -y)
+        
+        # Mirror on xy-plane
+        y_axis = Vector((0, 1, 0))
+        a = y_axis.angle(direction)
+
+        return pitch - math.pi / 2, 0, yaw + math.pi / 2 - a * 2
 
 # -----------------------------------------------------------------------------
-class DirectionalLightBuilder(LightBuilder):
+class PointLightBuilder(Builder):
+     
+    def build(self, _obj:Object) -> Actor | None:
+        location = self.get_location(_obj)
+        light = _obj.data
 
+        return PointLight(location, light.color, light.shadow_soft_size)
+    
+
+# -----------------------------------------------------------------------------
+class DirectionalLightBuilder(EulerLightBuilder):
+    
     def build(self, _obj:Object) -> Actor | None:
         location = self.get_location(_obj)
         rotation = self.get_rotation(_obj)
@@ -312,20 +347,27 @@ class DirectionalLightBuilder(LightBuilder):
 
 
 # -----------------------------------------------------------------------------
-class PointLightBuilder(LightBuilder):
+class SpotLightBuilder(EulerLightBuilder):
      
-     def build(self, _obj:Object) -> Actor | None:
+    def build(self, _obj:Object) -> Actor | None:
         location = self.get_location(_obj)
         rotation = self.get_rotation(_obj)
         light = _obj.data
 
-        return PointLight(location, rotation, light.color, light.shadow_soft_size)
+        return SpotLight(location, rotation, light.color, light.shadow_soft_size, light.spot_size)
 
 
 # -----------------------------------------------------------------------------
-class AreaLightBuilder(LightBuilder):
-     
-     def build(self, _obj:Object) -> Actor | None:
+class AreaLightBuilder(Builder):
+
+    def get_rotation(self, _obj: Object) -> tuple[float, float, float]:
+        r = get_rotation_mirrored(_obj)
+        # X and Y need to be swapped
+        rotation = (r.y, r.x - math.pi / 2, r.z)
+
+        return rotation
+        
+    def build(self, _obj:Object) -> Actor | None:
         location = self.get_location(_obj)
         rotation = self.get_rotation(_obj)
 
@@ -336,17 +378,6 @@ class AreaLightBuilder(LightBuilder):
         size_y = light.size * scale.y * self.options.scale
 
         return AreaLight(location, rotation, light.color, light.shadow_soft_size, size_x, size_y)
-
-
-# -----------------------------------------------------------------------------
-class SpotLightBuilder(LightBuilder):
-     
-     def build(self, _obj:Object) -> Actor | None:
-        location = self.get_location(_obj)
-        rotation = self.get_rotation(_obj)
-        light = _obj.data
-
-        return SpotLight(location, rotation, light.color, light.shadow_soft_size, light.spot_size)
 
 
 # -----------------------------------------------------------------------------

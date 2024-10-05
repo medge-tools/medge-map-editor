@@ -416,6 +416,7 @@ f'Begin Actor Class=DirectionalLight Name=DirectionalLight_0 Archetype=Direction
 \tEnd Object\n\
 \tLocation=({self.Location})\n\
 \tRotation=({self.Rotation})\n\
+\tDrawScale3D=(X=10,Y=1.000000,Z=1.000000)\n\
 End Actor\n'
     
 
@@ -423,10 +424,9 @@ End Actor\n'
 class PointLight(Actor):
     def __init__(self,
                  _location: tuple[float, float, float], 
-                 _rotation: tuple[float, float, float],
                  _color:    tuple[int, int, int],
                  _radius:   float):
-        super().__init__(_location, _rotation)
+        super().__init__(_location)
         self.Color = Color(_color)
         self.Radius = _radius
 
@@ -465,7 +465,7 @@ f'Begin Actor Class=TdAreaLight Name=TdAreaLight_0 Archetype=TdAreaLight\'TdGame
 \tEnd Object\n\
 \tLocation=({self.Location})\n\
 \tRotation=({self.Rotation})\n\
-\tDrawScale3D=(X={self.SizeX},Y=1.000000,Z={self.SizeZ})\n\
+\tDrawScale3D=(X={self.SizeX},Y=10.00000,Z={self.SizeZ})\n\
 End Actor\n'
 
 
@@ -492,4 +492,5 @@ f'Begin Actor Class=SpotLight Name=SpotLight_0 Archetype=SpotLight\'Engine.Defau
 \tEnd Object\n\
 \tLocation=({self.Location})\n\
 \tRotation=({self.Rotation})\n\
+\tDrawScale3D=(X=10,Y=1.000000,Z=1.000000)\n\
 End Actor\n'

@@ -255,34 +255,6 @@ def join_objects(_objects:list[Object]) -> Object:
 # Object Transformations
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-# Rotation mode: 
-#   https://gist.github.com/behreajj/2dbb6fb7cee78c167cd85085e67bcdf6
-# Mirror rotation: 
-#   https://www.gamedev.net/forums/topic/#599824-mirroring-a-quaternion-against-the-yz-plane/
-def get_rotation(_obj:Object, _mirror:str=None) -> Euler:
-    prev_rot_mode = _obj.rotation_mode
-    _obj.rotation_mode = 'QUATERNION'
-
-    q = _obj.rotation_quaternion.copy()
-
-    if _mirror:
-        for ax in _mirror:
-            if ax == 'X' or ax == 'x':
-                q.x *= -1
-                q.w *= -1
-
-            if ax == 'Y' or ax == 'y':
-                raise Exception('Y mirror not implemented')
-
-            if ax == 'Z' or ax == 'z':
-                raise Exception('Z mirror not implemented')
-
-    _obj.rotation_mode = prev_rot_mode
-
-    return q.to_euler()
-
-
-# -----------------------------------------------------------------------------
 # https://blender.stackexchange.com/questions/159538/how-to-apply-all-transformations-to-an-object-at-low-level
 def apply_all_transforms(_obj:Object):
     mb = _obj.matrix_basis
