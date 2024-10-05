@@ -82,8 +82,7 @@ class MET_OT_T3D_Export(Operator, ExportHelper):
     def execute(self, _context: Context):
         # Export T3D
         try:
-            us = self.units_scale[self.units]
-            scale = Vector((us, us, us))
+            scale = self.units_scale[self.units]
 
             options = T3DBuilderOptions(scale)
 

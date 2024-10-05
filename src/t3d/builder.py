@@ -1,9 +1,10 @@
 import bpy
 import bmesh
-from   bpy.types import Object, Context, Collection
+from   bpy.types import Object, Collection
 from   mathutils import Vector
 
 from dataclasses import dataclass
+import math
 
 from .scene import (
     ActorType, 
@@ -15,8 +16,11 @@ from .scene import (
     Brush, 
     LadderVolume, 
     BlockingVolume,
+    Zipline,
     DirectionalLight,
-    Zipline)
+    PointLight,
+    SpotLight,
+    AreaLight)
 
 from ...     import b3d_utils
 from ..props import get_actor_prop
@@ -62,17 +66,20 @@ class Builder:
 
     def __init__(self, _options:T3DBuilderOptions, _collection_paths:CollectionPaths):
         self.mirror = Vector((1, -1, 1))
-        self.scale = _options.scale
+        self.options = _options
         self.collection_paths = _collection_paths
 
 
-    # Transform to left-handed coordinate system
-    def get_location_rotation(self, _obj:Object) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
-        rot = b3d_utils.get_rotation_mirrored_x_axis(_obj)
-        location = _obj.matrix_world.translation * self.scale * self.mirror
-        rotation = (rot.x, rot.y, rot.z)
+    def get_location(self, _obj:Object) -> tuple[float, float, float]:
+        return _obj.matrix_world.translation * self.options.scale * self.mirror
 
-        return location, rotation
+
+    def get_rotation(self, _obj:Object) -> tuple[float, float, float]:
+        rot = b3d_utils.get_rotation(_obj, 'X')
+        # X and Y need to be swapped
+        rotation = (rot.y, rot.x, rot.z)
+
+        return rotation
 
 
     def create_polygons(self, _obj:Object, _apply_transforms=False) -> list[Polygon]:
@@ -90,9 +97,9 @@ class Builder:
             for v in reversed(f.verts):
                 if _apply_transforms:
                     world_co = obj_eval.matrix_world @ v.co
-                    verts.append(world_co * self.scale * self.mirror)
+                    verts.append(world_co * self.options.scale * self.mirror)
                 else:
-                    verts.append(v.co * obj_eval.scale * self.scale * self.mirror)
+                    verts.append(v.co * obj_eval.scale * self.options.scale * self.mirror)
 
             v0 = f.verts[0].co
             v1 = f.verts[1].co
@@ -119,7 +126,8 @@ class PlayerStartBuilder(Builder):
 
     def build(self, _obj:Object) -> Actor | None:
         player_start = get_actor_prop(_obj).player_start
-        location, rotation = self.get_location_rotation(_obj)
+        location = self.get_location(_obj)
+        rotation = self.get_rotation(_obj)
         
         location.z += 1
 
@@ -130,7 +138,7 @@ class PlayerStartBuilder(Builder):
 class CheckpointBuilder(Builder):
 
     def build(self, _obj:Object) -> Actor | None:
-        location, _ = self.get_location_rotation(_obj)
+        location = self.get_location(_obj)
         checkpoint = get_actor_prop(_obj).get_checkpoint()
 
         return Checkpoint(location, 
@@ -149,7 +157,8 @@ class StaticMeshBuilder(Builder):
 
     def build(self, _obj:Object) -> Actor | None:
         static_mesh = get_actor_prop(_obj).get_static_mesh()
-        location, rotation = self.get_location_rotation(_obj)
+        location = self.get_location(_obj)
+        rotation = self.get_rotation(_obj)
 
         if static_mesh.use_prefab:
             if (prefab := static_mesh.prefab):
@@ -174,7 +183,7 @@ class ZiplineBuilder(Builder):
     def build(self, _obj:Object) -> Actor | None:
         curve = get_actor_prop(_obj).get_zipline().curve
         
-        t = Vector((*(self.scale * self.mirror), 1.0)) 
+        t = Vector((*(self.options.scale * self.mirror), 1.0)) 
         
         mworld = curve.matrix_world
         
@@ -186,7 +195,7 @@ class ZiplineBuilder(Builder):
         
         polylist = self.create_polygons(_obj)
         
-        _, rotation = self.get_location_rotation(_obj)
+        rotation = self.get_rotation(_obj)
 
         return Zipline(polylist, rotation, start, middle, end)
 
@@ -212,7 +221,8 @@ class LadderVolumeBuilder(Builder):
 
     def build(self, _obj:Object) -> Actor | None:
         polylist = self.create_polygons(_obj)
-        location, rotation = self.get_location_rotation(_obj)
+        location = self.get_location(_obj)
+        rotation = self.get_rotation(_obj)
 
         ladder = get_actor_prop(_obj).get_ladder()
 
@@ -224,7 +234,8 @@ class SwingVolumeBuilder(Builder):
 
     def build(self, _obj:Object) -> Actor | None:
         polylist = self.create_polygons(_obj)
-        location, rotation = self.get_location_rotation(_obj)
+        location = self.get_location(_obj)
+        rotation = self.get_rotation(_obj)
 
         return Brush(polylist, location, rotation, 
                      'TdSwingVolume',
@@ -236,7 +247,8 @@ class BlockingVolumeBuilder(Builder):
 
     def build(self, _obj:Object) -> Actor | None:
         polylist = self.create_polygons(_obj)
-        location, rotation = self.get_location_rotation(_obj)
+        location = self.get_location(_obj)
+        rotation = self.get_rotation(_obj)
 
         blocking_volume = get_actor_prop(_obj).get_blocking_volume()
 
@@ -254,7 +266,8 @@ class TriggerVolumeBuilder(Builder):
     
     def build(self, _obj:Object) -> Actor | None:
         polylist = self.create_polygons(_obj)
-        location, rotation = self.get_location_rotation(_obj)
+        location = self.get_location(_obj)
+        rotation = self.get_rotation(_obj)
 
         return Brush(polylist, location, rotation, 
                      'TdTriggerVolume',
@@ -266,7 +279,8 @@ class KillVolumeBuilder(Builder):
     
     def build(self, _obj:Object) -> Actor | None:
         polylist = self.create_polygons(_obj)
-        location, rotation = self.get_location_rotation(_obj)
+        location = self.get_location(_obj)
+        rotation = self.get_rotation(_obj)
 
         return Brush(polylist, location, rotation, 
                      'TdKillVolume',
@@ -274,16 +288,65 @@ class KillVolumeBuilder(Builder):
 
 
 # -----------------------------------------------------------------------------
-class DirectionalLightBuilder(Builder):
+# Lights
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# For some reason the default rotation conversion doesn't work for lights
+class LightBuilder(Builder):
+    def get_rotation(self, _obj: Object) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
+        rot = b3d_utils.get_rotation(_obj, 'X')
+        rotation = (rot.x, rot.y, rot.z - math.pi)
+
+        return rotation
+
+
+# -----------------------------------------------------------------------------
+class DirectionalLightBuilder(LightBuilder):
 
     def build(self, _obj:Object) -> Actor | None:
-        location, rot = self.get_location_rotation(_obj)
-        # TODO: The conversion method for rotation doesn't work for lights
-        # Lights probably use quaternions instead of Euler's
-        rotation = (rot[0], rot[1] - 90, rot[2])
+        location = self.get_location(_obj)
+        rotation = self.get_rotation(_obj)
         light = _obj.data
 
         return DirectionalLight(location, rotation, light.color)
+
+
+# -----------------------------------------------------------------------------
+class PointLightBuilder(LightBuilder):
+     
+     def build(self, _obj:Object) -> Actor | None:
+        location = self.get_location(_obj)
+        rotation = self.get_rotation(_obj)
+        light = _obj.data
+
+        return PointLight(location, rotation, light.color, light.shadow_soft_size)
+
+
+# -----------------------------------------------------------------------------
+class AreaLightBuilder(LightBuilder):
+     
+     def build(self, _obj:Object) -> Actor | None:
+        location = self.get_location(_obj)
+        rotation = self.get_rotation(_obj)
+
+        light = _obj.data
+        scale = _obj.scale
+
+        size_x = light.size * scale.x * self.options.scale
+        size_y = light.size * scale.y * self.options.scale
+
+        return AreaLight(location, rotation, light.color, light.shadow_soft_size, size_x, size_y)
+
+
+# -----------------------------------------------------------------------------
+class SpotLightBuilder(LightBuilder):
+     
+     def build(self, _obj:Object) -> Actor | None:
+        location = self.get_location(_obj)
+        rotation = self.get_rotation(_obj)
+        light = _obj.data
+
+        return SpotLight(location, rotation, light.color, light.shadow_soft_size, light.spot_size)
 
 
 # -----------------------------------------------------------------------------
@@ -308,8 +371,14 @@ class T3DBuilder():
         
         if _obj.type == 'LIGHT':
             match _obj.data.type:
-                case 'SUN':
+                case 'SUN': 
                     return DirectionalLightBuilder(_options, _collection_paths).build(_obj)
+                case 'POINT':
+                    return PointLightBuilder(_options, _collection_paths).build(_obj)
+                case 'SPOT':
+                    return SpotLightBuilder(_options, _collection_paths).build(_obj)
+                case 'AREA':
+                    return AreaLightBuilder(_options, _collection_paths).build(_obj)
 
         me_actor = get_actor_prop(_obj)
 

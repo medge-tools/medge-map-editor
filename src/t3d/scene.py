@@ -103,14 +103,14 @@ class Rotation(Point3D):
     def __init__(self, _point=(0, 0, 0)):
         rotation = Vector(_point) * EULER_TO_URU
         super().__init__(rotation)
-        self.set_prefix('Roll', 'Pitch', 'Yaw')
+        self.set_prefix('Pitch', 'Roll', 'Yaw')
         self.set_format('{:.0f}')
 
 
 # -----------------------------------------------------------------------------
 class Color(Point3D):
-    def __init__(self, point=(0, 0, 0)):
-        super().__init__(point)
+    def __init__(self, _point=(0, 0, 0)):
+        super().__init__(_point)
         self.x = b3d_utils.map_range(self.x, 0, 1, 0, 255)
         self.y = b3d_utils.map_range(self.y, 0, 1, 0, 255)
         self.z = b3d_utils.map_range(self.z, 0, 1, 0, 255)
@@ -412,6 +412,82 @@ class DirectionalLight(Actor):
         return \
 f'Begin Actor Class=DirectionalLight Name=DirectionalLight_0 Archetype=DirectionalLight\'Engine.Default__DirectionalLight\'\n\
 \tBegin Object Class=DirectionalLightComponent Name=DirectionalLightComponent0 Archetype=DirectionalLightComponent\'Engine.Default__DirectionalLight:DirectionalLightComponent0\'\n\
+\t\tLightColor=({self.Color},A=0)\n\
+\tEnd Object\n\
+\tLocation=({self.Location})\n\
+\tRotation=({self.Rotation})\n\
+End Actor\n'
+    
+
+# -----------------------------------------------------------------------------
+class PointLight(Actor):
+    def __init__(self,
+                 _location: tuple[float, float, float], 
+                 _rotation: tuple[float, float, float],
+                 _color:    tuple[int, int, int],
+                 _radius:   float):
+        super().__init__(_location, _rotation)
+        self.Color = Color(_color)
+        self.Radius = _radius
+
+    def __str__(self) -> str:
+        return \
+f'Begin Actor Class=PointLight Name=PointLight_0 Archetype=PointLight\'Engine.Default__PointLight\'\n\
+\tBegin Object Class=PointLightComponent Name=PointLightComponent0 Archetype=PointLightComponent\'Engine.Default__PointLight:PointLightComponent0\'\n\
+\t\tRadius={self.Radius}\n\
+\t\tLightColor=({self.Color},A=0)\n\
+\tEnd Object\n\
+\tLocation=({self.Location})\n\
+End Actor\n'
+    
+
+# -----------------------------------------------------------------------------
+class AreaLight(Actor):
+    def __init__(self,
+                 _location: tuple[float, float, float], 
+                 _rotation: tuple[float, float, float],
+                 _color:    tuple[int, int, int],
+                 _radius:   float,
+                 _size_x:   float,
+                 _size_z:   float):
+        super().__init__(_location, _rotation)
+        self.Color = Color(_color)
+        self.Radius = _radius
+        self.SizeX = _size_x
+        self.SizeZ = _size_z
+
+    def __str__(self) -> str:
+        return \
+f'Begin Actor Class=TdAreaLight Name=TdAreaLight_0 Archetype=TdAreaLight\'TdGame.Default__TdAreaLight\'\n\
+\tBegin Object Class=PointLightComponent Name=PointLightComponent0 Archetype=PointLightComponent\'TdGame.Default__TdAreaLight:PointLightComponent0\'\n\
+\t\tRadius={self.Radius}\n\
+\t\tLightColor=({self.Color},A=0)\n\
+\tEnd Object\n\
+\tLocation=({self.Location})\n\
+\tRotation=({self.Rotation})\n\
+\tDrawScale3D=(X={self.SizeX},Y=1.000000,Z={self.SizeZ})\n\
+End Actor\n'
+
+
+# -----------------------------------------------------------------------------
+class SpotLight(Actor):
+    def __init__(self,
+                 _location: tuple[float, float, float], 
+                 _rotation: tuple[float, float, float],
+                 _color:    tuple[int, int, int],
+                 _radius:   float,
+                 _angle:    float):
+        super().__init__(_location, _rotation)
+        self.Color = Color(_color)
+        self.Radius = _radius
+        self.Angle = _angle
+
+    def __str__(self) -> str:
+        return \
+f'Begin Actor Class=SpotLight Name=SpotLight_0 Archetype=SpotLight\'Engine.Default__SpotLight\'\n\
+\tBegin Object Class=SpotLightComponent Name=SpotLightComponent0 Archetype=SpotLightComponent\'Engine.Default__SpotLight:SpotLightComponent0\'\n\
+\t\tOuterConeAngle={self.Angle}\n\
+\t\tRadius={self.Radius}\n\
 \t\tLightColor=({self.Color},A=0)\n\
 \tEnd Object\n\
 \tLocation=({self.Location})\n\

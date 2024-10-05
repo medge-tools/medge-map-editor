@@ -259,13 +259,24 @@ def join_objects(_objects:list[Object]) -> Object:
 #   https://gist.github.com/behreajj/2dbb6fb7cee78c167cd85085e67bcdf6
 # Mirror rotation: 
 #   https://www.gamedev.net/forums/topic/#599824-mirroring-a-quaternion-against-the-yz-plane/
-def get_rotation_mirrored_x_axis(_obj:Object) -> Euler:
+def get_rotation(_obj:Object, _mirror:str=None) -> Euler:
     prev_rot_mode = _obj.rotation_mode
     _obj.rotation_mode = 'QUATERNION'
 
     q = _obj.rotation_quaternion.copy()
-    q.x *= -1
-    q.w *= -1
+
+    if _mirror:
+        for ax in _mirror:
+            if ax == 'X' or ax == 'x':
+                q.x *= -1
+                q.w *= -1
+
+            if ax == 'Y' or ax == 'y':
+                raise Exception('Y mirror not implemented')
+
+            if ax == 'Z' or ax == 'z':
+                raise Exception('Z mirror not implemented')
+
     _obj.rotation_mode = prev_rot_mode
 
     return q.to_euler()
@@ -294,8 +305,8 @@ def update_matrices(_obj:Object):
 
     else:
         _obj.matrix_world = _obj.parent.matrix_world * \
-                           _obj.matrix_parent_inverse * \
-                           _obj.matrix_basis
+                            _obj.matrix_parent_inverse * \
+                            _obj.matrix_basis
         
 
 # -----------------------------------------------------------------------------
