@@ -69,10 +69,20 @@ def TrackIndexEnumProperty(_callback:Callable=None):
 
 
 # -----------------------------------------------------------------------------
-# We cannot make this a PropertyGroup and add it as a PointerProperty to actors,
+# We cannot turn this into a PropertyGroup and add it as a PointerProperty to actors,
 # otherwise we will get a stackoverflow.
 # I think it's because of to many nested PointerProperties
 class MaterialProperty:
+
+    def draw_material(self, _layout:UILayout):
+        _layout.prop(self, 'material_filter')
+
+        if self.material_filter:
+            _layout.prop(self, 'material_filter_collection')
+            _layout.prop(self, 'material_filter_prefix')
+        
+        _layout.prop(self, 'material')
+
 
     def __filter_on_package(self, _obj:Object):
         if _obj:
@@ -87,27 +97,38 @@ class MaterialProperty:
         return True
     
 
-    def draw_material(self, _layout:UILayout):
-        _layout.prop(self, 'material_filter')
+    def __on_material_update(self, _context:Context):
+        if self.material and self.id_data:
+            my_mats = self.id_data.data.materials
+            my_mats.clear()
 
-        if self.material_filter:
-            _layout.prop(self, 'material_filter_collection')
-            _layout.prop(self, 'material_filter_prefix')
-        
-        _layout.prop(self, 'material')
+            for mat in self.material.data.materials:
+                my_mats.append(mat)
+
 
 
     material_filter:            BoolProperty(name='Filter')
     material_filter_collection: PointerProperty(type=bpy.types.Collection, name='Collection')
     material_filter_prefix:     StringProperty(name='Prefix')
-    material:                   PointerProperty(type=Object, name='Material', update=__filter_on_package)
+    material:                   PointerProperty(type=Object, name='Material', poll=__filter_on_package, update=__on_material_update)
 
 
 # -----------------------------------------------------------------------------
-# We cannot make this a PropertyGroup and add it as a PointerProperty to actors,
+# We cannot turn this into a PropertyGroup and add it as a PointerProperty to actors,
 # otherwise we will get a stackoverflow. 
 # I think it's because of to many nested PointerProperties
 class PhysMaterialProperty:
+    
+
+    def draw_phys_material(self, _layout:UILayout):
+        _layout.prop(self, 'phys_material_filter')
+
+        if self.phys_material_filter:
+            _layout.prop(self, 'phys_material_filter_collection')
+            _layout.prop(self, 'phys_material_filter_prefix')
+        
+        _layout.prop(self, 'phys_material')
+
 
     def __filter_on_package(self, _obj:Object):
         if _obj:
@@ -122,20 +143,10 @@ class PhysMaterialProperty:
         return True
     
 
-    def draw_phys_material(self, _layout:UILayout):
-        _layout.prop(self, 'phys_material_filter')
-
-        if self.phys_material_filter:
-            _layout.prop(self, 'phys_material_filter_collection')
-            _layout.prop(self, 'phys_material_filter_prefix')
-        
-        _layout.prop(self, 'phys_material')
-
-
     phys_material_filter:            BoolProperty(name='Filter')
     phys_material_filter_collection: PointerProperty(type=bpy.types.Collection, name='Collection')
     phys_material_filter_prefix:     StringProperty(name='Prefix')
-    phys_material:                   PointerProperty(type=Object, name='PhysMaterial', update=__filter_on_package)
+    phys_material:                   PointerProperty(type=Object, name='PhysMaterial', poll=__filter_on_package)
 
 
 # -----------------------------------------------------------------------------
@@ -273,10 +284,6 @@ class MET_ACTOR_PG_LadderVolume(Actor, PropertyGroup):
         b3d_utils.draw_box(_layout, 'Do not apply any transforms, these values are needed for export') 
         _layout.separator()
         _layout.prop(self, 'is_pipe')
-
-
-    def create(self):
-        verts = []
 
 
     def __on_is_pipe_update(self, _context:Context):
