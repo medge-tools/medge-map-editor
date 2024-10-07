@@ -9,7 +9,7 @@ from   gpu_extras.batch  import batch_for_shader
 from   bpy.types         import Object, Mesh, Operator, Context, UIList, UILayout, PropertyGroup, ID, Collection, Curve, Spline, Driver, DriverVariable
 from   bpy.props         import *
 from   bmesh.types       import BMesh
-from   mathutils         import Vector, Matrix, Euler
+from   mathutils         import Vector, Matrix
 from   mathutils.bvhtree import BVHTree
 
 import math
@@ -22,33 +22,33 @@ import textwrap
 # Collection
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-def new_collection(_name:str, _unique=True, _parent:Collection|str=None):
+def new_collection(_name:str, _parent:Collection|str=None):
     """
-    Collection will be automatically created if it doesn't exists
+    Collection will be created if it doesn't exists
     If `_parent == None`, then the object will be linked to the root collection
     """    
-    if _unique:
-        coll = bpy.context.blend_data.collections.get(_name)
+    data_collections = bpy.context.blend_data.collections
+    scene_collection = bpy.context.scene.collection
 
-        if not coll:
-            coll = bpy.data.collections.new(_name)
-    else:
+    coll = bpy.context.blend_data.collections.get(_name)
+
+    if not coll:
         coll = bpy.data.collections.new(_name)
 
-    if _parent:
-        p_coll = _parent
+        if _parent:
+            p_coll = _parent
 
-        if isinstance(_parent, str):
-            p_coll:Collection = bpy.context.blend_data.collections.get(_parent)
+            if isinstance(_parent, str):
+                p_coll:Collection = data_collections.get(_parent)
 
-            if not p_coll:
-                p_coll = bpy.data.collections.new(_parent)
-                bpy.context.scene.collection.children.link(p_coll)
+                if not p_coll:
+                    p_coll = bpy.data.collections.new(_parent)
+                    scene_collection.children.link(p_coll)
 
-        p_coll.children.link(coll)
+            p_coll.children.link(coll)
 
-    else:
-        bpy.context.scene.collection.children.link(coll)
+        else:
+            scene_collection.children.link(coll)
 
     return coll
 

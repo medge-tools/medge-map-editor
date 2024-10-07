@@ -36,7 +36,7 @@ def new_actor(_actor_type:ActorType, _data:ID=None):
 
 
     me_actor = get_actor_prop(obj)
-    me_actor.type = _actor_type.name
+    me_actor.actor_type = _actor_type.name
 
     return obj
 
@@ -49,7 +49,7 @@ def ActorTypeEnumProperty(_callback:Callable=None):
     def get_actor_type_items(self, _context:Context):
         return [(data.name, data.label, '') for data in ActorType]
 
-    return EnumProperty(name='Type', 
+    return EnumProperty(name='Actor Type', 
                         items=get_actor_type_items, 
                         default=0, 
                         update=_callback)
@@ -253,9 +253,9 @@ class MET_ACTOR_PG_LadderVolume(Actor, PropertyGroup):
     def init(self):
         super().init()
 
-        scale = 1, 1, 3
+        scale = 1, 1, 6
         volume = b3d_utils.create_cube(scale)
-        b3d_utils.transform(volume, [Matrix.Translation((0, 0, 1.5))])
+        b3d_utils.transform(volume, [Matrix.Translation((0, 0, 3))])
 
         b3d_utils.set_data(self.id_data, volume)
 
@@ -263,8 +263,7 @@ class MET_ACTOR_PG_LadderVolume(Actor, PropertyGroup):
 
         arrow = self.widgets.add()
         arrow.obj = b3d_utils.new_object(b3d_utils.create_arrow(scale), 'ArrowWidget', COLLECTION_WIDGETS, self.id_data, False)
-        arrow.obj.location = self.id_data.location
-        arrow.obj.location.z += 4.9
+        arrow.obj.location = 0, 0, 5
         b3d_utils.set_object_selectable(arrow.obj, False)
 
         self.id_data.name = 'LadderVolume'
@@ -311,7 +310,7 @@ class MET_ACTOR_PG_SwingVolume(Actor, PropertyGroup):
         for arrow in self.widgets:
             s = scale * .3
             arrow.obj = b3d_utils.new_object(b3d_utils.create_arrow(s), 'ArrowWidget', COLLECTION_WIDGETS, self.id_data, False)
-            arrow.obj.location = self.id_data.location
+            arrow.obj.location = 0, 0, 0
             b3d_utils.set_object_selectable(arrow.obj, False)
 
         m_t07_x  = Matrix.Translation((.7, 0, 0))
@@ -635,6 +634,41 @@ class MET_ACTOR_PG_Checkpoint(Actor, PropertyGroup):
 
 
 # -----------------------------------------------------------------------------
+# Lights
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+class BakerSettings:
+    
+    def draw(self, _layout:UILayout):
+        _layout.prop(self, 'sample_factor')
+
+    sample_factor: FloatProperty(name='Sample Factor', min=0, default=1.0)
+
+
+# -----------------------------------------------------------------------------
+class MET_ACTOR_PG_PointLight(BakerSettings, PropertyGroup):
+    pass
+
+# -----------------------------------------------------------------------------
+class MET_ACTOR_PG_DirectionalLight(BakerSettings, PropertyGroup):
+    pass
+
+# -----------------------------------------------------------------------------
+class MET_ACTOR_PG_SpotLight(BakerSettings, PropertyGroup):
+    pass
+
+# -----------------------------------------------------------------------------
+class MET_ACTOR_PG_AreaLight(BakerSettings, PropertyGroup):
+
+    def draw(self, _layout: UILayout):
+        super().draw(_layout)
+        b3d_utils.auto_gui_props(self, _layout)
+
+    is_window_light: BoolProperty(name='Is Window Light')
+    window_light_angle: FloatProperty(name='Window Light Angle')
+
+
+# -----------------------------------------------------------------------------
 # ActorProperty
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -643,14 +677,11 @@ class MET_OBJECT_PG_Actor(PropertyGroup):
     def draw(self, _layout:UILayout):
         col = _layout.column(align=True)
 
-        if not self.user_editable:
-            col.label(text=str(self.type))
-            return
-
-        col.prop(self, 'type')
+        if self.id_data.type == 'MESH':
+            col.prop(self, 'actor_type')
         col.separator()
 
-        match(self.type):
+        match(self.actor_type):
             case ActorType.BRUSH.name:
                 self.brush.draw(col)
             case ActorType.STATIC_MESH.name:
@@ -669,12 +700,26 @@ class MET_OBJECT_PG_Actor(PropertyGroup):
                 self.player_start.draw(col)
             case ActorType.CHECKPOINT.name:
                 self.checkpoint.draw(col)
+        
+        if not self.id_data or self.id_data.type != 'LIGHT':
+            col.label(text='No Settings')
+            return
 
-    
+        match self.id_data.data.type:
+            case 'POINT':
+                self.point_light.draw(col)
+            case 'SUN':
+                self.directional_light.draw(col)
+            case 'SPOT':
+                self.spot_light.draw(col)
+            case 'AREA':
+                self.area_light.draw(col)
+            
+
     def __on_type_update(self, _context:Context):
         b3d_utils.set_active_object(self.id_data)
 
-        match(self.type):
+        match(self.actor_type):
             case ActorType.BRUSH.name:
                 self.brush.init()
             case ActorType.STATIC_MESH.name:
@@ -693,8 +738,21 @@ class MET_OBJECT_PG_Actor(PropertyGroup):
                 self.player_start.init()
             case ActorType.CHECKPOINT.name:
                 self.checkpoint.init()
+        
+        if not self.id_data: return
+        if self.id_data.type != 'LIGHT': return
 
+        match self.id_data.data.type:
+            case 'POINT':
+                self.point_light.init()
+            case 'SUN':
+                self.directional_light.init()
+            case 'SPOT':
+                self.spot_light.init()
+            case 'AREA':
+                self.area_light.init()
     
+
     def get_brush(self) -> MET_ACTOR_PG_Brush:
         return self.brush
     
@@ -722,8 +780,19 @@ class MET_OBJECT_PG_Actor(PropertyGroup):
     def get_checkpoint(self) -> MET_ACTOR_PG_Checkpoint:
         return self.checkpoint
 
-    type:            ActorTypeEnumProperty(__on_type_update)
-    user_editable:   BoolProperty(name='PRIVATE', default=True)
+    def get_point_light(self) -> MET_ACTOR_PG_PointLight:
+        return self.point_light
+
+    def get_directional_light(self) -> MET_ACTOR_PG_DirectionalLight:
+        return self.directional_light
+
+    def get_spot_light(self) -> MET_ACTOR_PG_SpotLight:
+        return self.spot_light
+
+    def get_area_light(self) -> MET_ACTOR_PG_AreaLight:
+        return self.area_light
+
+    actor_type:      ActorTypeEnumProperty(__on_type_update)
 
     brush:           PointerProperty(type=MET_ACTOR_PG_Brush)
     static_mesh:     PointerProperty(type=MET_ACTOR_PG_StaticMesh)
@@ -734,6 +803,11 @@ class MET_OBJECT_PG_Actor(PropertyGroup):
     trigger_volume:  PointerProperty(type=MET_ACTOR_PG_TriggerVolume)
     player_start:    PointerProperty(type=MET_ACTOR_PG_PlayerStart)
     checkpoint:      PointerProperty(type=MET_ACTOR_PG_Checkpoint)
+
+    point_light:       PointerProperty(type=MET_ACTOR_PG_PointLight)
+    directional_light: PointerProperty(type=MET_ACTOR_PG_DirectionalLight)
+    spot_light:        PointerProperty(type=MET_ACTOR_PG_SpotLight)
+    area_light:        PointerProperty(type=MET_ACTOR_PG_AreaLight)
 
 
 # -----------------------------------------------------------------------------
@@ -748,12 +822,8 @@ def get_actor_prop(_obj:Object) -> MET_OBJECT_PG_Actor:
 def on_depsgraph_update_post(_scene:Scene, _depsgraph:Depsgraph):
     for obj in _scene.objects:
         actor = get_actor_prop(obj)
-        
-        match(obj.type):
-            case 'LIGHT': 
-                actor.user_editable = False
 
-        match(actor.type):
+        match(actor.actor_type):
             case ActorType.ZIPLINE.name:
                 actor.zipline.update_bounds()
 

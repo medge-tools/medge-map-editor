@@ -49,7 +49,7 @@ class MET_OT_add_skydome(Operator):
         obj.name = 'Skydome'
 
         actor = get_actor_prop(obj)
-        actor.type = ActorType.STATIC_MESH.name
+        actor.actor_type = ActorType.STATIC_MESH.name
         
         sm = actor.static_mesh
         sm.use_prefab = True

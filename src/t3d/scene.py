@@ -2,6 +2,7 @@ import math
 from mathutils import Vector
 
 from enum import Enum
+from dataclasses import dataclass
 
 from ... import b3d_utils
 
@@ -116,6 +117,9 @@ class Color(Point3D):
         self.z = b3d_utils.map_range(self.z, 0, 1, 0, 255)
         self.set_prefix('R', 'G', 'B')
         self.set_format('{:.0f}')
+
+    def __str__(self) -> str:
+        return super().__str__() + ',A=0'
 
 
 # -----------------------------------------------------------------------------
@@ -388,15 +392,74 @@ class BlockingVolume(Brush):
 # Lights
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
+@dataclass
+class BakerSettings:
+    baker_brightness : float
+    baker_color : Color
+    use_baker_color_and_brightness : bool
+    sample_factor : float
+
+    def __str__(self) -> str:
+        return \
+f'\tBakerColor=({self.baker_color})\n\
+\tBakerBrightness={self.baker_brightness}\n\
+\tbUseBakerColorAndBrightness={self.use_baker_color_and_brightness}\n\
+\tSampleFactor={self.sample_factor}'
+
+
+# -----------------------------------------------------------------------------
 class SkyLight(Actor):
+    def __init__(self,
+                 _location:   tuple[float, float, float], 
+                 _color:      tuple[float, float, float],
+                 _brightness: float,
+                 _sample_factor: float):
+        super().__init__(_location)
+        self.Color = Color(_color)
+        self.Brightness = _brightness
+        self.BakerSettings = BakerSettings(_brightness, self.Color, True, _sample_factor)
+
     def __str__(self) -> str:
         return \
 f'Begin Actor Class=SkyLight Name=SkyLight_0 Archetype=SkyLight\'Engine.Default__SkyLight\'\n\
-Begin Object Class=SkyLightComponent Name=SkyLightComponent0 Archetype=SkyLightComponent\'Engine.Default__SkyLight:SkyLightComponent0\'\n\
-End Object\n\
-Location=(X=0.000000,Y=0.000000,Z=300.000000)\n\
-DrawScale=3.000000\n\
-End Actor\n'        
+\tBegin Object Class=SkyLightComponent Name=SkyLightComponent0 Archetype=SkyLightComponent\'Engine.Default__SkyLight:SkyLightComponent0\'\n\
+\t\tBrightness={self.Brightness}\n\
+\t\tLightColor=({self.Color})\n\
+\tEnd Object\n\
+{self.BakerSettings}\n\
+\tLocation=({self.Location})\n\
+\tDrawScale=3.000000\n\
+End Actor\n' 
+    
+
+# -----------------------------------------------------------------------------
+class PointLight(Actor):
+    def __init__(self,
+                 _location:   tuple[float, float, float], 
+                 _color:      tuple[float, float, float],
+                 _brightness: float,
+                 _radius:     float,
+                 _baker_cut_off_radius: float,
+                 _sample_factor: float):
+        super().__init__(_location)
+        self.Color = Color(_color)
+        self.Brightness = _brightness
+        self.Radius = _radius
+        self.BakerCutOffRadius = _baker_cut_off_radius
+        self.BakerSettings = BakerSettings(_brightness, self.Color, True, _sample_factor)
+
+    def __str__(self) -> str:
+        return \
+f'Begin Actor Class=PointLight Name=PointLight_0 Archetype=PointLight\'Engine.Default__PointLight\'\n\
+\tBegin Object Class=PointLightComponent Name=PointLightComponent0 Archetype=PointLightComponent\'Engine.Default__PointLight:PointLightComponent0\'\n\
+\t\tBakerCutOffRadius={self.BakerCutOffRadius}\n\
+\t\tRadius={self.Radius}\n\
+\t\tBrightness={self.Brightness}\n\
+\t\tLightColor=({self.Color})\n\
+\tEnd Object\n\
+{self.BakerSettings}\n\
+\tLocation=({self.Location})\n\
+End Actor\n'
 
 
 # -----------------------------------------------------------------------------
@@ -404,93 +467,102 @@ class DirectionalLight(Actor):
     def __init__(self,
                  _location: tuple[float, float, float], 
                  _rotation: tuple[float, float, float],
-                 _color:    tuple[int, int, int]):
+                 _color:    tuple[float, float, float],
+                 _brightness: float,
+                 _sample_factor: float):
         super().__init__(_location, _rotation)
         self.Color = Color(_color)
+        self.Brightness = _brightness
+        self.BakerSettings = BakerSettings(_brightness, self.Color, True, _sample_factor)
 
     def __str__(self) -> str:
         return \
 f'Begin Actor Class=DirectionalLight Name=DirectionalLight_0 Archetype=DirectionalLight\'Engine.Default__DirectionalLight\'\n\
 \tBegin Object Class=DirectionalLightComponent Name=DirectionalLightComponent0 Archetype=DirectionalLightComponent\'Engine.Default__DirectionalLight:DirectionalLightComponent0\'\n\
-\t\tLightColor=({self.Color},A=0)\n\
+\t\tBrightness={self.Brightness}\n\
+\t\tLightColor=({self.Color})\n\
 \tEnd Object\n\
+{self.BakerSettings}\n\
 \tLocation=({self.Location})\n\
 \tRotation=({self.Rotation})\n\
 \tDrawScale3D=(X=10,Y=1.000000,Z=1.000000)\n\
 End Actor\n'
-    
-
-# -----------------------------------------------------------------------------
-class PointLight(Actor):
-    def __init__(self,
-                 _location: tuple[float, float, float], 
-                 _color:    tuple[int, int, int],
-                 _radius:   float):
-        super().__init__(_location)
-        self.Color = Color(_color)
-        self.Radius = _radius
-
-    def __str__(self) -> str:
-        return \
-f'Begin Actor Class=PointLight Name=PointLight_0 Archetype=PointLight\'Engine.Default__PointLight\'\n\
-\tBegin Object Class=PointLightComponent Name=PointLightComponent0 Archetype=PointLightComponent\'Engine.Default__PointLight:PointLightComponent0\'\n\
-\t\tRadius={self.Radius}\n\
-\t\tLightColor=({self.Color},A=0)\n\
-\tEnd Object\n\
-\tLocation=({self.Location})\n\
-End Actor\n'
-    
-
-# -----------------------------------------------------------------------------
-class AreaLight(Actor):
-    def __init__(self,
-                 _location: tuple[float, float, float], 
-                 _rotation: tuple[float, float, float],
-                 _color:    tuple[int, int, int],
-                 _radius:   float,
-                 _size_x:   float,
-                 _size_z:   float):
-        super().__init__(_location, _rotation)
-        self.Color = Color(_color)
-        self.Radius = _radius
-        self.SizeX = _size_x
-        self.SizeZ = _size_z
-
-    def __str__(self) -> str:
-        return \
-f'Begin Actor Class=TdAreaLight Name=TdAreaLight_0 Archetype=TdAreaLight\'TdGame.Default__TdAreaLight\'\n\
-\tBegin Object Class=PointLightComponent Name=PointLightComponent0 Archetype=PointLightComponent\'TdGame.Default__TdAreaLight:PointLightComponent0\'\n\
-\t\tRadius={self.Radius}\n\
-\t\tLightColor=({self.Color},A=0)\n\
-\tEnd Object\n\
-\tLocation=({self.Location})\n\
-\tRotation=({self.Rotation})\n\
-\tDrawScale3D=(X={self.SizeX},Y=10.00000,Z={self.SizeZ})\n\
-End Actor\n'
-
 
 # -----------------------------------------------------------------------------
 class SpotLight(Actor):
     def __init__(self,
                  _location: tuple[float, float, float], 
                  _rotation: tuple[float, float, float],
-                 _color:    tuple[int, int, int],
+                 _color:    tuple[float, float, float],
+                 _brightness: float,
                  _radius:   float,
-                 _angle:    float):
+                 _angle:    float,
+                 _baker_cut_off_radius: float,
+                 _sample_factor: float):
         super().__init__(_location, _rotation)
         self.Color = Color(_color)
+        self.Brightness = _brightness
         self.Radius = _radius
         self.Angle = _angle
+        self.BakerCutOffRadius = _baker_cut_off_radius
+        self.BakerSettings = BakerSettings(_brightness, self.Color, True, _sample_factor)
 
     def __str__(self) -> str:
         return \
 f'Begin Actor Class=SpotLight Name=SpotLight_0 Archetype=SpotLight\'Engine.Default__SpotLight\'\n\
 \tBegin Object Class=SpotLightComponent Name=SpotLightComponent0 Archetype=SpotLightComponent\'Engine.Default__SpotLight:SpotLightComponent0\'\n\
 \t\tOuterConeAngle={self.Angle}\n\
+\t\tBakerCutOffRadius={self.BakerCutOffRadius}\n\
 \t\tRadius={self.Radius}\n\
-\t\tLightColor=({self.Color},A=0)\n\
+\t\tBrightness={self.Brightness}\n\
+\t\tLightColor=({self.Color})\n\
 \tEnd Object\n\
+{self.BakerSettings}\n\
 \tLocation=({self.Location})\n\
 \tRotation=({self.Rotation})\n\
 \tDrawScale3D=(X=10,Y=1.000000,Z=1.000000)\n\
+End Actor\n'
+
+
+# -----------------------------------------------------------------------------
+class AreaLight(Actor):
+    def __init__(self,
+                 _location: tuple[float, float, float], 
+                 _rotation: tuple[float, float, float],
+                 _color:    tuple[float, float, float],
+                 _brightness: float,
+                 _radius:     float,
+                 _size_x:     float,
+                 _size_z:     float,
+                 _baker_cut_off_radius: float,
+                 _sample_factor: float,
+                 _is_window_light:      bool,
+                 _window_light_angle:   float):
+        super().__init__(_location, _rotation)
+        self.Color = Color(_color)
+        self.Brightness = _brightness
+        self.Radius = _radius
+        self.SizeX = _size_x
+        self.SizeZ = _size_z
+
+        self.BakerSettings = BakerSettings(_brightness, self.Color, True, _sample_factor)
+        self.BakerCutOffRadius = _baker_cut_off_radius
+        self.IsWindowLight = _is_window_light
+        self.WindowLightAngle = _window_light_angle
+
+    def __str__(self) -> str:
+        return \
+f'Begin Actor Class=TdAreaLight Name=TdAreaLight_0 Archetype=TdAreaLight\'TdGame.Default__TdAreaLight\'\n\
+\tBegin Object Class=PointLightComponent Name=PointLightComponent0 Archetype=PointLightComponent\'TdGame.Default__TdAreaLight:PointLightComponent0\'\n\
+\t\tRadius={self.Radius}\n\
+\t\tLightColor=({self.Color})\n\
+\t\tBakerCutOffRadius={self.BakerCutOffRadius}\n\
+\t\tBrightness={self.Brightness}\n\
+\tEnd Object\n\
+{self.BakerSettings}\n\
+\tbIsWindowLight={self.IsWindowLight}\n\
+\tWindowLightAngle={self.WindowLightAngle}\n\
+\tLocation=({self.Location})\n\
+\tRotation=({self.Rotation})\n\
+\tDrawScale3D=(X={self.SizeX},Y=10.00000,Z={self.SizeZ})\n\
 End Actor\n'

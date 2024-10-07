@@ -1,6 +1,11 @@
 import bpy
 import bmesh
-from   bpy.types import Object, Collection
+from   bpy.types import (
+    Object, Collection, 
+    PointLight as BL_PointLight, 
+    SunLight as BL_SunLight, 
+    SpotLight as BL_SpotLight, 
+    AreaLight as BL_AreaLight)
 from   mathutils import Vector, Euler
 
 from dataclasses import dataclass
@@ -9,6 +14,7 @@ from math import atan2, hypot
 
 from .scene import (
     ActorType, 
+    BakerSettings,
     Actor, 
     Polygon, 
     Checkpoint, 
@@ -18,6 +24,7 @@ from .scene import (
     LadderVolume, 
     BlockingVolume,
     Zipline,
+    SkyLight,
     DirectionalLight,
     PointLight,
     SpotLight,
@@ -29,8 +36,18 @@ from ..props import get_actor_prop
 
 # -----------------------------------------------------------------------------
 @dataclass
+class SkylightOptions:
+    location : tuple[float, float, float]
+    color : tuple[float, float, float, float]
+    brightness : float
+
+
+# -----------------------------------------------------------------------------
+@dataclass
 class T3DBuilderOptions:
-    scale : int
+    unit_scale : int
+    skylight_options : SkylightOptions | None # If not None, add skylight
+    light_power_scale : float # Scales the energy when setting the brightness
 
 
 # -----------------------------------------------------------------------------
@@ -81,7 +98,7 @@ class Builder:
 
 
     def get_location(self, _obj:Object) -> tuple[float, float, float]:
-        return _obj.matrix_world.translation * self.options.scale * self.mirror
+        return _obj.matrix_world.translation * self.options.unit_scale * self.mirror
 
 
     def get_rotation(self, _obj:Object) -> tuple[float, float, float]:
@@ -107,9 +124,9 @@ class Builder:
             for v in reversed(f.verts):
                 if _apply_transforms:
                     world_co = obj_eval.matrix_world @ v.co
-                    verts.append(world_co * self.options.scale * self.mirror)
+                    verts.append(world_co * self.options.unit_scale * self.mirror)
                 else:
-                    verts.append(v.co * obj_eval.scale * self.options.scale * self.mirror)
+                    verts.append(v.co * obj_eval.scale * self.options.unit_scale * self.mirror)
 
             v0 = f.verts[0].co
             v1 = f.verts[1].co
@@ -193,7 +210,7 @@ class ZiplineBuilder(Builder):
     def build(self, _obj:Object) -> Actor | None:
         curve = get_actor_prop(_obj).get_zipline().curve
         
-        t = Vector((*(self.options.scale * self.mirror), 1.0)) 
+        t = Vector((*(self.options.unit_scale * self.mirror), 1.0)) 
         
         mworld = curve.matrix_world
         
@@ -317,22 +334,30 @@ class EulerLightBuilder(Builder):
 
         # Align 
         pitch = atan2(hypot(x, y), -z)
-        yaw = atan2(x, -y)
+        yaw = atan2(x, -y) + math.pi / 2
         
-        # Mirror on xy-plane
+        # Mirror on y-axis, because it gets mirrored in UnrealEd
         y_axis = Vector((0, 1, 0))
         a = y_axis.angle(direction)
 
-        return pitch - math.pi / 2, 0, yaw + math.pi / 2 - a * 2
+        return pitch - math.pi / 2, 0, yaw - a * 2
+
 
 # -----------------------------------------------------------------------------
 class PointLightBuilder(Builder):
      
     def build(self, _obj:Object) -> Actor | None:
         location = self.get_location(_obj)
-        light = _obj.data
+        light:BL_PointLight = _obj.data
 
-        return PointLight(location, light.color, light.shadow_soft_size)
+        pl = get_actor_prop(_obj).get_point_light()
+
+        return PointLight(location, 
+                          light.color, 
+                          light.energy * self.options.light_power_scale,
+                          light.shadow_soft_size * self.options.unit_scale, 
+                          light.cutoff_distance,
+                          pl.sample_factor)
     
 
 # -----------------------------------------------------------------------------
@@ -341,9 +366,15 @@ class DirectionalLightBuilder(EulerLightBuilder):
     def build(self, _obj:Object) -> Actor | None:
         location = self.get_location(_obj)
         rotation = self.get_rotation(_obj)
-        light = _obj.data
+        light:BL_SunLight = _obj.data
 
-        return DirectionalLight(location, rotation, light.color)
+        dl = get_actor_prop(_obj).get_directional_light()
+
+        return DirectionalLight(location, 
+                                rotation, 
+                                light.color,
+                                light.energy, # SunLight energy is already normalized
+                                dl.sample_factor)
 
 
 # -----------------------------------------------------------------------------
@@ -352,9 +383,18 @@ class SpotLightBuilder(EulerLightBuilder):
     def build(self, _obj:Object) -> Actor | None:
         location = self.get_location(_obj)
         rotation = self.get_rotation(_obj)
-        light = _obj.data
+        light: BL_SpotLight = _obj.data
 
-        return SpotLight(location, rotation, light.color, light.shadow_soft_size, light.spot_size)
+        sl = get_actor_prop(_obj).get_spot_light()
+
+        return SpotLight(location, 
+                         rotation, 
+                         light.color, 
+                         light.energy * self.options.light_power_scale,
+                         light.shadow_soft_size, 
+                         light.spot_size,
+                         light.cutoff_distance,
+                         sl.sample_factor)
 
 
 # -----------------------------------------------------------------------------
@@ -374,38 +414,56 @@ class AreaLightBuilder(Builder):
         light = _obj.data
         scale = _obj.scale
 
-        size_x = light.size * scale.x * self.options.scale
-        size_y = light.size * scale.y * self.options.scale
+        size_x = light.size * scale.x * self.options.unit_scale
+        size_y = light.size * scale.y * self.options.unit_scale
 
-        return AreaLight(location, rotation, light.color, light.shadow_soft_size, size_x, size_y)
+        al = get_actor_prop(_obj).get_area_light()
+
+        return AreaLight(location, 
+                         rotation, 
+                         light.color, 
+                         light.energy * self.options.light_power_scale,
+                         light.shadow_soft_size, 
+                         size_x, 
+                         size_y,
+                         light.cutoff_distance * self.options.unit_scale,
+                         al.sample_factor,
+                         al.is_window_light,
+                         al.window_light_angle)
 
 
 # -----------------------------------------------------------------------------
 # T3DBuilder
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-class T3DBuilder():
+class T3DBuilder:
+
+    def __init__(self) -> None:
+        self.scene:list[Actor] = []
+
 
     def build(self, _objects:list[Object], _options:T3DBuilderOptions) -> list[Actor]:
-        scene = []
         collection_paths = CollectionPaths('GenericBrowser')
+
+        if (so := _options.skylight_options):
+            self.scene.append(SkyLight(so.location, so.color, so.brightness))
 
         for obj in _objects:
             if(actor := self.build_actor(obj, _options, collection_paths)):
-                scene.append(actor)
+                self.scene.append(actor)
 
-        return scene
-    
+        return self.scene    
+
 
     def build_actor(self, _obj:Object, _options:T3DBuilderOptions, _collection_paths:CollectionPaths) -> Actor | None:
         b3d_utils.set_object_mode(_obj, 'OBJECT')
         
         if _obj.type == 'LIGHT':
             match _obj.data.type:
-                case 'SUN': 
-                    return DirectionalLightBuilder(_options, _collection_paths).build(_obj)
                 case 'POINT':
                     return PointLightBuilder(_options, _collection_paths).build(_obj)
+                case 'SUN': 
+                    return DirectionalLightBuilder(_options, _collection_paths).build(_obj)
                 case 'SPOT':
                     return SpotLightBuilder(_options, _collection_paths).build(_obj)
                 case 'AREA':
@@ -413,9 +471,9 @@ class T3DBuilder():
 
         me_actor = get_actor_prop(_obj)
 
-        if me_actor.type == ActorType.NONE.name: return None
+        if me_actor.actor_type == ActorType.NONE.name: return None
 
-        match(me_actor.type):
+        match(me_actor.actor_type):
             case ActorType.PLAYER_START.name:
                 return PlayerStartBuilder(_options, _collection_paths).build(_obj)
             case ActorType.CHECKPOINT.name:
@@ -439,3 +497,10 @@ class T3DBuilder():
         
         return None
     
+
+    def write(self, _filepath: str):
+        with open(_filepath, 'w') as f:
+            f.write('Begin Map\nBegin Level NAME=PersistentLevel\n')
+            for actor in self.scene:
+                f.write(str(actor))
+            f.write('End Level\nBegin Surface\nEnd Surface\nEnd Map')
