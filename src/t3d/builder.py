@@ -40,6 +40,7 @@ class SkylightOptions:
     location : tuple[float, float, float]
     color : tuple[float, float, float, float]
     brightness : float
+    sample_factor : float
 
 
 # -----------------------------------------------------------------------------
@@ -446,7 +447,7 @@ class T3DBuilder:
         collection_paths = CollectionPaths('GenericBrowser')
 
         if (so := _options.skylight_options):
-            self.scene.append(SkyLight(so.location, so.color, so.brightness))
+            self.scene.append(SkyLight(so.location, so.color, so.brightness, so.sample_factor))
 
         for obj in _objects:
             if(actor := self.build_actor(obj, _options, collection_paths)):

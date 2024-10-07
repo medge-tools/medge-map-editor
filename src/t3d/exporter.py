@@ -1,12 +1,11 @@
 import bpy
 from bpy.props           import StringProperty, EnumProperty, BoolProperty, FloatVectorProperty, FloatProperty
-from bpy.types           import TOPBAR_MT_file_export, Operator, Context, Collection
+from bpy.types           import TOPBAR_MT_file_export, Operator, Context, Collection, Panel
 from bpy_extras.io_utils import ExportHelper
 
 import os.path
 
 from ...b3d_utils import get_selected_collection_names
-from .scene       import Actor
 from .builder     import T3DBuilder, T3DBuilderOptions, SkylightOptions
 
 
@@ -44,44 +43,35 @@ class MET_OT_T3D_Export(Operator, ExportHelper):
     
     export_static_meshes: BoolProperty(name='Export StaticMeshes')
     
+    light_power_scale: FloatProperty(name='Light Power Scale', min=0.0, default=1.0, description='Scales the light power value when setting the brightness')
+
     add_skylight: BoolProperty(name='Add Skylight')
     skylight_location: FloatVectorProperty(name='Location', subtype='TRANSLATION', default=(0, 0, 300), description='In Unreal units')
     skylight_color: FloatVectorProperty(name='Color', subtype='COLOR', min=0.0, max=1.0, default=(1.0, 1.0, 1.0))
-    skylight_brightness: FloatProperty(name='Brightness', min=0.0, description='In Unreal units')
+    skylight_brightness: FloatProperty(name='Brightness', min=0.0, default=1.0, description='In Unreal units')
+    skylight_sample_factor: FloatProperty(name='Sample Factor', min=0.0, default=1.0)
 
-    light_power_scale: FloatProperty(name='Light Power Scale', min=0.0, default=1.0, description='Scales the light power value when setting the brightness')
 
     def draw(self, _context:Context):
         layout = self.layout
         layout.use_property_decorate = False
         layout.use_property_split = True
 
-        col = layout.column(align=True)
-
-        col.prop(self, 'units')
+        layout.prop(self, 'units')
         
-        col.separator()
+        layout.separator()
 
         if not self.selected_objects:
-            col.prop(self, 'selected_collections')
+            layout.prop(self, 'selected_collections')
         
         if not self.selected_collections:
-            col.prop(self, 'selected_objects')
+            layout.prop(self, 'selected_objects')
         
-        col.prop(self, 'export_static_meshes')
+        layout.prop(self, 'export_static_meshes')
 
-        col.separator()
+        layout.separator()
 
-        col.prop(self, 'add_skylight')
-
-        if self.add_skylight:
-            col.prop(self, 'skylight_location')
-            col.prop(self, 'skylight_color')
-            col.prop(self, 'skylight_brightness')
-
-        col.separator()
-
-        col.prop(self, 'light_power_scale')
+        layout.prop(self, 'light_power_scale')
 
 
     def execute(self, _context: Context):
@@ -94,7 +84,8 @@ class MET_OT_T3D_Export(Operator, ExportHelper):
             if self.add_skylight:
                 skylight_options = SkylightOptions(self.skylight_location, 
                                                    self.skylight_color, 
-                                                   self.skylight_brightness)
+                                                   self.skylight_brightness,
+                                                   self.skylight_sample_factor)
 
             options = T3DBuilderOptions(unit_scale, 
                                         skylight_options, 
@@ -133,6 +124,39 @@ class MET_OT_T3D_Export(Operator, ExportHelper):
 
         return {'FINISHED'}
     
+
+# -----------------------------------------------------------------------------
+class MET_PT_SkylightSettings(Panel):
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = 'Add Skylight'
+    bl_options = {'DEFAULT_CLOSED'}
+
+    @classmethod
+    def poll(cls, _context:Context):
+        sfile = _context.space_data
+        operator = sfile.active_operator
+        return operator.bl_idname == 'MEDGE_MAP_EDITOR_OT_t3d_export'
+
+    def draw_header(self, _context:Context):
+        sfile = _context.space_data
+        operator = sfile.active_operator
+
+        self.layout.prop(operator, 'add_skylight', text='')
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+
+        sfile = context.space_data
+        operator = sfile.active_operator
+
+        layout.prop(operator, 'skylight_location')
+        layout.prop(operator, 'skylight_color')
+        layout.prop(operator, 'skylight_brightness')
+        layout.prop(operator, 'skylight_sample_factor')
+
 
 # -----------------------------------------------------------------------------
 # Registration

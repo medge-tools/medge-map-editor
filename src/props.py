@@ -69,9 +69,9 @@ def TrackIndexEnumProperty(_callback:Callable=None):
 
 
 # -----------------------------------------------------------------------------
-# We cannot turn this into a PropertyGroup and add it as a PointerProperty to actors,
-# otherwise we will get a stackoverflow.
-# I think it's because of to many nested PointerProperties
+# This cannot be turned into a PropertyGroup and add it as a PointerProperty to actors,
+# otherwise a stackoverflow will occur. 
+# It's probably because of too many nested PointerProperties
 class MaterialProperty:
 
     def draw_material(self, _layout:UILayout):
@@ -106,7 +106,6 @@ class MaterialProperty:
                 my_mats.append(mat)
 
 
-
     material_filter:            BoolProperty(name='Filter')
     material_filter_collection: PointerProperty(type=bpy.types.Collection, name='Collection')
     material_filter_prefix:     StringProperty(name='Prefix')
@@ -114,9 +113,9 @@ class MaterialProperty:
 
 
 # -----------------------------------------------------------------------------
-# We cannot turn this into a PropertyGroup and add it as a PointerProperty to actors,
-# otherwise we will get a stackoverflow. 
-# I think it's because of to many nested PointerProperties
+# This cannot be turned into a PropertyGroup and add it as a PointerProperty to actors,
+# otherwise a stackoverflow will occur. 
+# It's probably because of too many nested PointerProperties
 class PhysMaterialProperty:
     
 
