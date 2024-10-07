@@ -14,7 +14,7 @@ Inside UnrealEd a scene or selected objects can be exported to a [T3D](https://w
 
 ### Inside Blender
 
-Inside UnrealEd meshes and materials are refenced by their package path inside the GenericBrowser. We can replicated this structure inside Blender using Collections. You need a Collection named `GenericBrowser` and add child Collections with the name of the packages as they are in the UnrealEd GenericBrowser. 
+Inside UnrealEd meshes and materials are referenced by their package path inside the GenericBrowser. We can replicated this structure inside Blender using Collections. You need a Collection named `GenericBrowser` and add child Collections with the name of the packages as they are in the UnrealEd GenericBrowser. 
 
 The following actors are implemented and are accessible from the addon panel:
 
@@ -32,7 +32,7 @@ The following actors are implemented and are accessible from the addon panel:
 | PlayerStart    | Player start with the option to make it the time trial start.
 | Checkpoint     | Time Trial checkpoint.
 |                |
-| Lights         | Currently only the Sun light can be exported and rotations are not exported correctly (see [TODO](#todo)).
+| Lights         | All lights can be exported. Skylight can be set in the export window as Blender does not have a similar equivalent.
 
 For some actors, do not apply any transforms, as we want to export those. This is the case for StaticMesh, Ladder, Swing, Springboard and PlayerStart. There are info boxes at those actors to remind you.
 
@@ -71,12 +71,3 @@ In this section we go over how to extend the map editor with other Unreal object
 
 These are all the steps, but you may not need all of them. For example, the Springboard is an instance of a StaticMesh, so we only created an operator in `src > ops.py`.
 
-## TODO
-
-### Should Have
-- Only the sun light can be exported and the conversion method for rotation doesn't work for lights; they probably use quaternions instead of Euler's.
-- To be able to export different level collections to seperate t3d files.
-- Remove the need to set the material package, before being able to select a material.
-
-### Could Have
-- You can add materials to Brushes, but only by name. It would be nice if we could texture Brushes inside Blender and export those materials also.
