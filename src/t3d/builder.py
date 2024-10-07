@@ -338,7 +338,7 @@ class EulerLightBuilder(Builder):
         yaw = atan2(x, -y) + math.pi / 2
         
         # Mirror on y-axis, because it gets mirrored in UnrealEd
-        y_axis = Vector((0, 1, 0))
+        y_axis = Vector((0, -1, 0))
         a = y_axis.angle(direction)
 
         return pitch - math.pi / 2, 0, yaw - a * 2
