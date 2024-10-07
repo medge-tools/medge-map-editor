@@ -48,7 +48,8 @@ class SkylightOptions:
 class T3DBuilderOptions:
     unit_scale : int
     skylight_options : SkylightOptions | None # If not None, add skylight
-    light_power_scale : float # Scales the energy when setting the brightness
+    light_power_scale : float # Scales the energy when setting brightness
+    window_light_angle_scale : float # Scale the energy when setting window light angle
 
 
 # -----------------------------------------------------------------------------
@@ -430,7 +431,7 @@ class AreaLightBuilder(Builder):
                          light.cutoff_distance * self.options.unit_scale,
                          al.sample_factor,
                          al.is_window_light,
-                         al.window_light_angle)
+                         light.energy * self.options.window_light_angle_scale)
 
 
 # -----------------------------------------------------------------------------

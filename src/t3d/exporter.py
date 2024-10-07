@@ -43,7 +43,9 @@ class MET_OT_T3D_Export(Operator, ExportHelper):
     
     export_static_meshes: BoolProperty(name='Export StaticMeshes')
     
-    light_power_scale: FloatProperty(name='Light Power Scale', min=0.0, default=1.0, description='Scales the light power value when setting the brightness')
+    light_power_scale: FloatProperty(name='Light Power Scale', min=0.0, default=1.0, description='Scales light power when setting the brightness')
+
+    window_light_angle_scale: FloatProperty(name='Window Light Angle Scale', min=0.0, default=1.0, description='Scale light power when setting the window light angle')
 
     add_skylight: BoolProperty(name='Add Skylight')
     skylight_location: FloatVectorProperty(name='Location', subtype='TRANSLATION', default=(0, 0, 300), description='In Unreal units')
@@ -89,7 +91,8 @@ class MET_OT_T3D_Export(Operator, ExportHelper):
 
             options = T3DBuilderOptions(unit_scale, 
                                         skylight_options, 
-                                        self.light_power_scale)
+                                        self.light_power_scale,
+                                        self.window_light_angle_scale)
 
             if self.selected_collections:
                 for name in get_selected_collection_names():

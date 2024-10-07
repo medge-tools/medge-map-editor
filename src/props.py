@@ -117,7 +117,6 @@ class MaterialProperty:
 # otherwise a stackoverflow will occur. 
 # It's probably because of too many nested PointerProperties
 class PhysMaterialProperty:
-    
 
     def draw_phys_material(self, _layout:UILayout):
         _layout.prop(self, 'phys_material_filter')
@@ -167,9 +166,9 @@ class Actor:
 
     
     def clear_widgets(self):
-        for gm in self.widgets:
-            if gm.obj != None:
-                bpy.data.objects.remove(gm.obj)
+        for w in self.widgets:
+            if w.obj != None:
+                bpy.data.objects.remove(w.obj)
         self.widgets.clear()
     
     
@@ -269,14 +268,13 @@ class MET_ACTOR_PG_LadderVolume(Actor, PropertyGroup):
 
         b3d_utils.set_data(self.id_data, volume)
 
-        self.id_data.display_type = 'WIRE'
-
         arrow = self.widgets.add()
-        arrow.obj = b3d_utils.new_object(b3d_utils.create_arrow(scale), 'ArrowWidget', COLLECTION_WIDGETS, self.id_data, False)
+        arrow.obj = b3d_utils.new_object(b3d_utils.create_arrow(scale), 'ArrowWidget', COLLECTION_WIDGETS, self.id_data, False, False)
         arrow.obj.location = 0, 0, 5
         b3d_utils.set_object_selectable(arrow.obj, False)
 
         self.id_data.name = 'LadderVolume'
+        self.id_data.display_type = 'WIRE'
 
 
     def draw(self, _layout:UILayout):
@@ -303,10 +301,8 @@ class MET_ACTOR_PG_SwingVolume(Actor, PropertyGroup):
     
     def init(self):
         super().init()
-
-        self.id_data.display_type = 'WIRE'
         
-        scale = Vector((2, 2, 1))
+        scale = 3, 3, 4
         b3d_utils.set_data(self.id_data, b3d_utils.create_cube(scale))
 
         arrow0 = self.widgets.add()
@@ -315,7 +311,7 @@ class MET_ACTOR_PG_SwingVolume(Actor, PropertyGroup):
 
         for arrow in self.widgets:
             s = scale * .3
-            arrow.obj = b3d_utils.new_object(b3d_utils.create_arrow(s), 'ArrowWidget', COLLECTION_WIDGETS, self.id_data, False)
+            arrow.obj = b3d_utils.new_object(b3d_utils.create_arrow(s), 'ArrowWidget', COLLECTION_WIDGETS, self.id_data, False, False)
             arrow.obj.location = 0, 0, 0
             b3d_utils.set_object_selectable(arrow.obj, False)
 
@@ -330,6 +326,7 @@ class MET_ACTOR_PG_SwingVolume(Actor, PropertyGroup):
         b3d_utils.transform(arrow2.obj.data, [m_t07_x , m_r90_x, m_mir_x]) 
 
         self.id_data.name = 'Swing'
+        self.id_data.display_type = 'WIRE'
 
 
     def draw(self, _layout: UILayout):
@@ -347,7 +344,7 @@ class MET_ACTOR_PG_Zipline(Actor, PropertyGroup):
         
         # It would make more sense to set id_data to the curve and make the bounding box the child.
         # Unfortunately, the object type is MESH. Instead of converting to CURVE (which can conflict with other actors who expect MESH) 
-        # we just make the curve a child of the bounding box.
+        # the curve is set as a child of the bounding box.
         b3d_utils.set_data(self.id_data, b3d_utils.create_cube())  
 
         if self.curve:
@@ -358,12 +355,12 @@ class MET_ACTOR_PG_Zipline(Actor, PropertyGroup):
 
         b3d_utils.set_parent(self.curve, self.id_data, False)
 
-        self.id_data.display_type = 'WIRE'
-        self.id_data.name = 'Zipline_BoundingBox'
-
         b3d_utils.set_active_object(self.id_data)
 
         self.update_bounds(True)
+
+        self.id_data.display_type = 'WIRE'
+        self.id_data.name = 'Zipline_BoundingBox'
 
     
     def draw(self, _layout:UILayout):
@@ -517,8 +514,8 @@ class MET_ACTOR_PG_BlockingVolume(Actor, PhysMaterialProperty, PropertyGroup):
         if self.id_data.type != 'MESH':
             b3d_utils.set_data(self.id_data, b3d_utils.create_cube())  
 
-        self.id_data.display_type = 'WIRE'
         self.id_data.name = 'BlockingVolume'
+        self.id_data.display_type = 'WIRE'
     
 
     def draw(self, _layout: UILayout):
@@ -670,8 +667,7 @@ class MET_ACTOR_PG_AreaLight(BakerSettings, PropertyGroup):
         super().draw(_layout)
         b3d_utils.auto_gui_props(self, _layout)
 
-    is_window_light: BoolProperty(name='Is Window Light')
-    window_light_angle: FloatProperty(name='Window Light Angle')
+    is_window_light: BoolProperty(name='Is Window Light', description='If True, then power will be used for WindowLightAngle')
 
 
 # -----------------------------------------------------------------------------
@@ -685,27 +681,30 @@ class MET_OBJECT_PG_Actor(PropertyGroup):
 
         if self.id_data.type == 'MESH':
             col.prop(self, 'actor_type')
-        col.separator()
+            
+            col.separator()
 
-        match(self.actor_type):
-            case ActorType.BRUSH.name:
-                self.brush.draw(col)
-            case ActorType.STATIC_MESH.name:
-                self.static_mesh.draw(col)
-            case ActorType.LADDER_VOLUME.name:
-                self.ladder.draw(col)
-            case ActorType.SWING_VOLUME.name:
-                self.swing.draw(col)
-            case ActorType.ZIPLINE.name:
-                self.zipline.draw(col)
-            case ActorType.BLOCKING_VOLUME.name:
-                self.blocking_volume.draw(col)
-            case ActorType.TRIGGER_VOLUME.name | ActorType.KILL_VOLUME.name:
-                self.trigger_volume.draw(col)
-            case ActorType.PLAYER_START.name:
-                self.player_start.draw(col)
-            case ActorType.CHECKPOINT.name:
-                self.checkpoint.draw(col)
+            match(self.actor_type):
+                case ActorType.BRUSH.name:
+                    self.brush.draw(col)
+                case ActorType.STATIC_MESH.name:
+                    self.static_mesh.draw(col)
+                case ActorType.LADDER_VOLUME.name:
+                    self.ladder.draw(col)
+                case ActorType.SWING_VOLUME.name:
+                    self.swing.draw(col)
+                case ActorType.ZIPLINE.name:
+                    self.zipline.draw(col)
+                case ActorType.BLOCKING_VOLUME.name:
+                    self.blocking_volume.draw(col)
+                case ActorType.TRIGGER_VOLUME.name | ActorType.KILL_VOLUME.name:
+                    self.trigger_volume.draw(col)
+                case ActorType.PLAYER_START.name:
+                    self.player_start.draw(col)
+                case ActorType.CHECKPOINT.name:
+                    self.checkpoint.draw(col)
+            
+            return
         
         if not self.id_data or self.id_data.type != 'LIGHT':
             col.label(text='No Settings')

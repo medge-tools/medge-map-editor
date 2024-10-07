@@ -170,14 +170,14 @@ def link_object_to_scene(_obj:Object, _collection:Collection|str=None, _clear_us
 
 
 # -----------------------------------------------------------------------------
-def new_object(_data:ID, _name:str, _collection:Collection|str=None, _parent:Object=None, _set_active=True):
+def new_object(_data:ID, _name:str, _collection:Collection|str=None, _parent:Object=None, _keep_world_location=True, _set_active=True):
     obj = bpy.data.objects.new(_name, _data)
     obj.location = bpy.context.scene.cursor.location
 
     link_object_to_scene(obj, _collection)
 
     if _parent: 
-        set_parent(obj, _parent)
+        set_parent(obj, _parent, _keep_world_location)
 
     if _set_active:
         set_active_object(obj)
@@ -834,20 +834,6 @@ def multiline_text(_context:Context, _layout:UILayout, _text:str):
 
     for line in text_lines:
         _layout.label(text=line)
-
-
-# -----------------------------------------------------------------------------
-# Logging
-# -----------------------------------------------------------------------------
-# -----------------------------------------------------------------------------
-# https://blenderartists.org/t/print-to-info-area/1383928/3
-def print_console(_text:str):
-    for w in bpy.context.window_manager.windows:
-        s = w.screen
-        for a in s.areas:
-            if a.type == 'CONSOLE':
-                with bpy.context.temp_override(window=w, screen=s, area=a):
-                    bpy.ops.console.scrollback_append(text=_text, type="OUTPUT")
 
 
 # -----------------------------------------------------------------------------
