@@ -31,7 +31,6 @@ The following actors are implemented and are accessible from the addon panel:
 | KillVolume     | - 
 | PlayerStart    | With the option to make it the time trial start.
 | Checkpoint     | Time Trial checkpoint.
-|                |
 | Lights         | All lights can be exported. Skylight can be set in the export window as Blender does not have a similar equivalent. Light power is used as brightness. In the export window there is a parameter to scale power before it is set.
 | AreaLights     | There is an export parameter to scale light power when setting `window light angle`.
 
