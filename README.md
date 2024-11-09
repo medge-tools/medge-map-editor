@@ -29,10 +29,10 @@ The following actors are implemented and are accessible from the addon panel:
 | BlockingVolume | Blocking volume with the option to add a physical material like `TDPhysicalMaterials.Glass.Bulletproof.PM_Glass_BulletproofSlide`. 
 | TriggerVolume  | -
 | KillVolume     | - 
-| PlayerStart    | Player start with the option to make it the time trial start.
+| PlayerStart    | With the option to make it the time trial start.
 | Checkpoint     | Time Trial checkpoint.
-|                |
-| Lights         | All lights can be exported. Skylight can be set in the export window as Blender does not have a similar equivalent.
+| Lights         | All lights can be exported. Skylight can be set in the export window as Blender does not have a similar equivalent. Light power is used as brightness. In the export window there is a parameter to scale power before it is set.
+| AreaLights     | There is an export parameter to scale light power when setting `window light angle`.
 
 For some actors, do not apply any transforms, as we want to export those. This is the case for StaticMesh, Ladder, Swing, Springboard and PlayerStart. There are info boxes at those actors to remind you.
 
