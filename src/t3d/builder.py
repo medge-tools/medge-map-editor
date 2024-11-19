@@ -334,7 +334,7 @@ class EulerLightBuilder(Builder):
         y = direction.y
         z = direction.z
 
-        # Align 
+        # Just setting these values will align the second object
         pitch = atan2(hypot(x, y), -z)
         yaw = atan2(x, -y) + math.pi / 2
         
@@ -345,7 +345,12 @@ class EulerLightBuilder(Builder):
         if y < 0:
             y_axis.y = -1    
 
-        a = y_axis.angle((direction.x, direction.y, 0))
+        proj = Vector(((direction.x, direction.y, 0)))
+        
+        a = 0
+        
+        if proj.length > 0:
+            a = y_axis.angle(proj)
             
         if y < 0:
             a *= -1
@@ -369,7 +374,7 @@ class PointLightBuilder(Builder):
                           light.color, 
                           light.energy * self.options.light_power_scale,
                           light.shadow_soft_size * self.options.unit_scale, 
-                          light.cutoff_distance,
+                          light.cutoff_distance * self.options.unit_scale,
                           pl.sample_factor)
     
 
@@ -399,14 +404,15 @@ class SpotLightBuilder(EulerLightBuilder):
         light: BL_SpotLight = _obj.data
 
         sl = get_actor_prop(_obj).get_spot_light()
+        scale_x = _obj.scale.x
 
         return SpotLight(location, 
                          rotation, 
                          light.color, 
                          light.energy * self.options.light_power_scale,
                          light.shadow_soft_size, 
-                         light.spot_size,
-                         light.cutoff_distance,
+                         light.spot_size * scale_x,
+                         light.cutoff_distance * self.options.unit_scale,
                          sl.sample_factor)
 
 
@@ -427,8 +433,15 @@ class AreaLightBuilder(Builder):
         light = _obj.data
         scale = _obj.scale
 
-        size_x = light.size * scale.x * self.options.unit_scale
-        size_y = light.size * scale.y * self.options.unit_scale
+        if light.shape in {'SQUARE', 'DISK'}:
+            scale.x *= light.size
+            scale.y *= light.size
+        elif light.shape in {'RECTANGLE', 'ELLIPSE'}:
+            scale.x *= light.size
+            scale.y *= light.size_y
+
+        size_x = scale.x * self.options.unit_scale
+        size_y = scale.y * self.options.unit_scale
 
         al = get_actor_prop(_obj).get_area_light()
 
