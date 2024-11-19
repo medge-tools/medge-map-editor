@@ -485,7 +485,6 @@ f'Begin Actor Class=DirectionalLight Name=DirectionalLight_0 Archetype=Direction
 {self.BakerSettings}\n\
 \tLocation=({self.Location})\n\
 \tRotation=({self.Rotation})\n\
-\tDrawScale3D=(X=10,Y=1.000000,Z=1.000000)\n\
 End Actor\n'
 
 # -----------------------------------------------------------------------------
@@ -511,18 +510,32 @@ class SpotLight(Actor):
         return \
 f'Begin Actor Class=SpotLight Name=SpotLight_0 Archetype=SpotLight\'Engine.Default__SpotLight\'\n\
 \tBegin Object Class=SpotLightComponent Name=SpotLightComponent0 Archetype=SpotLightComponent\'Engine.Default__SpotLight:SpotLightComponent0\'\n\
-\t\tOuterConeAngle={self.Angle}\n\
-\t\tBakerCutOffRadius={self.BakerCutOffRadius}\n\
-\t\tRadius={self.Radius}\n\
 \t\tBrightness={self.Brightness}\n\
 \t\tLightColor=({self.Color})\n\
 \tEnd Object\n\
 {self.BakerSettings}\n\
 \tLocation=({self.Location})\n\
 \tRotation=({self.Rotation})\n\
-\tDrawScale3D=(X=10,Y=1.000000,Z=1.000000)\n\
 End Actor\n'
 
+# Blender spotlights and UT3 spotlights work very different from eachother and simply scaling values isn't enough
+
+# f'Begin Actor Class=SpotLight Name=SpotLight_0 Archetype=SpotLight\'Engine.Default__SpotLight\'\n\
+# \tBegin Object Class=SpotLightComponent Name=SpotLightComponent0 Archetype=SpotLightComponent\'Engine.Default__SpotLight:SpotLightComponent0\'\n\
+
+# These three properties are therefore omitted.
+
+# \t\tOuterConeAngle={self.Angle}\n\
+# \t\tBakerCutOffRadius={self.BakerCutOffRadius}\n\
+# \t\tRadius={self.Radius}\n\
+
+# \t\tBrightness={self.Brightness}\n\
+# \t\tLightColor=({self.Color})\n\
+# \tEnd Object\n\
+# {self.BakerSettings}\n\
+# \tLocation=({self.Location})\n\
+# \tRotation=({self.Rotation})\n\
+# End Actor\n'
 
 # -----------------------------------------------------------------------------
 class AreaLight(Actor):
@@ -564,5 +577,4 @@ f'Begin Actor Class=TdAreaLight Name=TdAreaLight_0 Archetype=TdAreaLight\'TdGame
 \tWindowLightAngle={self.WindowLightAngle}\n\
 \tLocation=({self.Location})\n\
 \tRotation=({self.Rotation})\n\
-\tDrawScale3D=(X={self.SizeX},Y=10.00000,Z={self.SizeZ})\n\
 End Actor\n'
